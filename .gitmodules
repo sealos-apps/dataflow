@@ -1,3 +1,0 @@
-[submodule "ee"]
-	path = ee
-	url = git@github.com:clidey/whodb-ee.git

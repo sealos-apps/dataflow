@@ -1,8 +1,0 @@
-go 1.26.1
-
-use (
-    ./core
-    ./ee-stub
-    ./desktop-ce
-    ./desktop-common
-)
