@@ -1,6 +1,7 @@
 # WhoDB x Sealos 集成 — 数据流设计
 
 > **Date:** 2026-03-23
+> **Updated:** 2026-03-24
 > **Context:** 用定制 WhoDB 替代 DB Manager / Chat2DB 作为 dbprovider 的数据库客户端
 
 ---
@@ -28,8 +29,10 @@ graph TB
         U2[User] -->|Click Manage Data| DP2[dbprovider]
         DP2 -->|getSecretByName| K2[K8s Secret]
         K2 -->|credentials| DP2
-        DP2 -->|openDesktopApp<br/>appKey: system-whodb<br/>messageData: credentials| DSK2[Sealos Desktop]
-        DSK2 -->|postMessage<br/>credentials in memory only| WF[WhoDB Frontend]
+        DP2 -->|AES encrypt username+password| ENC2[credential 密文]
+        ENC2 -->|openDesktopApp<br/>appKey: system-whodb<br/>query: dbType,host,port,credential,theme,lang| DSK2[Sealos Desktop]
+        DSK2 -->|formatUrl → iframe src<br/>URL query params with encrypted credential| WF[WhoDB Frontend]
+        WF -->|AES decrypt → replaceState clears URL<br/>credentials → sessionStorage| WF
         WF -->|Login mutation<br/>GraphQL| WB[WhoDB Backend]
         WB -->|GORM / native driver| DB2[(Database)]
 
@@ -39,14 +42,14 @@ graph TB
 ```
 
 **关键差异:**
-- Chat2DB: credentials 通过 URL query params + AES 加密（暴露在浏览器历史、Referer header、server logs）
-- WhoDB: credentials 通过 `postMessage` 内存传递，never touches URL or logs
-- Chat2DB: 需要额外的 datasource sync API 和独立后端
-- WhoDB: 单容器（Go backend + static frontend），GraphQL 直连数据库
+- Chat2DB: 整个 token AES 加密 + URL params，需要独立后端 API 同步 datasource，依赖 4 个环境变量
+- WhoDB: 敏感字段（username/password）AES 加密为 `credential` 参数，非敏感字段明文；前端解密后立即 `replaceState()` 清除 URL
+- 两者 access log 安全性等价：URL 中都只有密文，无明文凭证
+- WhoDB: 单容器（Go backend + static frontend），GraphQL 直连数据库，无需额外后端，环境变量从 4 个减少到 1 个
 
 ---
 
-## 2. 凭证传递 — postMessage 完整时序
+## 2. 凭证传递 — URL query params 完整时序
 
 ```mermaid
 sequenceDiagram
@@ -67,24 +70,30 @@ sequenceDiagram
     end
 
     rect rgb(240, 255, 240)
-        Note over dbprovider,Desktop: Step 2 — 通过 Desktop SDK 发送
-        dbprovider->>Desktop: sealosApp.runEvents('openDesktopApp', {<br/>  appKey: 'system-whodb',<br/>  messageData: {<br/>    type: 'InternalAppCall',<br/>    action: 'connectDatabase',<br/>    data: {dbType, connection, theme, lang}<br/>  }<br/>})
+        Note over dbprovider,Desktop: Step 2 — AES 加密 + 通过 Desktop SDK 打开 WhoDB
+        dbprovider->>dbprovider: AES_encrypt({username, password})<br/>→ credential (密文)
+        dbprovider->>Desktop: sealosApp.runEvents('openDesktopApp', {<br/>  appKey: 'system-whodb',<br/>  query: { dbType, host, port,<br/>    credential, theme, lang }<br/>})
     end
 
     rect rgb(255, 240, 240)
-        Note over Desktop,WhoDB_FE: Step 3 — postMessage 中继
-        Desktop->>WhoDB_FE: window.postMessage(messageData)
-        Note right of WhoDB_FE: addEventListener('message')<br/>validate origin whitelist
+        Note over Desktop,WhoDB_FE: Step 3 — Desktop 打开 iframe
+        Desktop->>Desktop: formatUrl(whodb_base_url, query)<br/>→ iframe src with query params (credential encrypted)
+        Desktop->>WhoDB_FE: Load iframe (URL contains encrypted credential)
     end
 
     rect rgb(255, 255, 230)
-        Note over WhoDB_FE,WhoDB_BE: Step 4 — GraphQL 自动登录
+        Note over WhoDB_FE: Step 4 — 解密 + 读取 + 立即清除 URL
+        WhoDB_FE->>WhoDB_FE: URLSearchParams → 读取参数<br/>AES_decrypt(credential) → {username, password}<br/>sessionStorage.setItem('pendingCredentials')<br/>history.replaceState() → 清除 URL 参数
+    end
+
+    rect rgb(230, 240, 255)
+        Note over WhoDB_FE,WhoDB_BE: Step 5 — GraphQL 自动登录
         WhoDB_FE->>WhoDB_FE: Type mapping:<br/>postgresql → Postgres<br/>apecloud-mysql → MySQL<br/>mongodb → MongoDB<br/>redis → Redis
         WhoDB_FE->>WhoDB_BE: mutation Login(credentials: {<br/>  Type: "Postgres",<br/>  Hostname: "xxx.svc.cluster.local",<br/>  Username: "root",<br/>  Password: "***",<br/>  Database: "postgres",<br/>  Advanced: [{Key:"Port", Value:"5432"}]<br/>})
     end
 
     rect rgb(240, 245, 255)
-        Note over WhoDB_BE,DB: Step 5 — 连接验证
+        Note over WhoDB_BE,DB: Step 6 — 连接验证
         WhoDB_BE->>DB: plugin.IsAvailable() — connection test
         DB-->>WhoDB_BE: OK
         WhoDB_BE-->>WhoDB_FE: {Status: true}<br/>Set-Cookie: Token=base64(credentials)
@@ -93,6 +102,15 @@ sequenceDiagram
     WhoDB_FE->>WhoDB_FE: Store profile in Redux<br/>Navigate to workspace
     WhoDB_FE-->>User: Database workspace ready
 ```
+
+### 为什么不用 postMessage
+
+Sealos Desktop SDK **没有消息队列/握手机制**：
+- `createSealosApp()` 不会向 Desktop 发送 "已就绪" 信号
+- Desktop 对 iframe 的 `postMessage` 是 fire-and-forget，无确认、无缓冲、无重试
+- 如果 Desktop 在 iframe 注册 `message` listener 之前发出 `messageData`，消息丢失
+
+URL query params 是 Chat2DB 生产验证过的可靠方案：params 是 iframe src 的一部分，加载时即可读取，无时序问题。
 
 ---
 
@@ -234,7 +252,8 @@ graph TB
         DP_IF["dbprovider iframe"]
         WH_IF["WhoDB iframe"]
 
-        DP_IF -.->|"postMessage<br/>(via Desktop relay)"| WH_IF
+        DP_IF -.->|"openDesktopApp(query)<br/>→ Desktop opens iframe<br/>with URL query params"| DESKTOP
+        DESKTOP -.->|"formatUrl → iframe src"| WH_IF
     end
 
     subgraph k8s["Kubernetes Namespace: ns-user-xxx"]
@@ -273,7 +292,7 @@ graph TB
 
 **要点:**
 - WhoDB 单容器部署，Go 后端既处理 GraphQL API 也 serve 静态前端
-- 凭证不经过 WhoDB 磁盘，只在内存中（auth context + connection cache）
+- 凭证通过 URL query params 传入 iframe（敏感字段 AES 加密），前端解密后立即 `replaceState()` 清除，之后仅存在于内存（auth context + connection cache）
 - 每个用户 namespace 一个 WhoDB 实例，天然隔离
 
 ---
@@ -293,7 +312,7 @@ flowchart LR
         A8["weaviate"]
     end
 
-    subgraph map["Mapping Layer<br/>(postMessage handler)"]
+    subgraph map["Mapping Layer<br/>(URL params handler)"]
         M["typeMap"]
     end
 
@@ -358,26 +377,33 @@ flowchart TB
 
     START -->|1| CLICK["Click 'Manage Data'<br/>on running DB instance"]
     CLICK -->|2| FETCH["dbprovider: GET /api/getSecretByName<br/>→ K8s API → Secret"]
-    FETCH -->|3| BUILD["Build messageData:<br/>{type, action, data:{dbType, connection, theme, lang}}"]
-    BUILD -->|4| SEND["sealosApp.runEvents('openDesktopApp',<br/>{appKey:'system-whodb', messageData})"]
-    SEND -->|"5 — postMessage relay"| RECV["WhoDB: addEventListener('message')<br/>validate origin whitelist"]
-    RECV -->|6| STORE["sessionStorage.setItem(<br/>'pendingConnection', JSON)"]
-    STORE -->|7| MAP["Map types:<br/>postgresql→Postgres, apecloud-mysql→MySQL"]
-    MAP -->|8| LOGIN["Auto-trigger: mutation Login({<br/>Type, Hostname, Username,<br/>Password, Database, Advanced})"]
-    LOGIN -->|9| AUTH["AuthMiddleware: pass through<br/>(Login is in allowed list)"]
-    AUTH -->|10| RESOLVE["Login resolver:<br/>engine.Choose(dbType)<br/>→ plugin.IsAvailable(credentials)"]
-    RESOLVE -->|11| CONNECT["Plugin: gorm.Open(dsn)<br/>+ ConfigureConnectionPool"]
-    CONNECT -->|12| TEST["Connection test:<br/>SELECT 1 / Ping"]
-    TEST -->|"13 — success"| COOKIE["Response: {Status:true}<br/>Set-Cookie: Token=base64(creds)"]
-    COOKIE -->|14| NAV["Frontend: dispatch login()<br/>navigate to workspace"]
-    NAV -->|15| QUERY["User writes SQL or<br/>browses tables"]
-    QUERY -->|16| EXEC["GraphQL with cookie →<br/>AuthMiddleware → Plugin →<br/>WithConnection → DB"]
-    EXEC -->|17| RESULT(("Results rendered<br/>in WhoDB UI"))
+    FETCH -->|3| ENCRYPT["AES_encrypt({username, password})<br/>→ credential (密文)"]
+    ENCRYPT -->|4| BUILD["Build query params:<br/>{dbType, host, port, credential, theme, lang}"]
+    BUILD -->|5| SEND["sealosApp.runEvents('openDesktopApp',<br/>{appKey:'system-whodb', query})"]
+    SEND -->|"6 — Desktop formatUrl"| OPEN["Desktop: formatUrl(whodb_url, query)<br/>→ open iframe with URL (credential encrypted)"]
+    OPEN -->|7| READ["WhoDB: URLSearchParams<br/>→ read params from URL"]
+    READ -->|8| DECRYPT["AES_decrypt(credential)<br/>→ {username, password}"]
+    DECRYPT -->|9| CLEAN["history.replaceState()<br/>→ clear URL params immediately"]
+    CLEAN -->|10| STORE["sessionStorage.setItem(<br/>'pendingCredentials', JSON)"]
+    STORE -->|11| MAP["Map types:<br/>postgresql→Postgres, apecloud-mysql→MySQL"]
+    MAP -->|12| LOGIN["Auto-trigger: mutation Login({<br/>Type, Hostname, Username,<br/>Password, Database, Advanced})"]
+    LOGIN -->|13| AUTH["AuthMiddleware: pass through<br/>(Login is in allowed list)"]
+    AUTH -->|14| RESOLVE["Login resolver:<br/>engine.Choose(dbType)<br/>→ plugin.IsAvailable(credentials)"]
+    RESOLVE -->|15| CONNECT["Plugin: gorm.Open(dsn)<br/>+ ConfigureConnectionPool"]
+    CONNECT -->|16| TEST["Connection test:<br/>SELECT 1 / Ping"]
+    TEST -->|"17 — success"| COOKIE["Response: {Status:true}<br/>Set-Cookie: Token=base64(creds)"]
+    COOKIE -->|18| NAV["Frontend: dispatch login()<br/>navigate to workspace"]
+    NAV -->|19| QUERY["User writes SQL or<br/>browses tables"]
+    QUERY -->|20| EXEC["GraphQL with cookie →<br/>AuthMiddleware → Plugin →<br/>WithConnection → DB"]
+    EXEC -->|21| RESULT(("Results rendered<br/>in WhoDB UI"))
 
     style START fill:#228be6,stroke:#1864ab,color:#fff
     style RESULT fill:#51cf66,stroke:#2b8a3e,color:#fff
+    style ENCRYPT fill:#ff922b,stroke:#d9480f,color:#fff
     style SEND fill:#ffd43b,stroke:#e67700,color:#000
-    style RECV fill:#ffd43b,stroke:#e67700,color:#000
+    style OPEN fill:#ffd43b,stroke:#e67700,color:#000
+    style DECRYPT fill:#ff922b,stroke:#d9480f,color:#fff
+    style CLEAN fill:#ff922b,stroke:#d9480f,color:#fff
     style LOGIN fill:#be4bdb,stroke:#862e9c,color:#fff
     style COOKIE fill:#be4bdb,stroke:#862e9c,color:#fff
 ```
@@ -388,11 +414,11 @@ flowchart TB
 
 | # | Diagram | 说明 |
 |---|---------|------|
-| 1 | Architecture Comparison | Chat2DB (URL+AES) vs WhoDB (postMessage) 安全性和架构差异 |
-| 2 | Credential Delivery Sequence | postMessage 凭证传递完整时序，含 origin 验证 |
+| 1 | Architecture Comparison | Chat2DB (AES+URL+后端同步) vs WhoDB (AES+URL query params + replaceState) 架构差异 |
+| 2 | Credential Delivery Sequence | AES 加密 + URL query params 凭证传递完整时序，含解密和 replaceState 清除 |
 | 3 | Auth Middleware Flowchart | 每次 HTTP 请求的认证解析路径（cookie/header/profile/keyring）|
 | 4 | Query Execution Sequence | 前端输入 → GraphQL → Plugin → 连接缓存 → DB 的完整数据通路 |
 | 5 | Connection Cache Lifecycle | 连接缓存状态机：创建 → 活跃 → 空闲 → 过期/驱逐 → 关闭 |
 | 6 | K8s Deployment Topology | WhoDB、dbprovider、DB pods 在 Sealos namespace 中的网络拓扑 |
 | 7 | Type Mapping | KubeBlocks dbType → WhoDB DatabaseType 映射 + 凭证字段转换 |
-| 8 | End-to-End Path | 用户从点击按钮到看到查询结果的 17 步完整路径 |
+| 8 | End-to-End Path | 用户从点击按钮到看到查询结果的 21 步完整路径 |

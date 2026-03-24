@@ -1,6 +1,7 @@
 # Plan A — WhoDB x Sealos 集成实施方案
 
 > **Date:** 2026-03-23
+> **Updated:** 2026-03-24
 > **Status:** Draft
 > **Related:** [Data Flow Diagrams](./sealos-integration-dataflow.md) · [方案对比分析](./sealos-integration-analysis.md)
 
@@ -10,12 +11,12 @@
 
 用定制化 WhoDB 替换 Chat2DB，作为 Sealos dbprovider 的数据库客户端。
 
-**方案核心：** WhoDB 作为独立 Sealos app（`system-whodb`）部署，通过 postMessage 从 dbprovider 接收数据库凭证，自动登录并进入工作区。同时对 UI 进行重度定制，裁剪不需要的功能、适配 Sealos 品牌和中文。
+**方案核心：** WhoDB 作为独立 Sealos app（`system-whodb`）部署，dbprovider 通过 `openDesktopApp` + URL query params 传递数据库连接信息（敏感字段 AES 加密），WhoDB 前端解密后立即从 URL 中清除，自动登录并进入工作区。同时对 UI 进行重度定制，裁剪不需要的功能、适配 Sealos 品牌和中文。
 
 **替换 Chat2DB 的理由：**
-- Chat2DB 凭证通过 URL query params + AES 传递，暴露在浏览器历史和 logs 中
 - Chat2DB 是闭源产品，无法定制
 - WhoDB 是开源的，功能是 Chat2DB 的超集，且技术栈现代（Go + React + GraphQL）
+- 集成层更简单：无需独立后端 API 同步，环境变量从 4 个减少到 1 个（仅 `WHODB_AES_KEY`）
 
 ---
 
@@ -28,13 +29,19 @@ User clicks "Manage Data" in dbprovider
 dbprovider ── GET K8s Secret ──▶ {host, port, username, password}
     │
     ▼
+dbprovider ── AES encrypt(username, password) ──▶ credential (密文)
+    │
+    ▼
 sealosApp.runEvents('openDesktopApp', {
     appKey: 'system-whodb',
-    messageData: { type, action, data: {dbType, connection, theme, lang} }
+    query: { dbType, host, port, credential, theme, lang }
 })
     │
     ▼
-Sealos Desktop ── postMessage ──▶ WhoDB Frontend (iframe)
+Sealos Desktop ── formatUrl() ──▶ WhoDB iframe src (URL with query params)
+    │  (URL 中只有密文，无明文 username/password)
+    ▼
+WhoDB Frontend loads ── reads query params ── AES decrypt(credential) ── history.replaceState() clears URL
     │
     ▼
 WhoDB Frontend ── mutation Login(credentials) ──▶ WhoDB Backend (Go)
@@ -44,6 +51,12 @@ WhoDB Backend ── GORM/native driver ──▶ Target Database
 ```
 
 详细数据流图见 [sealos-integration-dataflow.md](./sealos-integration-dataflow.md)。
+
+### 2.1 为什么用 URL query params 而非 postMessage
+
+Sealos Desktop SDK **没有消息队列机制**：`createSealosApp()` 不会向 Desktop 发送 "已就绪" 信号，Desktop 对 iframe 的 `postMessage` 是 fire-and-forget，没有握手、缓冲或重试。如果 Desktop 在 WhoDB iframe 注册 `message` listener 之前发出 `messageData`，消息直接丢失。
+
+Chat2DB 的生产方案也是 URL query params（`openDesktopApp` 的 `query` 字段），已验证可靠。Desktop 的 `openApp()` 通过 `formatUrl()` 把 `query` 拼进 iframe src，iframe 加载时 URL 已经带上了参数，不存在时序问题。
 
 ---
 
@@ -64,12 +77,12 @@ WhoDB Backend ── GORM/native driver ──▶ Target Database
 
 ## 4. Sealos SDK 集成
 
-轻量接入，只用 SDK 的 "app 注册 + 事件总线" 能力：
+轻量接入，只用 SDK 的 "app 注册 + 语言事件" 能力。凭证通过 URL query params 传递（敏感字段 AES 加密），不依赖 postMessage。
 
 | SDK 能力 | 需要 | 说明 |
 |---------|:----:|------|
-| `createSealosApp()` | Yes | 通知 Desktop "iframe 已就绪" |
-| `addEventListener('message')` | Yes | 接收凭证（原生 API，非 SDK） |
+| `createSealosApp()` | Yes | 初始化 SDK，注册 iframe 与 Desktop 的通信通道 |
+| URL query params 读取 | Yes | 从 iframe src URL 读取凭证（原生 API，非 SDK） |
 | `EVENT_NAME.CHANGE_I18N` | Yes | 同步 Desktop 语言切换 |
 | `sealosApp.getSession()` | No | 不需要 kubeconfig |
 | `QuotaGuardProvider` | No | WhoDB 不涉及计费 |
@@ -84,16 +97,21 @@ WhoDB Backend ── GORM/native driver ──▶ Target Database
 
 | 文件 | 改动 |
 |------|------|
-| `src/pages/dbs/components/dbList.tsx` | `handleManageData()`: Chat2DB 逻辑 → `sealosApp.runEvents('openDesktopApp', { appKey: 'system-whodb', messageData })` |
+| `src/pages/dbs/components/dbList.tsx` | `handleManageData()`: Chat2DB 逻辑 → AES 加密 username/password → `sealosApp.runEvents('openDesktopApp', { appKey: 'system-whodb', query: { dbType, host, port, credential, theme, lang } })` |
 | `src/pages/db/detail/components/Header.tsx` | 同上 |
-| `src/services/chat2db/` | 删除整个目录 |
+| `src/services/chat2db/` | 删除整个目录（API 同步、JDBC URL 构造不需要；AES 加密逻辑可复用或重写为简化版） |
 | `src/constants/chat2db.ts` | 删除 |
+| `src/pages/api/proxy/sync_data_source_a.ts` | 删除（不再需要后端 proxy 同步 datasource） |
+| `src/store/db.ts` 中 Chat2DB 相关状态 | 删除（dataSourceId 缓存不再需要） |
+
+对比 Chat2DB 集成，dbprovider 侧从 **"三步"（sync → encrypt → openApp with URL）** 简化为 **"两步"（encrypt → openApp with query）**，消除对 `CHAT2DB_API_KEY`、`CLIENT_DOMAIN_NAME`、`GATEWAY_DOMAIN_NAME` 三个环境变量的依赖。`CHAT2DB_AES_KEY` 替换为 `WHODB_AES_KEY`（同为 AES-256-CBC，可复用同一个 key 值）。
 
 ### 5.2 WhoDB Frontend
 
 | 改动 | 文件 | 说明 |
 |------|------|------|
-| SDK 注册 + postMessage 监听 | `src/index.tsx` | `createSealosApp()` + `addEventListener('message')` + origin 白名单 |
+| URL params 读取 + 解密 + 清除 | `src/index.tsx` | 读取 query params → AES 解密 `credential` 字段 → 存入 sessionStorage → `history.replaceState()` 清除 URL |
+| SDK 注册 | `src/index.tsx` | `createSealosApp()` 初始化 |
 | dbType 映射 | `src/config/sealos.ts` (新增) | `postgresql→Postgres`, `apecloud-mysql→MySQL`, `mongodb→MongoDB`, `redis→Redis`, `clickhouse→ClickHouse` |
 | 自动登录 | `src/pages/auth/login.tsx` | 检测 sessionStorage pending → 自动 Login mutation → 跳转 workspace |
 | 语言同步 | `src/index.tsx` | 监听 `CHANGE_I18N` → i18n 切换 |
@@ -116,7 +134,10 @@ WHODB_DISABLE_MOCK_DATA_GENERATION=true
 WHODB_ALLOWED_ORIGINS=https://*.sealos.run
 WHODB_LOG_LEVEL=warn
 WHODB_MAX_PAGE_SIZE=5000
+WHODB_AES_KEY=<32-char-key>          # AES-256-CBC，dbprovider 和 WhoDB 共享，用于加解密 credential 字段
 ```
+
+> `WHODB_AES_KEY` 可复用现有 `CHAT2DB_AES_KEY` 的值，两者都是 AES-256-CBC 的 32 字符密钥。
 
 ---
 
@@ -139,7 +160,7 @@ WHODB_MAX_PAGE_SIZE=5000
 
 | 功能 | 当前 | 改动 |
 |------|------|------|
-| Login 页面 | ~1,147 LOC，含 DB 选择器 / 多 profile / SSL / AWS picker | 重写为 ~100 LOC："等待连接" 状态页 + postMessage 自动登录 |
+| Login 页面 | ~1,147 LOC，含 DB 选择器 / 多 profile / SSL / AWS picker | 重写为 ~100 LOC："等待连接" 状态页 + URL params 自动登录 |
 | Sidebar | ~530 LOC，含多 profile 切换 / update 通知 / cloud filter | 精简到 ~200 LOC：保留导航菜单 + schema 选择 |
 | Settings | ~317 LOC，含 PostHog toggle / AWS provider 管理 | 精简到 ~150 LOC：保留 UI 偏好 + 分页大小 |
 | 主题 | @clidey/ux 默认主题 | CSS 变量适配 Sealos Design System |
@@ -199,7 +220,7 @@ import { cn } from '@/lib/utils';
 
 | 任务 | 预估 |
 |------|------|
-| Sealos SDK 集成 + postMessage handler | 0.5d |
+| Sealos SDK 集成 + URL params 读取/清除 | 0.5d |
 | dbType 映射 + 自动登录流程 | 0.5d |
 | dbprovider 侧 Chat2DB 替换 | 0.5d |
 | 基础联调（dbprovider → Desktop → WhoDB → DB） | 0.5d |
@@ -270,45 +291,86 @@ import { cn } from '@/lib/utils';
 
 ---
 
-## 8. postMessage 消息格式
+## 8. 凭证传递格式
+
+### 8.1 加密策略
+
+只加密敏感字段（`username` + `password`），非敏感字段（`dbType`、`host`、`port`、`theme`、`lang`）保持明文。这样 access log 中只出现密文，同时非敏感字段仍可用于调试。
+
+加密算法：**AES-256-CBC**（与 Chat2DB 一致），密钥为 `WHODB_AES_KEY` 环境变量（32 字符）。
+
+### 8.2 dbprovider 发出（加密 + URL query params）
 
 ```typescript
-// dbprovider → Desktop → WhoDB
-interface SealosWhoDB_Message {
-  type: 'InternalAppCall';
-  action: 'connectDatabase';
-  data: {
-    dbName: string;           // e.g., "my-postgres"
-    dbType: string;           // e.g., "postgresql", "apecloud-mysql", "mongodb", "redis", "clickhouse"
-    connection: {
-      host: string;           // e.g., "my-postgres-postgresql.ns-xxx.svc.cluster.local"
-      port: string;           // e.g., "5432"
-      username: string;
-      password: string;
-    };
-    theme: 'light' | 'dark';
-    language: string;         // e.g., "zh", "en"
-  };
-}
+// dbprovider 侧：加密敏感字段
+const credential = AES_encrypt(
+  JSON.stringify({ username, password }),
+  WHODB_AES_KEY   // 32-char AES-256-CBC key
+);
+
+// dbprovider → Desktop openDesktopApp
+sealosApp.runEvents('openDesktopApp', {
+  appKey: 'system-whodb',
+  query: {
+    dbName:     'my-postgres',                                     // 明文，显示用
+    dbType:     'postgresql',                                      // 明文，KubeBlocks 类型名
+    host:       'my-postgres-postgresql.ns-xxx.svc.cluster.local', // 明文，集群内地址
+    port:       '5432',                                            // 明文
+    credential: credential,                                        // 密文，AES(username+password)
+    theme:      'light',                                           // 明文，跟随 Desktop
+    lang:       'zh',                                              // 明文，跟随 Desktop
+  }
+});
+// Desktop 调用 formatUrl() 将 query 拼入 iframe src URL
+// access log 示例: ?dbType=postgresql&host=...&credential=a3f8b2c1e9...&theme=light
 ```
 
-WhoDB 接收后映射为 `LoginCredentials`：
+### 8.3 WhoDB 前端接收 + 解密 + 立即清除
+
+```typescript
+// WhoDB 前端入口，iframe 加载后第一时间执行
+const params = new URLSearchParams(window.location.search);
+
+// 解密敏感字段
+const { username, password } = JSON.parse(
+  AES_decrypt(params.get('credential'), WHODB_AES_KEY)
+);
+
+const credentials = {
+  dbName:   params.get('dbName'),
+  dbType:   params.get('dbType'),
+  host:     params.get('host'),
+  port:     params.get('port'),
+  username,                          // 解密后的明文
+  password,                          // 解密后的明文
+  theme:    params.get('theme'),
+  lang:     params.get('lang'),
+};
+
+// 存到 sessionStorage（仅当前 tab 生命周期）
+sessionStorage.setItem('pendingCredentials', JSON.stringify(credentials));
+
+// 立刻清掉 URL 里的所有参数
+window.history.replaceState({}, '', window.location.pathname);
+```
+
+### 8.4 映射为 Login mutation 输入
 
 ```typescript
 // WhoDB Login mutation input
 {
-  Type: typeMap[message.data.dbType],       // "Postgres"
-  Hostname: message.data.connection.host,   // "my-postgres-postgresql.ns-xxx.svc"
-  Username: message.data.connection.username,
-  Password: message.data.connection.password,
-  Database: defaultDB[message.data.dbType], // "postgres" / "" / "admin" etc.
+  Type: typeMap[credentials.dbType],       // "Postgres"
+  Hostname: credentials.host,              // "my-postgres-postgresql.ns-xxx.svc"
+  Username: credentials.username,
+  Password: credentials.password,
+  Database: defaultDB[credentials.dbType], // "postgres" / "" / "admin" etc.
   Advanced: [
-    { Key: "Port", Value: message.data.connection.port }
+    { Key: "Port", Value: credentials.port }
   ]
 }
 ```
 
-Type 映射表：
+### 8.5 Type 映射表
 
 ```typescript
 const typeMap: Record<string, string> = {
@@ -318,11 +380,72 @@ const typeMap: Record<string, string> = {
   'redis':          'Redis',
   'clickhouse':     'ClickHouse',
 };
+
+const defaultDB: Record<string, string> = {
+  'postgresql':     'postgres',
+  'apecloud-mysql': '',
+  'mongodb':        'admin',
+  'redis':          '',
+  'clickhouse':     'default',
+};
 ```
+
+### 8.6 AES key 传递
+
+`WHODB_AES_KEY` 需要在 dbprovider 和 WhoDB 前端两侧都可用：
+
+| 侧 | 获取方式 |
+|-----|---------|
+| dbprovider | 服务端环境变量 `WHODB_AES_KEY`，在 `handleManageData()` 中调用加密 |
+| WhoDB 前端 | 构建时注入（`REACT_APP_WHODB_AES_KEY`）或通过 WhoDB 后端 API 获取 |
+
+> 可复用现有 `CHAT2DB_AES_KEY` 的值，两者都是 AES-256-CBC 的 32 字符密钥。
 
 ---
 
-## 9. K8s 部署
+## 9. 安全分析
+
+### 9.1 凭证暴露面
+
+WhoDB 运行在 Sealos Desktop 的 **iframe** 内，不是顶层页面。敏感字段（username/password）在 URL 中以 AES 密文形式传输。
+
+| 暴露渠道 | 明文暴露 | 说明 |
+|----------|:--------:|------|
+| 浏览器地址栏 | **否** | iframe 内 URL 不显示在地址栏 |
+| 浏览器历史记录 | **否** | iframe 导航不写入 history |
+| DevTools Elements/Network | 短暂密文 | `replaceState()` 执行前可见密文（几毫秒），之后 iframe src 已清除 |
+| Referer（跨域请求） | **否** | 浏览器默认策略 `strict-origin-when-cross-origin`，跨域只发 origin |
+| Referer（同源请求） | 短暂密文 | `replaceState()` 之后 Referer 也变干净，只有首次请求可能携带密文 |
+| Nginx/Ingress access log | **否（密文）** | access log 记录的是 `credential=a3f8b2c1e9...`，无法直接读出明文 |
+| sessionStorage | 短暂明文 | 解密后的明文存在当前 tab 的 sessionStorage 中，关闭 tab 自动清除 |
+
+### 9.2 防护措施
+
+1. **AES-256-CBC 加密** — username/password 在 URL 中始终是密文，access log、DevTools、Referer 中都无法直接读出明文
+2. **`history.replaceState()`** — 即便是密文也只在 URL 中存在几毫秒，之后 URL 完全干净
+3. **sessionStorage** — 解密后的明文存在当前 tab 的 sessionStorage 中，关闭 tab 自动清除，不跨 tab 共享
+4. **非敏感字段明文** — `dbType`、`host`、`port` 等保持明文，便于调试和日志分析，不构成安全风险
+
+### 9.3 与 Chat2DB 的安全性对比
+
+| | Chat2DB（现状） | WhoDB（本方案） |
+|--|--|--|
+| 加密算法 | AES-256-CBC | AES-256-CBC（相同） |
+| 加密范围 | 整个 `userId/userNS:orgId` token | `username` + `password` 字段 |
+| URL 中是否有明文凭证 | 否（密文） | 否（密文） |
+| 需要独立后端同步 | 是（sync_data_source_a API） | 否 |
+| 环境变量数量 | 4 个 | 1 个（`WHODB_AES_KEY`） |
+| access log 安全 | 密文 | 密文 |
+
+### 9.4 信任模型说明
+
+无论传输方式（URL params / postMessage / AES 加密），Sealos 平台侧始终可以看到用户数据库凭证——因为凭证的源头是平台管理的 K8s Secret，平台也持有 AES key。这不是 WhoDB 集成引入的新风险，而是 Sealos 架构的固有属性。
+
+AES 加密的目标是**防止非平台方**（日志聚合系统操作员、能看到 access log 但没有 K8s Secret 权限的人）直接读取到明文凭证。
+
+---
+
+## 10. K8s 部署
 
 ```yaml
 apiVersion: apps/v1
@@ -361,6 +484,11 @@ spec:
               value: "warn"
             - name: WHODB_MAX_PAGE_SIZE
               value: "5000"
+            - name: WHODB_AES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: whodb-secrets
+                  key: aes-key
           resources:
             requests:
               cpu: 100m
@@ -385,7 +513,7 @@ spec:
 
 ---
 
-## 10. 关键文件索引
+## 11. 关键文件索引
 
 ### WhoDB
 
@@ -411,12 +539,14 @@ spec:
 
 ### dbprovider
 
-| 用途 | 路径 |
-|------|------|
-| Chat2DB 集成 (列表页) | `src/pages/dbs/components/dbList.tsx` → `handleManageData()` |
-| Chat2DB 集成 (详情页) | `src/pages/db/detail/components/Header.tsx` → `handleManageData()` |
-| Chat2DB 常量 | `src/constants/chat2db.ts` |
-| Chat2DB 服务 | `src/services/chat2db/` |
-| K8s Secret API | `src/pages/api/getSecretByName.ts` |
-| Desktop SDK | `src/pages/_app.tsx` |
-| DB 类型映射 | `src/utils/database.ts` |
+| 用途 | 路径 | 操作 |
+|------|------|------|
+| Chat2DB 集成 (列表页) | `src/pages/dbs/components/dbList.tsx` → `handleManageData()` | 改为 WhoDB query params |
+| Chat2DB 集成 (详情页) | `src/pages/db/detail/components/Header.tsx` → `handleManageData()` | 改为 WhoDB query params |
+| Chat2DB 常量 | `src/constants/chat2db.ts` | 删除 |
+| Chat2DB 服务 | `src/services/chat2db/` | 删除整个目录 |
+| Chat2DB 后端 proxy | `src/pages/api/proxy/sync_data_source_a.ts` | 删除 |
+| Chat2DB 状态缓存 | `src/store/db.ts` 中 dataSourceId 相关 | 删除 |
+| K8s Secret API | `src/pages/api/getSecretByName.ts` | 保留（仍需获取凭证） |
+| Desktop SDK | `src/pages/_app.tsx` | 保留 |
+| DB 类型映射 | `src/utils/database.ts` | 保留 |

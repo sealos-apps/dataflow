@@ -1,11 +1,37 @@
-DOCKER_USERNAME ?= aimerite
+SERVICE_NAME = whodb
+DOCKER_USERNAME ?=
 IMAGE_TAG ?= latest
-IMAGE_NAME = $(DOCKER_USERNAME)/whodb
+IMG ?= $(DOCKER_USERNAME)/$(SERVICE_NAME):$(IMAGE_TAG)
 
-image-build:
-	docker build -f core/Dockerfile -t $(IMAGE_NAME):$(IMAGE_TAG) .
+.PHONY: all
+all: build
 
-image-push:
-	docker push $(IMAGE_NAME):$(IMAGE_TAG)
+##@ General
 
-image-build-push: image-build image-push
+.PHONY: help
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Build
+
+.PHONY: build
+build: ## Build frontend.
+	cd frontend && pnpm run build
+
+.PHONY: run
+run: ## Run dev service from host.
+	cd frontend && pnpm run start
+
+##@ Docker
+
+.PHONY: docker-build
+docker-build: ## Build docker image.
+	docker buildx build -f core/Dockerfile --platform linux/amd64 -t $(IMG) .
+
+.PHONY: docker-push
+docker-push: ## Push docker image.
+	docker push $(IMG)
+
+.PHONY: docker-build-push
+docker-build-push: ## Build and push docker image.
+	docker buildx build -f core/Dockerfile --platform linux/amd64 -t $(IMG) --push .
