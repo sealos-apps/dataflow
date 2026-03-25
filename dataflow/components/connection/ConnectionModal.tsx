@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
+
 import { X, Database, Server, HardDrive, Cloud, Save, Loader2, Check, AlertCircle, Eye, EyeOff, ChevronLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -16,10 +16,10 @@ interface ConnectionModalProps {
 type ConnectionType = "MYSQL" | "POSTGRES" | "MONGODB" | "REDIS";
 
 const CONNECTION_TYPES = [
-    { id: "MYSQL", name: "MySQL", icon: <Image src="/images/mysql.svg" alt="MySQL" width={32} height={32} className="h-8 w-8" /> },
-    { id: "POSTGRES", name: "PostgreSQL", icon: <Image src="/images/postgresql.svg" alt="PostgreSQL" width={32} height={32} className="h-8 w-8" /> },
-    { id: "MONGODB", name: "MongoDB", icon: <Image src="/images/mongodb.svg" alt="MongoDB" width={32} height={32} className="h-8 w-8" /> },
-    { id: "REDIS", name: "Redis", icon: <Image src="/images/redis.svg" alt="Redis" width={32} height={32} className="h-8 w-8" /> },
+    { id: "MYSQL", name: "MySQL", icon: <img src="/images/mysql.svg" alt="MySQL" className="h-8 w-8" /> },
+    { id: "POSTGRES", name: "PostgreSQL", icon: <img src="/images/postgresql.svg" alt="PostgreSQL" className="h-8 w-8" /> },
+    { id: "MONGODB", name: "MongoDB", icon: <img src="/images/mongodb.svg" alt="MongoDB" className="h-8 w-8" /> },
+    { id: "REDIS", name: "Redis", icon: <img src="/images/redis.svg" alt="Redis" className="h-8 w-8" /> },
 ];
 
 export function ConnectionModal({ isOpen, onClose, initialData }: ConnectionModalProps) {

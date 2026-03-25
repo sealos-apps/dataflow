@@ -2,7 +2,6 @@
 
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import {
     Database,
     Plus,
@@ -46,7 +45,6 @@ import { TruncateTableModal } from "@/components/database/TruncateTableModal";
 import { CopyTableModal } from "@/components/database/CopyTableModal";
 import { Eraser, Scissors, Copy } from "lucide-react";
 
-import { useRouter } from "next/navigation";
 import { ExportCollectionModal } from "@/components/database/ExportCollectionModal";
 import { ImportCollectionModal } from "@/components/database/ImportCollectionModal";
 import { useTabContext } from "@/contexts/TabContext";
@@ -738,11 +736,9 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
                                 )}
                             </button>
                             {DB_ICONS[conn.type] ? (
-                                <Image
+                                <img
                                     src={DB_ICONS[conn.type]}
                                     alt={conn.type}
-                                    width={16}
-                                    height={16}
                                     className="h-4 w-4 shrink-0"
                                 />
                             ) : (
