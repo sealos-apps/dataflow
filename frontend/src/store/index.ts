@@ -17,6 +17,8 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { persistReducer, persistStore, createTransform } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
+import storageSession from 'redux-persist/lib/storage/session';
+import { isSealosContext } from '../config/sealos';
 import { authReducers } from './auth';
 import { databaseReducers } from './database';
 import { settingsReducers } from "./settings";
@@ -150,8 +152,18 @@ const chatTransform = createTransform(
   { whitelist: ['houdini'] }
 );
 
+// Sealos embedded mode: auth uses sessionStorage (closes with tab, no cross-session leaks).
+// Normal mode: auth uses localStorage (persists across sessions).
+const sealosEntry = isSealosContext(new URLSearchParams(window.location.search));
+const authStorage = sealosEntry ? storageSession : storage;
+
+// Clear stale auth before store init — rehydration will find nothing to restore.
+if (sealosEntry) {
+  sessionStorage.removeItem('persist:auth');
+}
+
 const persistedReducer = combineReducers({
-  auth: persistReducer({ key: "auth", storage, }, authReducers),
+  auth: persistReducer({ key: "auth", storage: authStorage, }, authReducers),
   database: persistReducer({ key: "database", storage, }, databaseReducers),
   settings: persistReducer({ key: "settings", storage }, settingsReducers),
   houdini: persistReducer({
