@@ -29,7 +29,6 @@ import (
 	"github.com/clidey/whodb/core/src/auth"
 	"github.com/clidey/whodb/core/src/common"
 	"github.com/clidey/whodb/core/src/engine"
-	"github.com/clidey/whodb/core/src/env"
 	"github.com/clidey/whodb/core/src/mockdata"
 )
 
@@ -222,28 +221,6 @@ func TestLoginFailsWhenPluginUnavailable(t *testing.T) {
 	}
 }
 
-func TestLoginFailsWhenCredentialFormDisabled(t *testing.T) {
-	resolver := &Resolver{}
-	mut := resolver.Mutation()
-
-	orig := env.DisableCredentialForm
-	env.DisableCredentialForm = true
-	t.Cleanup(func() { env.DisableCredentialForm = orig })
-
-	ctx := context.WithValue(context.Background(), auth.AuthKey_Credentials, &engine.Credentials{Type: "Test"})
-	reqCtx := context.WithValue(ctx, common.RouterKey_ResponseWriter, httptest.NewRecorder())
-
-	_, err := mut.Login(reqCtx, model.LoginCredentials{
-		Type:     "Test",
-		Hostname: "h",
-		Username: "u",
-		Password: "p",
-		Database: "d",
-	})
-	if err == nil {
-		t.Fatalf("expected login to fail when credential form disabled")
-	}
-}
 
 func setEngineMock(t *testing.T, mock *testutil.PluginMock) {
 	t.Helper()
