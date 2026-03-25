@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from 'react';
 import { X, FileCode, Table, Database, Trash2, SearchX, SplitSquareHorizontal } from 'lucide-react';
 import { useTabContext, Tab, TabType } from '@/contexts/TabContext';

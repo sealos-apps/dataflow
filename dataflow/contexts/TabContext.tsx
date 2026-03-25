@@ -1,5 +1,3 @@
-"use client";
-
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 export type TabType = 'query' | 'table' | 'collection' | 'redis_keys_list';

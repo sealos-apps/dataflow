@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useRef, useEffect } from "react";
 import { DashboardComponent, useAnalysisStore } from "@/stores/useAnalysisStore";
 import { cn } from "@/lib/utils";

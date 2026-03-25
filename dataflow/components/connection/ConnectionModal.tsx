@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 
 import { X, Database, Server, HardDrive, Cloud, Save, Loader2, Check, AlertCircle, Eye, EyeOff, ChevronLeft } from "lucide-react";

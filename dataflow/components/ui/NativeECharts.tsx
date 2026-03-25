@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useRef, useEffect, useState, memo, useCallback } from 'react';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';

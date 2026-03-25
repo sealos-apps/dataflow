@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { useAnalysisStore } from "@/stores/useAnalysisStore";
 import { Plus, Search, LayoutDashboard, SlidersHorizontal, Edit2, Trash2, PlusCircle } from "lucide-react";

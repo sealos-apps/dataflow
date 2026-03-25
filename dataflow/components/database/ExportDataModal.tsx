@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { X, Download, FileJson, FileSpreadsheet, FileCode, FileText, Loader2, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";

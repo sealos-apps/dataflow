@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { FileJson, Loader2, Database, Edit2, Trash2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Plus, Save, Copy, Download, Filter, RefreshCcw } from "lucide-react";
 import { useConnections } from "@/contexts/ConnectionContext";

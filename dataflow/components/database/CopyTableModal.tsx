@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { X, Copy, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useConnections } from "@/contexts/ConnectionContext";

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import { useAnalysisStore, Dashboard, DashboardComponent } from "@/stores/useAnalysisStore";

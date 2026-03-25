@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Square, Save, AlignLeft, Clock, CheckCircle, AlertCircle, FileText, Activity, Loader2, XCircle, CheckCircle2, GalleryVerticalEnd, PenTool } from "lucide-react";
 import { cn } from "@/lib/utils";

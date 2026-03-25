@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, X, Check, BarChart, Calendar, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";

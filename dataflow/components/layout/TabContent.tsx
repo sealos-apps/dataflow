@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useMemo } from 'react';
 import { useTabContext, Tab } from '@/contexts/TabContext';
 import { SQLEditorView } from '@/components/editor/SQLEditorView';
