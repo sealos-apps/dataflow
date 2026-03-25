@@ -34,6 +34,9 @@ import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 import {
     useGetStorageUnitRowsLazyQuery,
+    useAddRowMutation,
+    useDeleteRowMutation,
+    useUpdateStorageUnitMutation,
     WhereConditionType,
     SortDirection,
     type WhereCondition,
@@ -53,6 +56,9 @@ interface TableDetailViewProps {
 export function TableDetailView({ connectionId, databaseName, tableName, schema }: TableDetailViewProps) {
     const { connections } = useConnections();
     const [getRows] = useGetStorageUnitRowsLazyQuery();
+    const [addRow] = useAddRowMutation();
+    const [deleteRow] = useDeleteRowMutation();
+    const [updateStorageUnit] = useUpdateStorageUnitMutation();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<TableData | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -341,58 +347,55 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
 
     const handleSave = async () => {
         if (!primaryKey) {
-            showAlert("Error", "Cannot update row: Primary Key not found for this table.", "error");
+            showAlert('Error', 'Cannot update row: Primary Key not found for this table.', 'error');
             return;
         }
 
-        const conn = connections.find(c => c.id === connectionId);
-        if (!conn || !data) return;
+        const conn = connections.find((c) => c.id === connectionId);
+        if (!conn || editingRowIndex === null || !data) return;
 
-        const originalRow = data.rows[editingRowIndex!];
-        const pkValue = originalRow[primaryKey];
+        const originalRow = data.rows[editingRowIndex];
 
-        // Calculate changes
-        const updates: Record<string, any> = {};
-        Object.keys(editValues).forEach(key => {
-            if (editValues[key] !== originalRow[key]) {
-                updates[key] = editValues[key];
-            }
-        });
+        const updatedColumns = Object.keys(editValues).filter(
+            (key) => editValues[key] !== originalRow[key],
+        );
 
-        if (Object.keys(updates).length === 0) {
+        if (updatedColumns.length === 0) {
             handleCancelEdit();
             return;
         }
 
+        const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
+
+        const values = Object.entries(editValues).map(([key, value]) => ({
+            Key: key,
+            Value: String(value ?? ''),
+        }));
+
         try {
-            const response = await fetch('/api/connections/update-row', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    database: databaseName,
-                    schema,
-                    table: tableName,
-                    primaryKey,
-                    primaryKeyValue: pkValue,
-                    updates
-                }),
+            const { data: result, errors } = await updateStorageUnit({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: tableName,
+                    values,
+                    updatedColumns,
+                },
             });
 
-            const result = await response.json();
-            if (result.success) {
-                showAlert("Success", "Row updated successfully!", "success");
+            if (errors?.length) {
+                showAlert('Error', `Failed to update row: ${errors[0].message}`, 'error');
+                return;
+            }
+
+            if (result?.UpdateStorageUnit.Status) {
+                showAlert('Success', 'Row updated successfully!', 'success');
                 handleCancelEdit();
-                fetchData(); // Refresh data
+                fetchData();
             } else {
-                showAlert("Error", `Failed to update row: ${result.error}`, "error");
+                showAlert('Error', 'Failed to update row', 'error');
             }
         } catch (error: any) {
-            showAlert("Error", `Error updating row: ${error.message}`, "error");
+            showAlert('Error', `Error updating row: ${error.message}`, 'error');
         }
     };
 
@@ -402,41 +405,41 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
     };
 
     const handleConfirmDelete = async () => {
-        if (deletingRowIndex === null || !primaryKey) return;
+        if (deletingRowIndex === null || !primaryKey || !data) return;
 
-        const conn = connections.find(c => c.id === connectionId);
-        if (!conn || !data) return;
+        const conn = connections.find((c) => c.id === connectionId);
+        if (!conn) return;
 
         const row = data.rows[deletingRowIndex];
-        const pkValue = row[primaryKey];
+        const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
+
+        const values = Object.entries(row).map(([key, value]) => ({
+            Key: key,
+            Value: String(value ?? ''),
+        }));
 
         try {
-            const response = await fetch('/api/connections/delete-row', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    database: databaseName,
-                    schema,
-                    table: tableName,
-                    primaryKey,
-                    primaryKeyValue: pkValue
-                }),
+            const { data: result, errors } = await deleteRow({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: tableName,
+                    values,
+                },
             });
 
-            const result = await response.json();
-            if (result.success) {
-                showAlert("Success", "Row deleted successfully!", "success");
-                fetchData(); // Refresh data
+            if (errors?.length) {
+                showAlert('Error', `Failed to delete row: ${errors[0].message}`, 'error');
+                return;
+            }
+
+            if (result?.DeleteRow.Status) {
+                showAlert('Success', 'Row deleted successfully!', 'success');
+                fetchData();
             } else {
-                showAlert("Error", `Failed to delete row: ${result.error}`, "error");
+                showAlert('Error', 'Failed to delete row', 'error');
             }
         } catch (error: any) {
-            showAlert("Error", `Error deleting row: ${error.message}`, "error");
+            showAlert('Error', `Error deleting row: ${error.message}`, 'error');
         } finally {
             setDeletingRowIndex(null);
         }
@@ -463,42 +466,42 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
     };
 
     const handleSaveNewRow = async () => {
-        const conn = connections.find(c => c.id === connectionId);
+        const conn = connections.find((c) => c.id === connectionId);
         if (!conn) return;
 
-        // Validate that at least one field has been filled
-        if (Object.keys(newRowData).length === 0 || Object.values(newRowData).every(v => !v)) {
-            showAlert("Error", "Please enter at least one value", "error");
+        if (Object.keys(newRowData).length === 0 || Object.values(newRowData).every((v) => !v)) {
+            showAlert('Error', 'Please enter at least one value', 'error');
             return;
         }
 
+        const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
+        const values = Object.entries(newRowData)
+            .filter(([_, v]) => v !== undefined && v !== '')
+            .map(([key, value]) => ({ Key: key, Value: String(value) }));
+
         try {
-            const response = await fetch('/api/connections/create-row', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    database: databaseName,
-                    schema,
-                    table: tableName,
-                    rowData: newRowData
-                }),
+            const { data: result, errors } = await addRow({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: tableName,
+                    values,
+                },
             });
 
-            const result = await response.json();
-            if (result.success) {
-                showAlert("Success", "New row added successfully!", "success");
+            if (errors?.length) {
+                showAlert('Error', `Failed to add row: ${errors[0].message}`, 'error');
+                return;
+            }
+
+            if (result?.AddRow.Status) {
+                showAlert('Success', 'New row added successfully!', 'success');
                 handleCancelAdd();
-                fetchData(); // Refresh data
+                fetchData();
             } else {
-                showAlert("Error", `Failed to add row: ${result.error}`, "error");
+                showAlert('Error', 'Failed to add row', 'error');
             }
         } catch (error: any) {
-            showAlert("Error", `Error adding row: ${error.message}`, "error");
+            showAlert('Error', `Error adding row: ${error.message}`, 'error');
         }
     };
 
