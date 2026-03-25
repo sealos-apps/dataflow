@@ -31,6 +31,9 @@ en_US:
   failedToSelectDatabaseFile: Failed to Select Database File
   failedToParseCredentials: Failed to Parse Credentials from URL
   urlParseWarning: We could not extract all required details (host, username, password, or database) from this URL. Please enter the information manually.
+  sealosUnsupportedDbType: "Unsupported database type: {dbType}"
+  sealosLoginFailed: "Sealos login failed: {error}"
+  sealosDecryptFailed: Failed to decrypt credentials
   tryWhodb: Try {appName}
   noSetupRequired: No Setup Required
   experienceDescription: Experience the power of {appName} with our interactive sample database. Explore all features with real data.
