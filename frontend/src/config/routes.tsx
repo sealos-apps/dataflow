@@ -15,7 +15,7 @@
  */
 
 import { FC, lazy, ReactNode, Suspense } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { LoginPage } from "../pages/auth/login";
 import { useAppSelector } from "../store/hooks";
 import { LogoutPage } from "../pages/auth/logout";
@@ -99,10 +99,12 @@ export const InternalRoutes = {
 
 export const PrivateRoute: FC = () => {
     const loggedIn = useAppSelector(state => state.auth.status === "logged-in");
+    const location = useLocation();
     if(loggedIn) {
         return <Outlet />;
     }
-    return <Navigate to={PublicRoutes.Login.path} />
+    // Preserve query params (e.g. Sealos credential params) when redirecting to login
+    return <Navigate to={`${PublicRoutes.Login.path}${location.search}`} />
 }
 
 export const getRoutes = (): IInternalRoute[] => {
