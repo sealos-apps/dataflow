@@ -62,8 +62,6 @@ func InitializeEngine() *engine.Engine {
 	MainEngine.RegistryPlugin(elasticsearch.NewElasticSearchPlugin())
 	MainEngine.RegistryPlugin(clickhouse.NewClickHousePlugin())
 
-	MainEngine.AddLoginProfile(sqlite3.GetSampleProfile())
-
 	// Parse and register generic AI providers from environment configuration.
 	// RegisterGenericProviders calls env.AddGenericProvider internally,
 	// so we iterate directly without pre-assigning env.GenericProviders.

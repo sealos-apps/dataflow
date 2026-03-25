@@ -16,9 +16,8 @@
 
 import {Toaster} from "@clidey/ux";
 import {useEffect} from "react";
-import {Route, Routes} from "react-router-dom";
-import {getRoutes, PrivateRoute, PublicRoutes} from './config/routes';
-import {NavigateToDefault} from "./pages/chat/default-chat-route";
+import {Navigate, Route, Routes} from "react-router-dom";
+import {getRoutes, InternalRoutes, PrivateRoute, PublicRoutes} from './config/routes';
 import {useAppDispatch, useAppSelector} from "./store/hooks";
 import {useThemeCustomization} from "./hooks/use-theme-customization";
 import {useSidebarShortcuts} from "./hooks/useSidebarShortcuts";
@@ -74,7 +73,7 @@ export const App = () => {
             {getRoutes().map(route => (
               <Route key={route.path} path={route.path} element={route.component} />
             ))}
-            <Route path="/" element={<NavigateToDefault />} />
+            <Route path="/" element={<Navigate to={InternalRoutes.Dashboard.StorageUnit.path} replace />} />
           </Route>
           <Route path={PublicRoutes.Login.path} element={PublicRoutes.Login.component} />
         </Routes>
