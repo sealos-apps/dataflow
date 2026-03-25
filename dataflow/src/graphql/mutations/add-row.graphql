@@ -1,0 +1,5 @@
+mutation AddRow($schema: String!, $storageUnit: String!, $values: [RecordInput!]!) {
+  AddRow(schema: $schema, storageUnit: $storageUnit, values: $values) {
+    Status
+  }
+}
