@@ -32,6 +32,16 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
+import {
+    useGetStorageUnitRowsLazyQuery,
+    WhereConditionType,
+    SortDirection,
+    type WhereCondition,
+    type SortCondition,
+} from '@graphql';
+import { transformRowsResult, type TableData } from '@/src/utils/graphql-transforms';
+import { resolveSchemaParam } from '@/src/utils/database-features';
+import { parseSearchToWhereCondition, mergeSearchWithWhere } from '@/src/utils/search-parser';
 
 interface TableDetailViewProps {
     connectionId: string;
@@ -42,8 +52,9 @@ interface TableDetailViewProps {
 
 export function TableDetailView({ connectionId, databaseName, tableName, schema }: TableDetailViewProps) {
     const { connections } = useConnections();
+    const [getRows] = useGetStorageUnitRowsLazyQuery();
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<TableData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -165,18 +176,17 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
-        setEditingRowIndex(null); // Reset editing state on fetch
-        setSelectedRowIndex(null); // Reset selection state on fetch
-        setIsAddingRow(false); // Reset adding state on fetch
+        setEditingRowIndex(null);
+        setSelectedRowIndex(null);
+        setIsAddingRow(false);
 
-        const conn = connections.find(c => c.id === connectionId);
+        const conn = connections.find((c) => c.id === connectionId);
         if (!conn) {
-            setError("Connection not found");
+            setError('Connection not found');
             setLoading(false);
             return;
         }
 
-        // Check if table changed to prevent sending stale columns/filters
         const currentTableKey = `${connectionId}:${databaseName}:${schema || ''}:${tableName}`;
         let effectiveVisibleColumns = visibleColumns;
         let effectiveFilterConditions = filterConditions;
@@ -184,57 +194,88 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
         let effectiveSortDirection = sortDirection;
 
         if (lastTableRef.current !== currentTableKey) {
-            // Table changed, ignore stale state and reset
             effectiveVisibleColumns = [];
             effectiveFilterConditions = [];
             effectiveSortColumn = null;
             effectiveSortDirection = null;
-
-            // Schedule state reset
             setVisibleColumns([]);
             setFilterConditions([]);
             setSortColumn(null);
             setSortDirection(null);
             setSearchTerm('');
             setCurrentPage(1);
-
             lastTableRef.current = currentTableKey;
         }
 
         try {
-            const response = await fetch('/api/connections/fetch-table-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    database: databaseName,
-                    schema,
-                    table: tableName,
-                    page: currentPage,
-                    limit: pageSize,
-                    searchTerm: searchTerm.trim(),
-                    sortColumn: effectiveSortColumn,
-                    sortDirection: effectiveSortDirection,
-                    filters: effectiveFilterConditions,
-                    selectedColumns: effectiveVisibleColumns.length > 0 ? effectiveVisibleColumns : undefined
-                }),
+            const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
+
+            const sort: SortCondition[] | undefined =
+                effectiveSortColumn && effectiveSortDirection
+                    ? [{
+                        Column: effectiveSortColumn,
+                        Direction: effectiveSortDirection === 'asc' ? SortDirection.Asc : SortDirection.Desc,
+                    }]
+                    : undefined;
+
+            let filterWhere: WhereCondition | undefined;
+            if (effectiveFilterConditions.length > 0) {
+                const atomicConditions: WhereCondition[] = effectiveFilterConditions
+                    .filter((fc: any) => fc.column && fc.operator)
+                    .map((fc: any) => ({
+                        Type: WhereConditionType.Atomic,
+                        Atomic: {
+                            Key: fc.column,
+                            Operator: fc.operator,
+                            Value: fc.value ?? '',
+                            ColumnType: data?.columnTypes[fc.column] ?? 'string',
+                        },
+                    }));
+
+                if (atomicConditions.length === 1) {
+                    filterWhere = atomicConditions[0];
+                } else if (atomicConditions.length > 1) {
+                    filterWhere = {
+                        Type: WhereConditionType.And,
+                        And: { Children: atomicConditions },
+                    };
+                }
+            }
+
+            const searchWhere = searchTerm.trim()
+                ? parseSearchToWhereCondition(
+                    searchTerm,
+                    data?.columns ?? [],
+                    data?.columns?.map((c) => data.columnTypes[c]) ?? [],
+                )
+                : undefined;
+
+            const where = mergeSearchWithWhere(searchWhere, filterWhere);
+
+            const { data: result, error: queryError } = await getRows({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: tableName,
+                    where,
+                    sort,
+                    pageSize,
+                    pageOffset: (currentPage - 1) * pageSize,
+                },
             });
 
-            const result = await response.json();
-            if (result.success) {
-                setData(result.data);
-                setPrimaryKey(result.data.primaryKey || null);
-                setForeignKeyColumns(result.data.foreignKeyColumns || []);
-                // Initialize visible columns if empty (and we just fetched new columns)
-                if (effectiveVisibleColumns.length === 0 && result.data.columns) {
-                    setVisibleColumns(result.data.columns);
+            if (queryError) {
+                setError(queryError.message);
+                return;
+            }
+
+            if (result?.Row) {
+                const tableData = transformRowsResult(result.Row);
+                setData(tableData);
+                setPrimaryKey(tableData.primaryKey);
+                setForeignKeyColumns(tableData.foreignKeyColumns);
+                if (effectiveVisibleColumns.length === 0 && tableData.columns.length > 0) {
+                    setVisibleColumns(tableData.columns);
                 }
-            } else {
-                setError(result.error || 'Failed to fetch table data');
             }
         } catch (err: any) {
             setError(err.message || 'Failed to fetch table data');
@@ -305,7 +346,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
         }
 
         const conn = connections.find(c => c.id === connectionId);
-        if (!conn) return;
+        if (!conn || !data) return;
 
         const originalRow = data.rows[editingRowIndex!];
         const pkValue = originalRow[primaryKey];
@@ -364,7 +405,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
         if (deletingRowIndex === null || !primaryKey) return;
 
         const conn = connections.find(c => c.id === connectionId);
-        if (!conn) return;
+        if (!conn || !data) return;
 
         const row = data.rows[deletingRowIndex];
         const pkValue = row[primaryKey];
@@ -847,7 +888,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                         </div>
                     )}
                     {/* Pagination Controls */}
-                    {data?.total > 0 && (
+                    {totalRows > 0 && (
                         <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-3">
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">
