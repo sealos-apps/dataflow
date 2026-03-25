@@ -4,26 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DataFlow — a database management and analysis platform. Frontend built with Next.js, backend to be powered by [WhoDB](https://github.com/clidey/whodb) core. Currently in transition: backend has been stripped out, frontend shells remain for database views and dashboard builder.
+DataFlow — a database management and analysis platform. Frontend built as a Vite SPA, backend powered by [WhoDB](https://github.com/clidey/whodb) core (Go). The production build produces static files in `build/` that are embedded into the WhoDB Go binary via `go:embed`.
 
 ## Commands
 
 ```bash
-pnpm dev      # Dev server at localhost:3000
-pnpm build    # Production build (standalone output)
-pnpm start    # Start production server
-pnpm lint     # ESLint (next core-web-vitals + typescript)
+pnpm dev        # Vite dev server at localhost:3000 (proxies /api to localhost:8080)
+pnpm build      # Production build: tsc && vite build → output in build/
+pnpm preview    # Preview production build locally
+pnpm lint       # ESLint
+pnpm typecheck  # TypeScript type checking (tsc --noEmit)
 ```
 
 No test framework is configured.
 
 ## Architecture
 
-**Next.js 16 App Router** with React 19, TypeScript, Tailwind CSS 4.
+**Vite SPA** with React 19, TypeScript, Tailwind CSS 4.
+
+- Entry point: `src/main.tsx` renders `<App />` into `index.html`
+- Router: client-side routing via `src/App.tsx`
+- Build output: `build/` directory (static files, embedded by Go backend)
 
 ### Current State (Post-Cleanup)
 
-- **No backend API routes** — `app/api/` has been removed entirely
+- **No backend API routes** — backend is WhoDB core (Go) serving GraphQL
 - **No AI layer** — `lib/ai/` has been removed
 - **No database drivers** — `mongodb`, `mysql2`, `pg`, `redis` packages removed
 - **No persistence layer** — conversations, dashboards, connections are not persisted
@@ -44,7 +49,7 @@ No test framework is configured.
 
 ### Key Libraries
 
-- **Monaco Editor** for SQL editing
+- **Monaco Editor** for SQL editing (loaded from CDN via `@monaco-editor/react`)
 - **ECharts** for data visualization
 - **react-grid-layout** for dashboard widget positioning
 - **xlsx** for Excel/CSV export
@@ -60,8 +65,7 @@ WhoDB core (Go) will serve as the backend via GraphQL API. The frontend componen
 
 ## Conventions
 
-- Path alias: `@/*` maps to the project root
-- Styling: `cn()` utility from `lib/utils.ts` (clsx + tailwind-merge). CSS variables defined in `app/globals.css` (Nebula Pro Palette).
+- Path alias: `@/*` maps to the project root (configured in both `vite.config.ts` and `tsconfig.json`)
+- Styling: `cn()` utility from `lib/utils.ts` (clsx + tailwind-merge). CSS variables defined in `src/index.css` (Nebula Pro Palette).
 - Connection types are uppercase enums: `'MYSQL' | 'POSTGRES' | 'MONGODB' | 'REDIS'`
-- Standalone output mode (`next.config.ts`) for containerized deployment
-- Fonts: Inter (sans) + JetBrains Mono (monospace), loaded via `next/font`
+- Fonts: Inter (sans) + JetBrains Mono (monospace), loaded via Google Fonts in `index.html`
