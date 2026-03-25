@@ -62,4 +62,5 @@ tools/
 dev_docs/
 dataflow/.next
 dataflow/build/
+*.env.local
 docs/superpowers/
