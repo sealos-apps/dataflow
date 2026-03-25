@@ -60,7 +60,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const params = new URLSearchParams(window.location.search);
 
     if (isSealosContext(params)) {
-      handleSealosLogin(params);
+      handleSealosLogin(params, login, setCredentials, setStatus, setError).catch((err) => {
+        console.error('[AuthContext] unexpected error:', err);
+        setError('Unexpected authentication error');
+        setStatus('error');
+      });
     } else {
       const restored = restoreFromStorage();
       if (restored) {
@@ -71,82 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStatus('error');
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handleSealosLogin(params: URLSearchParams) {
-    // Clear stale credentials from previous session
-    clearAuth();
-
-    const dbType = params.get('dbType')!;
-    const credential = params.get('credential')!;
-    const host = params.get('host') ?? '';
-    const port = params.get('port') ?? '';
-    const dbName = params.get('dbName') ?? undefined;
-
-    // Clear URL immediately to hide ciphertext
-    window.history.replaceState({}, '', window.location.pathname);
-
-    // Map KubeBlocks type -> WhoDB type
-    const whodbType = mapSealosDbType(dbType);
-    if (!whodbType) {
-      setError(`Unsupported database type: ${dbType}`);
-      setStatus('error');
-      return;
-    }
-
-    // Decrypt AES-encrypted credentials
-    const aesKey = import.meta.env.VITE_WHODB_AES_KEY;
-    let username: string;
-    let password: string;
-    try {
-      ({ username, password } = await decryptSealosCredential(credential, aesKey));
-    } catch (err) {
-      console.error('[AuthContext] decryption failed:', err);
-      setError('Failed to decrypt credentials');
-      setStatus('error');
-      return;
-    }
-
-    const database = dbName || getDefaultDatabase(dbType);
-    const advanced = port ? [{ Key: 'Port', Value: port }] : [];
-
-    // Verify connection via Login mutation
-    const loginInput: LoginCredentials = {
-      Type: whodbType,
-      Hostname: host,
-      Username: username,
-      Password: password,
-      Database: database,
-      Advanced: advanced,
-    };
-
-    try {
-      const result = await login({ variables: { credentials: loginInput } });
-      if (!result.data?.Login.Status) {
-        setError('Login failed: server rejected credentials');
-        setStatus('error');
-        return;
-      }
-    } catch (err) {
-      console.error('[AuthContext] login failed:', err);
-      setError(`Login failed: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('error');
-      return;
-    }
-
-    // Persist to auth-store (in-memory + sessionStorage)
-    const creds: AuthCredentials = {
-      Type: whodbType,
-      Hostname: host,
-      Username: username,
-      Password: password,
-      Database: database,
-      Advanced: advanced,
-    };
-    setAuthCredentials(creds);
-    setCredentials(creds);
-    setStatus('authenticated');
-  }
+  }, [login]);
 
   const switchDatabase = useCallback(async (newDatabase: string): Promise<boolean> => {
     const auth = getAuth();
@@ -189,4 +118,91 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+/**
+ * Handle Sealos dbprovider login flow: extract URL params, decrypt credentials,
+ * verify via Login mutation, persist to auth-store + React state.
+ *
+ * Defined outside the component so useEffect dependencies are explicit (no eslint-disable).
+ */
+async function handleSealosLogin(
+  params: URLSearchParams,
+  login: ReturnType<typeof useLoginMutation>[0],
+  setCredentials: React.Dispatch<React.SetStateAction<AuthCredentials | null>>,
+  setStatus: React.Dispatch<React.SetStateAction<AuthStatus>>,
+  setError: React.Dispatch<React.SetStateAction<string | null>>,
+): Promise<void> {
+  // Clear stale credentials from previous session
+  clearAuth();
+
+  const dbType = params.get('dbType')!;
+  const credential = params.get('credential')!;
+  const host = params.get('host') ?? '';
+  const port = params.get('port') ?? '';
+  const dbName = params.get('dbName') ?? undefined;
+
+  // Clear URL immediately to hide ciphertext
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // Map KubeBlocks type -> WhoDB type
+  const whodbType = mapSealosDbType(dbType);
+  if (!whodbType) {
+    setError(`Unsupported database type: ${dbType}`);
+    setStatus('error');
+    return;
+  }
+
+  // Decrypt AES-encrypted credentials
+  const aesKey = import.meta.env.VITE_WHODB_AES_KEY;
+  let username: string;
+  let password: string;
+  try {
+    ({ username, password } = await decryptSealosCredential(credential, aesKey));
+  } catch (err) {
+    console.error('[AuthContext] decryption failed:', err);
+    setError('Failed to decrypt credentials');
+    setStatus('error');
+    return;
+  }
+
+  const database = dbName || getDefaultDatabase(dbType);
+  const advanced = port ? [{ Key: 'Port', Value: port }] : [];
+
+  // Verify connection via Login mutation
+  const loginInput: LoginCredentials = {
+    Type: whodbType,
+    Hostname: host,
+    Username: username,
+    Password: password,
+    Database: database,
+    Advanced: advanced,
+  };
+
+  try {
+    const result = await login({ variables: { credentials: loginInput } });
+    if (!result.data?.Login.Status) {
+      setError('Login failed: server rejected credentials');
+      setStatus('error');
+      return;
+    }
+  } catch (err) {
+    console.error('[AuthContext] login failed:', err);
+    setError(`Login failed: ${err instanceof Error ? err.message : String(err)}`);
+    setStatus('error');
+    return;
+  }
+
+  // Persist to auth-store (in-memory + sessionStorage)
+  const creds: AuthCredentials = {
+    Type: whodbType,
+    Hostname: host,
+    Username: username,
+    Password: password,
+    Database: database,
+    Advanced: advanced,
+  };
+  setAuthCredentials(creds);
+  setCredentials(creds);
+  setStatus('authenticated');
 }
