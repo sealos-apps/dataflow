@@ -68,3 +68,5 @@ dataflow/docs/superpowers/
 
 # DataFlow derived files
 dataflow/public/monaco-editor/
+
+dataflow/.env
