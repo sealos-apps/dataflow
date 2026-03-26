@@ -3,7 +3,6 @@ import { Play, AlignLeft, Clock, CheckCircle, AlertCircle, FileText, Activity, L
 import { format } from 'sql-formatter';
 import { cn } from "@/lib/utils";
 import MonacoEditor from "./MonacoEditorWrapper";
-import type { Monaco } from "@monaco-editor/react";
 import type { editor } from 'monaco-editor';
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useRawExecuteLazyQuery } from '@graphql';
@@ -39,7 +38,6 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
     const [executionTime, setExecutionTime] = useState<number | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-    const monacoRef = useRef<Monaco | null>(null);
     const handleRun = async () => {
         if (!query.trim()) return;
 
@@ -229,9 +227,8 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
                             quickSuggestions: true,
                             wordBasedSuggestions: 'off',
                         }}
-                        onMount={(editorInstance: editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
+                        onMount={(editorInstance: editor.IStandaloneCodeEditor) => {
                             editorRef.current = editorInstance;
-                            monacoRef.current = monacoInstance;
                         }}
                     />
                 </div>
@@ -301,7 +298,6 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
                                     <div className="divide-y divide-border">
                                         {queryResults.map((result: any, resultIndex: number) => (
                                             <div key={resultIndex} className="flex flex-col">
-                                                {/* Result Header */}
                                                 {/* Result Header */}
                                                 <div className="flex flex-col border-b border-border/50">
                                                     <div className={`px-4 py-2.5 flex items-center justify-between ${result.isError ? 'bg-red-50/50' : 'bg-muted/30'}`}>
