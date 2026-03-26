@@ -5,6 +5,7 @@ import MonacoEditor from "./MonacoEditorWrapper";
 import type { Monaco } from "@monaco-editor/react";
 import type { editor } from 'monaco-editor';
 import { useConnectionStore } from "@/stores/useConnectionStore";
+import { useRawExecuteLazyQuery } from '@graphql';
 
 interface SQLEditorViewProps {
     context?: {
@@ -16,8 +17,20 @@ interface SQLEditorViewProps {
     onSqlChange?: (sql: string) => void;
 }
 
+function isSQLQueryAction(code?: string): boolean {
+    if (code == null) return true;
+    const cleaned = code
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim()
+        .toLowerCase();
+    return /^(select|with|values|show|explain|describe)\b/.test(cleaned);
+}
+
 export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorViewProps) {
     const { connections } = useConnectionStore();
+    const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' });
     const [activeResultTab, setActiveResultTab] = useState<'result' | 'message' | 'profile' | 'status'>('result');
     const [query, setQuery] = useState(initialSql || "");
     const [isExecuting, setIsExecuting] = useState(false);
@@ -29,64 +42,54 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
     const [isFormatting, setIsFormatting] = useState(false);
 
     const handleRun = async () => {
-        if (!context?.connectionId) {
-            setErrorMessage("No database connection selected");
-            setActiveResultTab('message');
-            return;
-        }
-
-        // Find the connection object
-        const connection = connections.find(c => c.id === context.connectionId);
-        if (!connection) {
-            setErrorMessage("Connection not found");
-            setActiveResultTab('message');
-            return;
-        }
+        if (!query.trim()) return;
 
         setIsExecuting(true);
         setErrorMessage(null);
+        setQueryResults(null);
         const startTime = Date.now();
 
         try {
-            const response = await fetch('/api/query/execute', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    connectionId: context.connectionId,
-                    database: context.databaseName,
-                    schema: context.schemaName,
-                    query,
-                    connection, // Pass the full connection object
-                }),
+            const { data, error } = await rawExecute({
+                variables: { query },
             });
 
-            const data = await response.json();
             const endTime = Date.now();
             setExecutionTime((endTime - startTime) / 1000);
 
-            if (data.success) {
-                if (Array.isArray(data.data)) {
-                    setQueryResults(data.data);
-                } else {
-                    setQueryResults([data.data]);
-                }
-                setActiveResultTab('result');
-            } else {
-                // Even on error, display partial results if available
-                if (data.data && (Array.isArray(data.data) ? data.data.length > 0 : true)) {
-                    if (Array.isArray(data.data)) {
-                        setQueryResults(data.data);
-                    } else {
-                        setQueryResults([data.data]);
-                    }
+            if (error) {
+                setErrorMessage(error.message);
+                setActiveResultTab('message');
+                return;
+            }
+
+            if (data?.RawExecute) {
+                const raw = data.RawExecute;
+                const columns = raw.Columns.map((c) => c.Name);
+
+                if (isSQLQueryAction(query) || raw.Rows.length > 0) {
+                    // Query result — show table
+                    const rows = raw.Rows.map((row) =>
+                        Object.fromEntries(columns.map((col, i) => [col, row[i]]))
+                    );
+                    setQueryResults([{
+                        columns,
+                        rows,
+                        info: `${raw.TotalCount} row${raw.TotalCount === 1 ? '' : 's'}`,
+                    }]);
                     setActiveResultTab('result');
                 } else {
-                    setActiveResultTab('message');
+                    // Action (INSERT/UPDATE/DELETE) — show success message
+                    setQueryResults([{
+                        columns: [],
+                        rows: [],
+                        info: 'Action Executed',
+                    }]);
+                    setActiveResultTab('result');
                 }
-                setErrorMessage(data.error || 'Query execution failed');
             }
-        } catch (error: any) {
-            setErrorMessage(error.message || 'Failed to execute query');
+        } catch (err: any) {
+            setErrorMessage(err.message);
             setActiveResultTab('message');
         } finally {
             setIsExecuting(false);
