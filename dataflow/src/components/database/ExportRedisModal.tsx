@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Download, FileJson, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { addAuthHeader } from '@/config/auth-headers';
+import { resolveSchemaParam } from '@/utils/database-features';
 import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ExportRedisModalProps {
@@ -52,82 +54,50 @@ export function ExportRedisModal({
         setIsSuccess(false);
 
         const conn = connections.find(c => c.id === connectionId);
-        if (!conn) {
-            console.error('Connection not found');
-            setIsExporting(false);
-            return;
-        }
+        if (!conn) { setIsExporting(false); return; }
 
         try {
-            const response = await fetch('/api/connections/redis/export', {
+            const graphqlSchema = resolveSchemaParam(conn.type, databaseName);
+            const backendFormat = format === 'json' ? 'ndjson' : 'csv';
+
+            const response = await fetch('/api/export', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...addAuthHeader({}, databaseName),
+                },
                 body: JSON.stringify({
-                    host: conn.host,
-                    port: conn.port,
-                    password: conn.password,
-                    database: databaseName,
-                    pattern,
-                    types,
-                    format
+                    schema: graphqlSchema,
+                    storageUnit: '', // Export all storage units
+                    format: backendFormat,
                 }),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to start export');
+                const text = await response.text();
+                throw new Error(text || `Export failed with status ${response.status}`);
             }
 
-            // Read streaming response
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
+            const disposition = response.headers.get('Content-Disposition');
+            const filenameMatch = disposition?.match(/filename="(.+)"/);
+            const filename = filenameMatch?.[1]
+                ?? `redis_export_${databaseName}_${Date.now()}.${format === 'json' ? 'ndjson' : 'csv'}`;
 
-            if (!reader) throw new Error('No response body');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            setDownloadUrl(url);
 
-            // Buffer to accumulate incomplete data across chunks
-            let buffer = '';
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                // Append new data to buffer
-                buffer += decoder.decode(value, { stream: true });
-
-                // Process complete lines only
-                const lines = buffer.split('\n');
-
-                // Keep the last incomplete line in the buffer
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.progress) setProgress(data.progress);
-                            if (data.downloadUrl) setDownloadUrl(data.downloadUrl);
-                        } catch {
-                            // Skip malformed JSON lines
-                            console.warn('Failed to parse SSE data:', line);
-                        }
-                    }
-                }
-            }
-
-            // Process any remaining data in the buffer
-            if (buffer.startsWith('data: ')) {
-                try {
-                    const data = JSON.parse(buffer.slice(6));
-                    if (data.progress) setProgress(data.progress);
-                    if (data.downloadUrl) setDownloadUrl(data.downloadUrl);
-                } catch {
-                    // Ignore final incomplete data
-                }
-            }
-
+            setProgress(100);
             setIsSuccess(true);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Export failed:', error);
-            // Handle error state here if needed
         } finally {
             setIsExporting(false);
         }
