@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useTabContext, Tab } from '@/contexts/TabContext';
+import { useTabStore, type Tab } from '@/stores/useTabStore';
 import { SQLEditorView } from '@/components/editor/SQLEditorView';
 import { TableDetailView } from '@/components/database/TableDetailView';
 import { CollectionDetailView } from '@/components/database/CollectionDetailView';
@@ -11,7 +11,7 @@ interface TabContentProps {
 }
 
 export function TabContent({ refreshTrigger }: TabContentProps) {
-    const { tabs, activeTabId, updateTab } = useTabContext();
+    const { tabs, activeTabId, updateTab } = useTabStore();
 
     const activeTab = useMemo(() => {
         return tabs.find(t => t.id === activeTabId);

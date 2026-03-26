@@ -3,7 +3,6 @@ import { Sidebar } from "./Sidebar";
 
 import { ActivityBar, ActivityTab } from "./ActivityBar";
 import { AnalysisView } from "../analysis/AnalysisView";
-import { TabProvider } from "@/contexts/TabContext";
 import { TabBar } from "./TabBar";
 import { TabContent } from "./TabContent";
 
@@ -29,33 +28,31 @@ export function MainLayout({ children }: MainLayoutProps) {
     };
 
     return (
-        <TabProvider>
-            <div className="flex h-screen w-full overflow-hidden bg-background">
-                <ActivityBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="flex h-screen w-full overflow-hidden bg-background">
+            <ActivityBar activeTab={activeTab} onTabChange={setActiveTab} />
 
-                {showSidebar && (
-                    <Sidebar
-                        onRefreshCollection={handleRefreshCollection}
-                    />
+            {showSidebar && (
+                <Sidebar
+                    onRefreshCollection={handleRefreshCollection}
+                />
+            )}
+
+            <main className="flex flex-1 flex-col overflow-hidden relative">
+                {activeTab === 'connections' ? (
+                    <>
+                        <TabBar />
+                        <TabContent refreshTrigger={collectionRefreshTrigger} />
+                    </>
+                ) : activeTab === 'analysis' ? (
+                    <AnalysisView />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        {activeTab === 'settings' && "Settings View (Coming Soon)"}
+                    </div>
                 )}
 
-                <main className="flex flex-1 flex-col overflow-hidden relative">
-                    {activeTab === 'connections' ? (
-                        <>
-                            <TabBar />
-                            <TabContent refreshTrigger={collectionRefreshTrigger} />
-                        </>
-                    ) : activeTab === 'analysis' ? (
-                        <AnalysisView />
-                    ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                            {activeTab === 'settings' && "Settings View (Coming Soon)"}
-                        </div>
-                    )}
-
-                </main>
-            </div>
-        </TabProvider>
+            </main>
+        </div>
     );
 }
 

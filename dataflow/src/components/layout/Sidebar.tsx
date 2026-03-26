@@ -45,7 +45,7 @@ import { Eraser, Scissors, Copy } from "lucide-react";
 
 import { ExportCollectionModal } from "@/components/database/ExportCollectionModal";
 import { ImportCollectionModal } from "@/components/database/ImportCollectionModal";
-import { useTabContext } from "@/contexts/TabContext";
+import { useTabStore } from "@/stores/useTabStore";
 
 interface SidebarProps {
     onRefreshCollection?: () => void;
@@ -60,7 +60,7 @@ const DB_ICONS: Record<string, string> = {
 
 export function Sidebar({ onRefreshCollection }: SidebarProps) {
     const { connections, selectedItem, selectItem, fetchDatabases, fetchSchemas, fetchTables } = useConnections();
-    const { openTab } = useTabContext();
+    const { openTab } = useTabStore();
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
     const [treeData, setTreeData] = useState<Record<string, any[]>>({});
     const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});

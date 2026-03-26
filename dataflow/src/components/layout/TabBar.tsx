@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, FileCode, Table, Database, Trash2, SearchX, SplitSquareHorizontal } from 'lucide-react';
-import { useTabContext, Tab, TabType } from '@/contexts/TabContext';
+import { useTabStore, type Tab, type TabType } from '@/stores/useTabStore';
 import { cn } from '@/lib/utils';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 
@@ -63,7 +63,7 @@ function TabItem({ tab, isActive, onActivate, onClose, onContextMenu }: TabItemP
 }
 
 export function TabBar() {
-    const { tabs, activeTabId, setActiveTab, closeTab, closeOtherTabs, closeAllTabs } = useTabContext();
+    const { tabs, activeTabId, setActiveTab, closeTab, closeOtherTabs, closeAllTabs } = useTabStore();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
     if (tabs.length === 0) {
