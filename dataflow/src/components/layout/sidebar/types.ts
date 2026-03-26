@@ -6,8 +6,7 @@ export type NodeType =
   | "schema"
   | "table"
   | "collection"
-  | "redis_keys_list"
-  | "key";
+  | "redis_keys_list";
 
 export interface TreeNodeData {
   id: string;
@@ -37,7 +36,6 @@ export const NODE_ICON_COLORS: Record<NodeType, string> = {
   table: "text-emerald-500/80",
   collection: "text-green-500/80",
   redis_keys_list: "text-blue-500/80",
-  key: "text-red-500/80",
 };
 
 /** Database brand icons (connection-level, keyed by Connection.type) */

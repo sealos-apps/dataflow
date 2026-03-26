@@ -9,8 +9,6 @@ type ConnectionType = "MYSQL" | "POSTGRES" | "MONGODB" | "REDIS" | "CLICKHOUSE";
 
 interface MenuCallbacks {
   onAction: (action: string) => void;
-  onExportCollection?: () => void;
-  onImportCollection?: () => void;
 }
 
 function refreshItem(onAction: (action: string) => void): ContextMenuItem {
@@ -93,14 +91,10 @@ export function getTableMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
 }
 
 export function getCollectionMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
-  const { onAction, onExportCollection, onImportCollection } = callbacks;
+  const { onAction } = callbacks;
   return [
-    ...(onExportCollection
-      ? [{ label: "Export Collection", onClick: onExportCollection, icon: React.createElement(Download, { className: "h-4 w-4" }) }]
-      : []) as ContextMenuItem[],
-    ...(onImportCollection
-      ? [{ label: "Import Collection", onClick: onImportCollection, icon: React.createElement(Upload, { className: "h-4 w-4" }) }]
-      : []) as ContextMenuItem[],
+    { label: "Export Collection", onClick: () => onAction("export_collection"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
+    { label: "Import Collection", onClick: () => onAction("import_collection"), icon: React.createElement(Upload, { className: "h-4 w-4" }) },
     { separator: true },
     { label: "Drop Collection", onClick: () => onAction("drop_collection"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },
     { separator: true },

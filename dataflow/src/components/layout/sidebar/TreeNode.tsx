@@ -1,7 +1,7 @@
 import React from "react";
 import {
   ChevronRight, ChevronDown, Loader2,
-  Database, LayoutGrid, Table, Files, Key, List,
+  Database, LayoutGrid, Table, Files, List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TreeNodeData, NodeType } from "./types";
@@ -15,7 +15,6 @@ const NODE_ICONS: Record<NodeType, React.ComponentType<{ className?: string }>> 
   table: Table,
   collection: Files,
   redis_keys_list: List,
-  key: Key,
 };
 
 interface TreeNodeProps {

@@ -148,34 +148,6 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
     [],
   );
 
-  const handleExportCollection = useCallback(() => {
-    if (!contextMenu) return;
-    const { node } = contextMenu;
-    openModal({
-      type: "export_collection",
-      params: {
-        connectionId: node.connectionId,
-        databaseName: node.metadata.database!,
-        collectionName: node.name,
-      },
-    });
-    setContextMenu(null);
-  }, [contextMenu, openModal]);
-
-  const handleImportCollection = useCallback(() => {
-    if (!contextMenu) return;
-    const { node } = contextMenu;
-    openModal({
-      type: "import_collection",
-      params: {
-        connectionId: node.connectionId,
-        databaseName: node.metadata.database!,
-        collectionName: node.name,
-      },
-    });
-    setContextMenu(null);
-  }, [contextMenu, openModal]);
-
   const handleContextMenuAction = useCallback(
     (action: string) => {
       if (!contextMenu) return;
@@ -342,6 +314,26 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
             },
           });
           break;
+        case "export_collection":
+          openModal({
+            type: "export_collection",
+            params: {
+              connectionId: node.connectionId,
+              databaseName: node.metadata.database!,
+              collectionName: node.name,
+            },
+          });
+          break;
+        case "import_collection":
+          openModal({
+            type: "import_collection",
+            params: {
+              connectionId: node.connectionId,
+              databaseName: node.metadata.database!,
+              collectionName: node.name,
+            },
+          });
+          break;
         case "drop_collection":
           openModal({
             type: "drop_collection",
@@ -422,8 +414,6 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
     const { node } = contextMenu;
     const callbacks = {
       onAction: handleContextMenuAction,
-      onExportCollection: handleExportCollection,
-      onImportCollection: handleImportCollection,
     };
 
     switch (node.type) {
@@ -447,9 +437,6 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         return [];
     }
   })();
-
-  // Extract activeModal params for modal rendering
-  const modalParams = activeModal?.params;
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-background">
@@ -501,7 +488,7 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         <ConnectionModal
           isOpen
           onClose={closeModal}
-          initialData={modalParams && "editingConnection" in modalParams ? modalParams.editingConnection : undefined}
+          initialData={"editingConnection" in activeModal.params ? activeModal.params.editingConnection : undefined}
         />
       )}
 
@@ -510,24 +497,26 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         <DeleteConnectionModal
           isOpen
           onClose={closeModal}
-          connectionId={(modalParams as { connectionId: string; connectionName: string }).connectionId}
-          connectionName={(modalParams as { connectionId: string; connectionName: string }).connectionName}
+          connectionId={activeModal.params.connectionId}
+          connectionName={activeModal.params.connectionName}
         />
       )}
 
       {/* Create Database Modal */}
-      {activeModal?.type === "create_database" && (
-        <CreateDatabaseModal
-          isOpen
-          onClose={closeModal}
-          connectionId={(modalParams as { connectionId: string }).connectionId}
-          onSuccess={() => {
-            const p = activeModal.params as { connectionId: string };
-            const conn = connections.find((c) => c.id === p.connectionId);
-            if (conn) refreshNode(connectionToNode(conn));
-          }}
-        />
-      )}
+      {activeModal?.type === "create_database" && (() => {
+        const p = activeModal.params;
+        return (
+          <CreateDatabaseModal
+            isOpen
+            onClose={closeModal}
+            connectionId={p.connectionId}
+            onSuccess={() => {
+              const conn = connections.find((c) => c.id === p.connectionId);
+              if (conn) refreshNode(connectionToNode(conn));
+            }}
+          />
+        );
+      })()}
 
       {/* Create Table Modal */}
       {activeModal?.type === "create_table" && (() => {
@@ -552,35 +541,39 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
       })()}
 
       {/* Edit Database Modal */}
-      {activeModal?.type === "edit_database" && (
-        <EditDatabaseModal
-          isOpen
-          onClose={closeModal}
-          connectionId={(modalParams as { connectionId: string; databaseName: string }).connectionId}
-          databaseName={(modalParams as { connectionId: string; databaseName: string }).databaseName}
-          onSuccess={() => {
-            const p = activeModal.params as { connectionId: string };
-            const conn = connections.find((c) => c.id === p.connectionId);
-            if (conn) refreshNode(connectionToNode(conn));
-          }}
-        />
-      )}
+      {activeModal?.type === "edit_database" && (() => {
+        const p = activeModal.params;
+        return (
+          <EditDatabaseModal
+            isOpen
+            onClose={closeModal}
+            connectionId={p.connectionId}
+            databaseName={p.databaseName}
+            onSuccess={() => {
+              const conn = connections.find((c) => c.id === p.connectionId);
+              if (conn) refreshNode(connectionToNode(conn));
+            }}
+          />
+        );
+      })()}
 
       {/* Delete Database Modal */}
-      {activeModal?.type === "delete_database" && (
-        <DeleteDatabaseModal
-          isOpen
-          onClose={closeModal}
-          connectionId={(modalParams as { connectionId: string; databaseName: string }).connectionId}
-          databaseName={(modalParams as { connectionId: string; databaseName: string }).databaseName}
-          onSuccess={() => {
-            selectItem(null);
-            const p = activeModal.params as { connectionId: string };
-            const conn = connections.find((c) => c.id === p.connectionId);
-            if (conn) refreshNode(connectionToNode(conn));
-          }}
-        />
-      )}
+      {activeModal?.type === "delete_database" && (() => {
+        const p = activeModal.params;
+        return (
+          <DeleteDatabaseModal
+            isOpen
+            onClose={closeModal}
+            connectionId={p.connectionId}
+            databaseName={p.databaseName}
+            onSuccess={() => {
+              selectItem(null);
+              const conn = connections.find((c) => c.id === p.connectionId);
+              if (conn) refreshNode(connectionToNode(conn));
+            }}
+          />
+        );
+      })()}
 
       {/* Edit Table Modal */}
       {activeModal?.type === "edit_table" && (() => {
@@ -634,24 +627,30 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
       })()}
 
       {/* Export Database Modal */}
-      {activeModal?.type === "export_database" && (
-        <ExportDatabaseModal
-          isOpen
-          onClose={closeModal}
-          connectionId={(modalParams as { connectionId: string; databaseName: string }).connectionId}
-          databaseName={(modalParams as { connectionId: string; databaseName: string }).databaseName}
-        />
-      )}
+      {activeModal?.type === "export_database" && (() => {
+        const p = activeModal.params;
+        return (
+          <ExportDatabaseModal
+            isOpen
+            onClose={closeModal}
+            connectionId={p.connectionId}
+            databaseName={p.databaseName}
+          />
+        );
+      })()}
 
       {/* Import Database Modal */}
-      {activeModal?.type === "import_database" && (
-        <ImportDatabaseModal
-          isOpen
-          onClose={closeModal}
-          connectionId={(modalParams as { connectionId: string; databaseName: string }).connectionId}
-          databaseName={(modalParams as { connectionId: string; databaseName: string }).databaseName}
-        />
-      )}
+      {activeModal?.type === "import_database" && (() => {
+        const p = activeModal.params;
+        return (
+          <ImportDatabaseModal
+            isOpen
+            onClose={closeModal}
+            connectionId={p.connectionId}
+            databaseName={p.databaseName}
+          />
+        );
+      })()}
 
       {/* Import Data Modal */}
       {activeModal?.type === "import_data" && (() => {
@@ -765,7 +764,7 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
           onClose={closeModal}
           onConfirm={confirmDropCollection}
           title="Drop Collection"
-          message={`Are you sure you want to drop the collection "${(modalParams as { collectionName: string }).collectionName}"? This action cannot be undone.`}
+          message={`Are you sure you want to drop the collection "${activeModal.params.collectionName}"? This action cannot be undone.`}
           confirmText="Drop Collection"
           isDestructive
         />
