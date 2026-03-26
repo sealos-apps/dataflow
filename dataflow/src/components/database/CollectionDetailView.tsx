@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FileJson, Loader2, Database, Edit2, Trash2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Plus, Save, Copy, Download, Filter, RefreshCcw } from "lucide-react";
+import { FileJson, Loader2, Database, Edit2, Trash2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus, Download, Filter, RefreshCcw } from "lucide-react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { AlertModal } from "@/components/ui/AlertModal";
@@ -8,6 +8,15 @@ import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 import { ExportCollectionModal } from "@/components/database/ExportCollectionModal";
 import { FilterCollectionModal } from "@/components/database/FilterCollectionModal";
+import {
+    useGetStorageUnitRowsLazyQuery,
+    useAddRowMutation,
+    useDeleteRowMutation,
+    useUpdateStorageUnitMutation,
+    WhereConditionType,
+    type WhereCondition,
+} from '@graphql';
+import { resolveSchemaParam } from '@/utils/database-features';
 
 interface CollectionDetailViewProps {
     connectionId: string;
@@ -18,6 +27,10 @@ interface CollectionDetailViewProps {
 
 export function CollectionDetailView({ connectionId, databaseName, collectionName, refreshTrigger }: CollectionDetailViewProps) {
     const { connections } = useConnectionStore();
+    const [getRows] = useGetStorageUnitRowsLazyQuery({ fetchPolicy: 'no-cache' });
+    const [addRowMutation] = useAddRowMutation();
+    const [deleteRowMutation] = useDeleteRowMutation();
+    const [updateStorageUnitMutation] = useUpdateStorageUnitMutation();
     const [loading, setLoading] = useState(true);
     const [documents, setDocuments] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -35,6 +48,7 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
     const [totalDocuments, setTotalDocuments] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [searchTerm, setSearchTerm] = useState("");
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Filter state
     const [showFilterModal, setShowFilterModal] = useState(false);
@@ -94,31 +108,63 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
                 return;
             }
 
+            const graphqlSchema = resolveSchemaParam(conn.type, databaseName);
+
+            // Build WhereCondition from activeFilter
+            // activeFilter shape: { fieldName: { operator: "$eq", value: "..." } }
+            const filterConditions: WhereCondition[] = Object.entries(activeFilter)
+                .filter(([_, cond]: [string, any]) => cond.operator && cond.value !== undefined)
+                .map(([fieldName, cond]: [string, any]) => ({
+                    Type: WhereConditionType.Atomic,
+                    Atomic: {
+                        Key: fieldName,
+                        Operator: cond.operator.replace('$', ''),
+                        Value: String(cond.value),
+                        ColumnType: 'string',
+                    },
+                }));
+
+            // Add search term as regex on 'document' column if present
+            if (searchTerm.trim()) {
+                filterConditions.push({
+                    Type: WhereConditionType.Atomic,
+                    Atomic: {
+                        Key: 'document',
+                        Operator: 'regex',
+                        Value: searchTerm.trim(),
+                        ColumnType: 'string',
+                    },
+                });
+            }
+
+            let where: WhereCondition | undefined;
+            if (filterConditions.length === 1) {
+                where = filterConditions[0];
+            } else if (filterConditions.length > 1) {
+                where = { Type: WhereConditionType.And, And: { Children: filterConditions } };
+            }
+
             try {
-                const response = await fetch('/api/connections/fetch-collection-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: conn.type.toLowerCase(),
-                        host: conn.host,
-                        port: conn.port,
-                        user: conn.user,
-                        password: conn.password,
-                        databaseName,
-                        collectionName,
-                        page: currentPage,
-                        limit: pageSize,
-                        searchTerm: searchTerm.trim(),
-                        filter: activeFilter
-                    }),
+                const { data: result, error: queryError } = await getRows({
+                    variables: {
+                        schema: graphqlSchema,
+                        storageUnit: collectionName,
+                        where,
+                        pageSize,
+                        pageOffset: (currentPage - 1) * pageSize,
+                    },
+                    context: { database: databaseName },
                 });
 
-                const result = await response.json();
-                if (result.success) {
-                    setDocuments(result.documents || []);
-                    setTotalDocuments(result.total || 0);
-                } else {
-                    setError(result.error || 'Failed to fetch collection data');
+                if (queryError) {
+                    setError(queryError.message);
+                    return;
+                }
+
+                if (result?.Row) {
+                    const parsedDocs = result.Row.Rows.map(row => JSON.parse(row[0]));
+                    setDocuments(parsedDocs);
+                    setTotalDocuments(result.Row.TotalCount);
                 }
             } catch (err: any) {
                 setError(err.message || 'Failed to fetch collection data');
@@ -128,54 +174,16 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
         };
 
         fetchData();
-    }, [connectionId, databaseName, collectionName, connections, refreshTrigger, currentPage, pageSize, searchTerm, activeFilter]);
+    }, [connectionId, databaseName, collectionName, connections, refreshTrigger, currentPage, pageSize, searchTerm, activeFilter, refreshKey, getRows]);
 
-    // Listen for refresh events
-    useEffect(() => {
-        const handleRefresh = () => {
-            // Re-fetch data logic is inside the other useEffect which depends on refreshTrigger.
-            // But for internal updates, we might want to trigger a re-fetch.
-            // Since fetchData is inside the effect, we can't call it directly.
-            // We can force a re-render or use a local refresh key if needed.
-            // For now, the handleSave/handleDelete updates local state, so we are good.
-        };
-        window.addEventListener('refreshCollection', handleRefresh);
-        return () => window.removeEventListener('refreshCollection', handleRefresh);
-    }, []);
-
-    const handleAddClick = async () => {
-        const conn = connections.find(c => c.id === connectionId);
-        if (!conn) return;
-
-        // Fetch schema template from backend
-        try {
-            const response = await fetch('/api/connections/fetch-collection-schema', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    databaseName,
-                    collectionName
-                }),
-            });
-
-            const result = await response.json();
-            if (result.success && result.template) {
-                setAddContent(JSON.stringify(result.template, null, 2));
-            } else {
-                // Fallback to empty template
-                setAddContent("{\n  \n}");
-            }
-        } catch (e) {
-            console.error('Failed to fetch schema template:', e);
-            // Fallback to empty template
+    const handleAddClick = () => {
+        if (documents.length > 0 && typeof documents[0] === 'object' && documents[0] !== null) {
+            const template: Record<string, string> = {};
+            Object.keys(documents[0]).filter(k => k !== '_id').forEach(k => { template[k] = ''; });
+            setAddContent(JSON.stringify(template, null, 2));
+        } else {
             setAddContent("{\n  \n}");
         }
-
         setShowAddModal(true);
     };
 
@@ -186,53 +194,32 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
             const conn = connections.find(c => c.id === connectionId);
             if (!conn) return;
 
-            const response = await fetch('/api/connections/create-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    databaseName,
-                    collectionName,
-                    document: newDoc
-                }),
+            const graphqlSchema = resolveSchemaParam(conn.type, databaseName);
+            const values = Object.entries(newDoc).map(([key, value]) => ({
+                Key: key,
+                Value: typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''),
+            }));
+
+            const { data: result, errors } = await addRowMutation({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: collectionName,
+                    values,
+                },
+                context: { database: databaseName },
             });
 
-            const result = await response.json();
-            if (result.success) {
+            if (errors?.length) {
+                showAlert("Error", `Failed to add document: ${errors[0].message}`, "error");
+                return;
+            }
+
+            if (result?.AddRow.Status) {
                 showAlert("Success", "Document added successfully!", "success");
                 setShowAddModal(false);
-
-                // Refresh data by re-fetching
-                setLoading(true);
-                const fetchResponse = await fetch('/api/connections/fetch-collection-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: conn.type.toLowerCase(),
-                        host: conn.host,
-                        port: conn.port,
-                        user: conn.user,
-                        password: conn.password,
-                        databaseName,
-                        collectionName,
-                        page: currentPage,
-                        limit: pageSize,
-                        searchTerm: searchTerm.trim()
-                    }),
-                });
-
-                const fetchResult = await fetchResponse.json();
-                if (fetchResult.success) {
-                    setDocuments(fetchResult.documents || []);
-                    setTotalDocuments(fetchResult.total || 0);
-                }
-                setLoading(false);
+                setRefreshKey(prev => prev + 1);
             } else {
-                showAlert("Error", `Failed to add document: ${result.error}`, "error");
+                showAlert("Error", "Failed to add document", "error");
             }
         } catch (e: any) {
             showAlert("Error", `Invalid JSON or add error: ${e.message}`, "error");
@@ -254,29 +241,31 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
             const conn = connections.find(c => c.id === connectionId);
             if (!conn) return;
 
-            const response = await fetch('/api/connections/update-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    databaseName,
-                    collectionName,
-                    documentId: docId,
-                    updates: updatedDoc
-                }),
+            const graphqlSchema = resolveSchemaParam(conn.type, databaseName);
+            const values = [{ Key: 'document', Value: JSON.stringify({ ...updatedDoc, _id: docId }) }];
+            const updatedColumns = Object.keys(updatedDoc).filter(k => k !== '_id');
+
+            const { data: result, errors } = await updateStorageUnitMutation({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: collectionName,
+                    values,
+                    updatedColumns,
+                },
+                context: { database: databaseName },
             });
 
-            const result = await response.json();
-            if (result.success) {
+            if (errors?.length) {
+                showAlert("Error", `Failed to update document: ${errors[0].message}`, "error");
+                return;
+            }
+
+            if (result?.UpdateStorageUnit.Status) {
                 showAlert("Success", "Document updated successfully!", "success");
                 setEditingDoc(null);
-                setDocuments(prev => prev.map(d => d._id === docId ? { ...updatedDoc, _id: docId } : d));
+                setRefreshKey(prev => prev + 1);
             } else {
-                showAlert("Error", `Failed to update document: ${result.error}`, "error");
+                showAlert("Error", "Failed to update document", "error");
             }
         } catch (e: any) {
             showAlert("Error", `Invalid JSON or update error: ${e.message}`, "error");
@@ -294,29 +283,29 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
         const conn = connections.find(c => c.id === connectionId);
         if (!conn) return;
 
+        const graphqlSchema = resolveSchemaParam(conn.type, databaseName);
+        const values = [{ Key: 'document', Value: JSON.stringify({ _id: deletingDocId }) }];
+
         try {
-            const response = await fetch('/api/connections/delete-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    databaseName,
-                    collectionName,
-                    documentId: deletingDocId
-                }),
+            const { data: result, errors } = await deleteRowMutation({
+                variables: {
+                    schema: graphqlSchema,
+                    storageUnit: collectionName,
+                    values,
+                },
+                context: { database: databaseName },
             });
 
-            const result = await response.json();
-            if (result.success) {
+            if (errors?.length) {
+                showAlert("Error", `Failed to delete document: ${errors[0].message}`, "error");
+                return;
+            }
+
+            if (result?.DeleteRow.Status) {
                 showAlert("Success", "Document deleted successfully!", "success");
-                setDocuments(prev => prev.filter(d => d._id !== deletingDocId));
-                setTotalDocuments(prev => Math.max(0, prev - 1));
+                setRefreshKey(prev => prev + 1);
             } else {
-                showAlert("Error", `Failed to delete document: ${result.error}`, "error");
+                showAlert("Error", "Failed to delete document", "error");
             }
         } catch (e: any) {
             showAlert("Error", `Delete error: ${e.message}`, "error");
