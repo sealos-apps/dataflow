@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useRef, ReactNode } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/useAuthStore';
 import type { AuthCredentials } from '@/config/auth-store';
 import {
   useGetDatabaseLazyQuery,
@@ -76,7 +76,8 @@ function deriveConnection(creds: AuthCredentials, createdAt: string): Connection
 const ConnectionContext = createContext<ConnectionContextType | undefined>(undefined);
 
 export function ConnectionProvider({ children }: { children: ReactNode }) {
-  const { credentials, switchDatabase } = useAuth();
+  const credentials = useAuthStore((s) => s.credentials);
+  const switchDatabase = useAuthStore((s) => s.switchDatabase);
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const createdAtRef = useRef(new Date().toISOString());
 

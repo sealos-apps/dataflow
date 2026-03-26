@@ -7,7 +7,7 @@
  * access to the current credentials. This module holds them in memory and
  * mirrors writes to sessionStorage for cross-refresh persistence.
  *
- * AuthContext controls when to restore from storage (not auto-restored on load).
+ * useAuthStore.initialize() controls when to restore from storage (not auto-restored on load).
  */
 
 const STORAGE_KEY = 'dataflow_auth';
@@ -61,7 +61,7 @@ export function getAuth(): CurrentAuth {
 
 /**
  * Restore credentials from sessionStorage into in-memory store.
- * Called by AuthContext on mount when no Sealos URL params are present.
+ * Called by useAuthStore.initialize() on mount when no Sealos URL params are present.
  * Returns the restored credentials, or null if none were found.
  */
 export function restoreFromStorage(): AuthCredentials | null {
