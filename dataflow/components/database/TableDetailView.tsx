@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
     Table as TableIcon,
     Search,
@@ -43,7 +43,7 @@ import {
     type SortCondition,
 } from '@graphql';
 import { transformRowsResult, type TableData } from '@/src/utils/graphql-transforms';
-import { resolveSchemaParam } from '@/src/utils/database-features';
+import { resolveSchemaParam, isNoSQL } from '@/src/utils/database-features';
 import { parseSearchToWhereCondition, mergeSearchWithWhere } from '@/src/utils/search-parser';
 
 interface TableDetailViewProps {
@@ -55,7 +55,7 @@ interface TableDetailViewProps {
 
 export function TableDetailView({ connectionId, databaseName, tableName, schema }: TableDetailViewProps) {
     const { connections } = useConnections();
-    const [getRows] = useGetStorageUnitRowsLazyQuery();
+    const [getRows] = useGetStorageUnitRowsLazyQuery({ fetchPolicy: 'no-cache' });
     const [addRow] = useAddRowMutation();
     const [deleteRow] = useDeleteRowMutation();
     const [updateStorageUnit] = useUpdateStorageUnitMutation();
@@ -144,6 +144,24 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
     const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
     const [filterConditions, setFilterConditions] = useState<any[]>([]);
 
+    // ---- Race condition prevention ----
+    const latestRequestIdRef = useRef(0);
+
+    // ---- Stable reference to current filter/sort state (avoids stale closures) ----
+    const filterConditionsRef = useRef(filterConditions);
+    useEffect(() => { filterConditionsRef.current = filterConditions; }, [filterConditions]);
+
+    // Retain latest column info for search parsing (survives data=null between fetches)
+    const columnsRef = useRef<{ names: string[]; types: string[] }>({ names: [], types: [] });
+    useEffect(() => {
+        if (data?.columns && data.columns.length > 0) {
+            columnsRef.current = {
+                names: data.columns,
+                types: data.columns.map(c => data.columnTypes[c] ?? 'string'),
+            };
+        }
+    }, [data?.columns, data?.columnTypes]);
+
     const [alertState, setAlertState] = useState<{
         isOpen: boolean;
         title: string;
@@ -179,85 +197,60 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
 
     const lastTableRef = React.useRef<string>('');
 
-    const fetchData = async () => {
+    const handleSubmitRequest = useCallback(async (overridePageOffset?: number) => {
+        const conn = connections.find((c) => c.id === connectionId);
+        if (!conn) return;
+
         setLoading(true);
         setError(null);
-        setEditingRowIndex(null);
-        setSelectedRowIndex(null);
-        setIsAddingRow(false);
 
-        const conn = connections.find((c) => c.id === connectionId);
-        if (!conn) {
-            setError('Connection not found');
-            setLoading(false);
-            return;
-        }
+        // Race condition: only the latest request's results are used
+        latestRequestIdRef.current += 1;
+        const thisRequestId = latestRequestIdRef.current;
 
-        const currentTableKey = `${connectionId}:${databaseName}:${schema || ''}:${tableName}`;
-        let effectiveVisibleColumns = visibleColumns;
-        let effectiveFilterConditions = filterConditions;
-        let effectiveSortColumn = sortColumn;
-        let effectiveSortDirection = sortDirection;
+        const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
 
-        if (lastTableRef.current !== currentTableKey) {
-            effectiveVisibleColumns = [];
-            effectiveFilterConditions = [];
-            effectiveSortColumn = null;
-            effectiveSortDirection = null;
-            setVisibleColumns([]);
-            setFilterConditions([]);
-            setSortColumn(null);
-            setSortDirection(null);
-            setSearchTerm('');
-            setCurrentPage(1);
-            lastTableRef.current = currentTableKey;
-        }
-
-        try {
-            const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
-
-            const sort: SortCondition[] | undefined =
-                effectiveSortColumn && effectiveSortDirection
-                    ? [{
-                        Column: effectiveSortColumn,
-                        Direction: effectiveSortDirection === 'asc' ? SortDirection.Asc : SortDirection.Desc,
-                    }]
-                    : undefined;
-
-            let filterWhere: WhereCondition | undefined;
-            if (effectiveFilterConditions.length > 0) {
-                const atomicConditions: WhereCondition[] = effectiveFilterConditions
-                    .filter((fc: any) => fc.column && fc.operator)
-                    .map((fc: any) => ({
-                        Type: WhereConditionType.Atomic,
-                        Atomic: {
-                            Key: fc.column,
-                            Operator: fc.operator,
-                            Value: fc.value ?? '',
-                            ColumnType: data?.columnTypes[fc.column] ?? 'string',
-                        },
-                    }));
-
-                if (atomicConditions.length === 1) {
-                    filterWhere = atomicConditions[0];
-                } else if (atomicConditions.length > 1) {
-                    filterWhere = {
-                        Type: WhereConditionType.And,
-                        And: { Children: atomicConditions },
-                    };
-                }
-            }
-
-            const searchWhere = searchTerm.trim()
-                ? parseSearchToWhereCondition(
-                    searchTerm,
-                    data?.columns ?? [],
-                    data?.columns?.map((c) => data.columnTypes[c]) ?? [],
-                )
+        // Build sort condition
+        const sort: SortCondition[] | undefined =
+            sortColumn && sortDirection
+                ? [{ Column: sortColumn, Direction: sortDirection === 'asc' ? SortDirection.Asc : SortDirection.Desc }]
                 : undefined;
 
-            const where = mergeSearchWithWhere(searchWhere, filterWhere);
+        // Build filter where condition
+        const currentFilters = filterConditionsRef.current;
+        let filterWhere: WhereCondition | undefined;
+        if (currentFilters.length > 0) {
+            const atomicConditions: WhereCondition[] = currentFilters
+                .filter((fc: any) => fc.column && fc.operator)
+                .map((fc: any) => ({
+                    Type: WhereConditionType.Atomic,
+                    Atomic: {
+                        Key: fc.column,
+                        Operator: fc.operator,
+                        Value: fc.value ?? '',
+                        ColumnType: data?.columnTypes[fc.column] ?? 'string',
+                    },
+                }));
 
+            if (atomicConditions.length === 1) {
+                filterWhere = atomicConditions[0];
+            } else if (atomicConditions.length > 1) {
+                filterWhere = { Type: WhereConditionType.And, And: { Children: atomicConditions } };
+            }
+        }
+
+        // Build search where condition
+        const searchWhere = searchTerm.trim()
+            ? parseSearchToWhereCondition(
+                searchTerm,
+                columnsRef.current.names,
+                columnsRef.current.types,
+            )
+            : undefined;
+
+        const where = mergeSearchWithWhere(searchWhere, filterWhere);
+
+        try {
             const { data: result, error: queryError } = await getRows({
                 variables: {
                     schema: graphqlSchema,
@@ -265,9 +258,12 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                     where,
                     sort,
                     pageSize,
-                    pageOffset: (currentPage - 1) * pageSize,
+                    pageOffset: overridePageOffset ?? (currentPage - 1) * pageSize,
                 },
             });
+
+            // Drop stale results
+            if (thisRequestId !== latestRequestIdRef.current) return;
 
             if (queryError) {
                 setError(queryError.message);
@@ -279,25 +275,53 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                 setData(tableData);
                 setPrimaryKey(tableData.primaryKey);
                 setForeignKeyColumns(tableData.foreignKeyColumns);
-                if (effectiveVisibleColumns.length === 0 && tableData.columns.length > 0) {
+                if (visibleColumns.length === 0 && tableData.columns.length > 0) {
                     setVisibleColumns(tableData.columns);
                 }
             }
         } catch (err: any) {
+            if (thisRequestId !== latestRequestIdRef.current) return;
             setError(err.message || 'Failed to fetch table data');
         } finally {
-            setLoading(false);
+            if (thisRequestId === latestRequestIdRef.current) {
+                setLoading(false);
+            }
         }
-    };
+    }, [connections, connectionId, databaseName, schema, tableName, sortColumn, sortDirection, searchTerm, pageSize, currentPage, getRows, visibleColumns.length]);
 
+    // ---- Table switch: reset state + fetch ----
     useEffect(() => {
-        fetchData();
-    }, [connectionId, databaseName, tableName, schema, connections, currentPage, pageSize, refreshKey, searchTerm, sortColumn, sortDirection, filterConditions, visibleColumns]);
+        const currentTableKey = `${connectionId}:${databaseName}:${schema || ''}:${tableName}`;
+        if (lastTableRef.current !== currentTableKey) {
+            lastTableRef.current = currentTableKey;
+            setVisibleColumns([]);
+            setFilterConditions([]);
+            setSortColumn(null);
+            setSortDirection(null);
+            setSearchTerm('');
+            setCurrentPage(1);
+            setEditingRowIndex(null);
+            setSelectedRowIndex(null);
+            setIsAddingRow(false);
+        }
+    }, [connectionId, databaseName, schema, tableName]);
 
-    // Reset to page 1 when search term changes
+    // ---- Initial fetch + refetch on data-changing params ----
     useEffect(() => {
+        handleSubmitRequest();
+    }, [handleSubmitRequest, refreshKey]);
+
+    // ---- Page change handler (explicit offset) ----
+    const handlePageChange = useCallback((newPage: number) => {
+        setCurrentPage(newPage);
+        handleSubmitRequest((newPage - 1) * pageSize);
+    }, [handleSubmitRequest, pageSize]);
+
+    // ---- Search submit (reset to page 1) ----
+    const handleSearchSubmit = useCallback(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+        handleSubmitRequest(0);
+    }, [handleSubmitRequest]);
 
     // Expose refresh function via window for external triggers
     useEffect(() => {
@@ -390,7 +414,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
             if (result?.UpdateStorageUnit.Status) {
                 showAlert('Success', 'Row updated successfully!', 'success');
                 handleCancelEdit();
-                fetchData();
+                setRefreshKey(prev => prev + 1);
             } else {
                 showAlert('Error', 'Failed to update row', 'error');
             }
@@ -434,7 +458,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
 
             if (result?.DeleteRow.Status) {
                 showAlert('Success', 'Row deleted successfully!', 'success');
-                fetchData();
+                setRefreshKey(prev => prev + 1);
             } else {
                 showAlert('Error', 'Failed to delete row', 'error');
             }
@@ -469,15 +493,40 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
         const conn = connections.find((c) => c.id === connectionId);
         if (!conn) return;
 
-        if (Object.keys(newRowData).length === 0 || Object.values(newRowData).every((v) => !v)) {
+        const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
+        let values: Array<{ Key: string; Value: string }>;
+
+        // MongoDB document mode: single Document column → parse JSON
+        if (isNoSQL(conn.type) && data?.columns.length === 1 && data.columnTypes[data.columns[0]] === 'Document') {
+            const docValue = newRowData[data.columns[0]] || newRowData['document'] || '';
+            try {
+                const json = JSON.parse(docValue);
+                values = Object.keys(json).map(key => {
+                    const val = json[key];
+                    return {
+                        Key: key,
+                        Value: typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val),
+                    };
+                });
+            } catch {
+                showAlert('Error', 'Invalid JSON document', 'error');
+                return;
+            }
+        } else {
+            // Standard relational mode
+            if (Object.keys(newRowData).length === 0 || Object.values(newRowData).every((v) => !v)) {
+                showAlert('Error', 'Please enter at least one value', 'error');
+                return;
+            }
+            values = Object.entries(newRowData)
+                .filter(([_, v]) => v !== undefined && v !== '')
+                .map(([key, value]) => ({ Key: key, Value: String(value) }));
+        }
+
+        if (values.length === 0) {
             showAlert('Error', 'Please enter at least one value', 'error');
             return;
         }
-
-        const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema);
-        const values = Object.entries(newRowData)
-            .filter(([_, v]) => v !== undefined && v !== '')
-            .map(([key, value]) => ({ Key: key, Value: String(value) }));
 
         try {
             const { data: result, errors } = await addRow({
@@ -496,7 +545,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
             if (result?.AddRow.Status) {
                 showAlert('Success', 'New row added successfully!', 'success');
                 handleCancelAdd();
-                fetchData();
+                setRefreshKey(prev => prev + 1);
             } else {
                 showAlert('Error', 'Failed to add row', 'error');
             }
@@ -511,7 +560,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                 <div className="text-center p-8 bg-background rounded-xl shadow-nebula-card border">
                     <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-sm text-muted-foreground">{error}</p>
-                    <Button variant="outline" className="mt-4" onClick={fetchData}>
+                    <Button variant="outline" className="mt-4" onClick={() => handleSubmitRequest()}>
                         Retry
                     </Button>
                 </div>
@@ -519,6 +568,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
         );
     }
 
+    const canEdit = data && !data.disableUpdate;
     const totalRows = data?.total || 0;
     const totalPages = Math.ceil(totalRows / pageSize);
     const startRow = (currentPage - 1) * pageSize + 1;
@@ -540,15 +590,19 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button
-                        onClick={handleAddClick}
-                        size="sm"
-                        className="gap-2 shadow-sm"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Data
-                    </Button>
-                    <div className="h-4 w-px bg-border mx-1" />
+                    {canEdit && (
+                        <>
+                            <Button
+                                onClick={handleAddClick}
+                                size="sm"
+                                className="gap-2 shadow-sm"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                Add Data
+                            </Button>
+                            <div className="h-4 w-px bg-border mx-1" />
+                        </>
+                    )}
                     <Button
                         variant="outline"
                         size="sm"
@@ -574,7 +628,7 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                         variant="outline"
                         size="sm"
                         className="h-8 gap-2"
-                        onClick={fetchData}
+                        onClick={() => setRefreshKey(prev => prev + 1)}
                         disabled={loading}
                     >
                         <div className={cn("flex items-center justify-center", loading && "animate-spin")}>
@@ -733,17 +787,19 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                                                 </th>
                                             );
                                         })}
-                                        <th className="px-6 py-2 text-right font-semibold text-xs text-muted-foreground uppercase tracking-wider border-b border-r border-border/50 w-[120px] sticky top-0 right-0 bg-background z-50 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)]">
-                                            Actions
-                                        </th>
+                                        {canEdit && (
+                                            <th className="px-6 py-2 text-right font-semibold text-xs text-muted-foreground uppercase tracking-wider border-b border-r border-border/50 w-[120px] sticky top-0 right-0 bg-background z-50 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)]">
+                                                Actions
+                                            </th>
+                                        )}
                                         <th className="border-b border-border/50 w-full bg-background sticky top-0 z-40"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/50 bg-background">
                                     {/* Add Row */}
-                                    {isAddingRow && (
+                                    {canEdit && isAddingRow && (
                                         <tr className="bg-gray-200 border-b border-border/50">
-                                            {data?.columns?.map((col: string, idx: number) => {
+                                            {data?.columns?.filter((col: string) => visibleColumns.includes(col)).map((col: string, idx: number) => {
                                                 const width = columnWidths[col] || 120;
                                                 return (
                                                     <td key={idx} className="p-0 border-r border-border/50" style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}>
@@ -826,59 +882,58 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                                                         </td>
                                                     );
                                                 })}
-                                                <td className={cn(
-                                                    "px-6 py-2 text-right whitespace-nowrap sticky right-0 transition-colors z-20 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] border-r border-b border-border/50",
-                                                    isEditing ? "bg-gray-200" : isSelected ? "bg-gray-200" : "bg-background group-hover:bg-muted/30"
-                                                )}>
-                                                    <div className={cn(
-                                                        "flex items-center justify-end gap-1 transition-opacity",
-                                                        isEditing ? "opacity-100" : "opacity-100"
+                                                {canEdit && (
+                                                    <td className={cn(
+                                                        "px-6 py-2 text-right whitespace-nowrap sticky right-0 transition-colors z-20 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] border-r border-b border-border/50",
+                                                        isEditing ? "bg-gray-200" : isSelected ? "bg-gray-200" : "bg-background group-hover:bg-muted/30"
                                                     )}>
-                                                        {isEditing ? (
-                                                            <>
-                                                                <Button
-                                                                    onClick={handleSave}
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                                                    title="Save"
-                                                                >
-                                                                    <Save className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                                <Button
-                                                                    onClick={handleCancelEdit}
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                                                    title="Cancel"
-                                                                >
-                                                                    <X className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Button
-                                                                    onClick={() => handleEditClick(row, rowIdx)}
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                                                    title="Edit Row"
-                                                                >
-                                                                    <Edit2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                                <Button
-                                                                    onClick={() => handleDeleteClick(rowIdx)}
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                                                    title="Delete Row"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </td>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            {isEditing ? (
+                                                                <>
+                                                                    <Button
+                                                                        onClick={handleSave}
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                                        title="Save"
+                                                                    >
+                                                                        <Save className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={handleCancelEdit}
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                                        title="Cancel"
+                                                                    >
+                                                                        <X className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Button
+                                                                        onClick={() => handleEditClick(row, rowIdx)}
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                                        title="Edit Row"
+                                                                    >
+                                                                        <Edit2 className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => handleDeleteClick(rowIdx)}
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                                        title="Delete Row"
+                                                                    >
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                )}
                                                 <td className={cn(
                                                     "border-b border-border/50",
                                                     isEditing ? "bg-gray-200" : ""
@@ -1028,7 +1083,10 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
                     onApply={(cols, conditions) => {
                         setVisibleColumns(cols);
                         setFilterConditions(conditions);
-                        // fetchData will be triggered by useEffect
+                        setCurrentPage(1);
+                        // Manually trigger since ref-based state won't trigger the effect
+                        filterConditionsRef.current = conditions;
+                        setRefreshKey(prev => prev + 1);
                     }}
                 />
             )}

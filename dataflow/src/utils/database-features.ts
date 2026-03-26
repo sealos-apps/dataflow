@@ -47,6 +47,19 @@ export function supportsDatabaseSwitching(dbType: string | undefined): boolean {
   return dbType != null && TYPES_WITH_DATABASE_SWITCHING.has(dbType);
 }
 
+const NOSQL_TYPES: ReadonlySet<string> = new Set([
+  'MONGODB', 'MongoDB', 'MongoDb',
+  'REDIS', 'Redis',
+  'ELASTICSEARCH', 'ElasticSearch',
+]);
+
+/**
+ * Returns true if this database type is a NoSQL database (MongoDB, Redis, ElasticSearch).
+ */
+export function isNoSQL(dbType: string | undefined): boolean {
+  return dbType != null && NOSQL_TYPES.has(dbType);
+}
+
 /**
  * Resolve the `schema` GraphQL parameter for a given context.
  *
