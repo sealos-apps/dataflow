@@ -49,6 +49,7 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
         try {
             const { data, error } = await rawExecute({
                 variables: { query },
+                context: { database: context?.databaseName },
             });
 
             const endTime = Date.now();
@@ -98,6 +99,7 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
         try {
             const formatted = format(query);
             setQuery(formatted);
+            onSqlChange?.(formatted);
             if (editorRef.current) {
                 editorRef.current.setValue(formatted);
             }
@@ -213,7 +215,11 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
                         height="100%"
                         defaultLanguage="sql"
                         value={query}
-                        onChange={(value: string | undefined) => setQuery(value || '')}
+                        onChange={(value: string | undefined) => {
+                            const v = value || '';
+                            setQuery(v);
+                            onSqlChange?.(v);
+                        }}
                         theme="vs-light"
                         options={{
                             minimap: { enabled: false },
