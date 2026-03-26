@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, AlertTriangle, Loader2 } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface DeleteConnectionModalProps {
     isOpen: boolean;
@@ -10,7 +10,7 @@ interface DeleteConnectionModalProps {
 }
 
 export function DeleteConnectionModal({ isOpen, onClose, connectionId, connectionName }: DeleteConnectionModalProps) {
-    const { removeConnection } = useConnections();
+    const { removeConnection } = useConnectionStore();
     const [confirmName, setConfirmName] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 

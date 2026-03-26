@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, AlertTriangle, Trash2, Loader2 } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 import { AlertModal } from "@/components/ui/AlertModal";
 
@@ -14,7 +14,7 @@ interface DeleteTableModalProps {
 }
 
 export function DeleteTableModal({ isOpen, onClose, connectionId, databaseName, tableName, onSuccess }: DeleteTableModalProps) {
-    const { deleteTable } = useConnections();
+    const { deleteTable } = useConnectionStore();
     const [confirmName, setConfirmName] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 

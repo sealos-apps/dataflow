@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import MonacoEditor from "./MonacoEditorWrapper";
 import type { Monaco } from "@monaco-editor/react";
 import type { editor } from 'monaco-editor';
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface SQLEditorViewProps {
     context?: {
@@ -17,7 +17,7 @@ interface SQLEditorViewProps {
 }
 
 export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorViewProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [activeResultTab, setActiveResultTab] = useState<'result' | 'message' | 'profile' | 'status'>('result');
     const [query, setQuery] = useState(initialSql || "");
     const [isExecuting, setIsExecuting] = useState(false);

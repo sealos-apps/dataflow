@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Key, Loader2, Database } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface KeyDetailViewProps {
     connectionId: string;
@@ -9,7 +9,7 @@ interface KeyDetailViewProps {
 }
 
 export function KeyDetailView({ connectionId, databaseName, keyName }: KeyDetailViewProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [loading, setLoading] = useState(true);
     const [keyData, setKeyData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);

@@ -23,7 +23,7 @@ import {
     ArrowDownAZ,
     EyeOff
 } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { ExportDataModal } from "@/components/database/ExportDataModal";
 import { FilterTableModal } from "@/components/database/FilterTableModal";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
@@ -54,7 +54,7 @@ interface TableDetailViewProps {
 }
 
 export function TableDetailView({ connectionId, databaseName, tableName, schema }: TableDetailViewProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [getRows] = useGetStorageUnitRowsLazyQuery({ fetchPolicy: 'no-cache' });
     const [addRow] = useAddRowMutation();
     const [deleteRow] = useDeleteRowMutation();

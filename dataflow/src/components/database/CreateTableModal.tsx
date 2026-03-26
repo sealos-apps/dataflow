@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { AlertModal } from "@/components/ui/AlertModal";
 
 import { X, Table, Save, Loader2, Plus, Trash2 } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { cn } from "@/lib/utils";
 
 interface CreateTableModalProps {
@@ -26,7 +26,7 @@ const COLUMN_TYPES = [
 ];
 
 export function CreateTableModal({ isOpen, onClose, connectionId, databaseName, onSuccess }: CreateTableModalProps) {
-    const { createTable } = useConnections();
+    const { createTable } = useConnectionStore();
     const [tableName, setTableName] = useState("");
     const [columns, setColumns] = useState<ColumnDefinition[]>([
         { id: "1", name: "id", type: "INT", isPrimaryKey: true, isNullable: false }

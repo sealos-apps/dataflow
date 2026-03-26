@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Upload, X, Loader2, FileJson, FileType, CheckCircle2, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ImportCollectionModalProps {
     isOpen: boolean;
@@ -14,7 +14,7 @@ interface ImportCollectionModalProps {
 }
 
 export function ImportCollectionModal({ isOpen, onClose, connectionId, databaseName, collectionName, onSuccess }: ImportCollectionModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [format, setFormat] = useState<'json' | 'csv'>('json');
     const [file, setFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);

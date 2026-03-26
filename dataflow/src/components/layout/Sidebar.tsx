@@ -21,7 +21,7 @@ import {
     List
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConnections, Connection } from "@/contexts/ConnectionContext";
+import { useConnectionStore, type Connection } from "@/stores/useConnectionStore";
 import { ContextMenu } from "../ui/ContextMenu";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
 import { AlertModal } from "../ui/AlertModal";
@@ -59,7 +59,7 @@ const DB_ICONS: Record<string, string> = {
 };
 
 export function Sidebar({ onRefreshCollection }: SidebarProps) {
-    const { connections, selectedItem, selectItem, fetchDatabases, fetchSchemas, fetchTables } = useConnections();
+    const { connections, selectedItem, selectItem, fetchDatabases, fetchSchemas, fetchTables } = useConnectionStore();
     const { openTab } = useTabStore();
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
     const [treeData, setTreeData] = useState<Record<string, any[]>>({});

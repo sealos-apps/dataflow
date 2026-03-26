@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Download, FileJson, FileSpreadsheet, FileCode, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ExportDatabaseModalProps {
     isOpen: boolean;
@@ -18,7 +18,7 @@ export function ExportDatabaseModal({
     connectionId,
     databaseName
 }: ExportDatabaseModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [format, setFormat] = useState<ExportFormat>('sql');
     const [filter, setFilter] = useState("");
     const [isExporting, setIsExporting] = useState(false);

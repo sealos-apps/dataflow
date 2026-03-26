@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Download, FileJson, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ExportRedisModalProps {
     isOpen: boolean;
@@ -22,7 +22,7 @@ export function ExportRedisModal({
     initialPattern = "*",
     initialTypes = []
 }: ExportRedisModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [format, setFormat] = useState<ExportFormat>('json');
     const [pattern, setPattern] = useState(initialPattern);
     const [types, setTypes] = useState<string[]>(initialTypes);

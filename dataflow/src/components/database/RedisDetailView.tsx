@@ -18,7 +18,7 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useConnections } from '@/contexts/ConnectionContext';
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -41,7 +41,7 @@ interface RedisDetailViewProps {
 }
 
 export function RedisDetailView({ connectionId, databaseName }: RedisDetailViewProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [keys, setKeys] = useState<RedisKey[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 

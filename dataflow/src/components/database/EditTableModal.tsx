@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Table, Save, Loader2, Plus, Trash2, Key, Link as LinkIcon, CheckCircle, XCircle, ChevronDown } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { cn } from "@/lib/utils";
 
 interface EditTableModalProps {
@@ -64,7 +64,7 @@ const INDEX_TYPES = ["BTREE", "HASH", "FULLTEXT", "SPATIAL"];
 const FK_ACTIONS = ["RESTRICT", "CASCADE", "SET NULL", "NO ACTION", "SET DEFAULT"];
 
 export function EditTableModal({ isOpen, onClose, connectionId, databaseName, tableName, schema, onSuccess }: EditTableModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [activeTab, setActiveTab] = useState<'fields' | 'indexes' | 'foreignKeys'>('fields');
 
     const [columns, setColumns] = useState<ColumnDefinition[]>([]);

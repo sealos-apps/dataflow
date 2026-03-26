@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, AlertTriangle, Trash2, Loader2 } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface DeleteDatabaseModalProps {
     isOpen: boolean;
@@ -11,7 +11,7 @@ interface DeleteDatabaseModalProps {
 }
 
 export function DeleteDatabaseModal({ isOpen, onClose, connectionId, databaseName, onSuccess }: DeleteDatabaseModalProps) {
-    const { deleteDatabase } = useConnections();
+    const { deleteDatabase } = useConnectionStore();
     const [confirmName, setConfirmName] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 

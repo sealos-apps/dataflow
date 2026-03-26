@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Database, Save, Loader2 } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface CreateDatabaseModalProps {
     isOpen: boolean;
@@ -10,7 +10,7 @@ interface CreateDatabaseModalProps {
 }
 
 export function CreateDatabaseModal({ isOpen, onClose, connectionId, onSuccess }: CreateDatabaseModalProps) {
-    const { createDatabase } = useConnections();
+    const { createDatabase } = useConnectionStore();
     const [dbName, setDbName] = useState("");
     const [charset, setCharset] = useState("utf8mb4");
     const [collation, setCollation] = useState("utf8mb4_general_ci");

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, FileJson, FileSpreadsheet, FileCode, FileText, Loader2, CheckCircle, FileUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ImportDataModalProps {
     isOpen: boolean;
@@ -24,7 +24,7 @@ export function ImportDataModal({
     tableName,
     onSuccess
 }: ImportDataModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [format, setFormat] = useState<ImportFormat>('csv');
     const [file, setFile] = useState<File | null>(null);
     const [targetTableName, setTargetTableName] = useState(tableName || "");

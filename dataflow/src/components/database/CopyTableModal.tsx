@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Copy, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -14,7 +14,7 @@ interface CopyTableModalProps {
 }
 
 export function CopyTableModal({ isOpen, onClose, connectionId, databaseName, tableName, onSuccess }: CopyTableModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [newTableName, setNewTableName] = useState(`${tableName}_copy`);
     const [copyOption, setCopyOption] = useState<"structure" | "structure_data">("structure_data");
     const [isProcessing, setIsProcessing] = useState(false);

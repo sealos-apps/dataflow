@@ -3,7 +3,7 @@ import { Download, X, Loader2, FileJson, FileType, CheckCircle2 } from "lucide-r
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ExportCollectionModalProps {
     isOpen: boolean;
@@ -14,7 +14,7 @@ interface ExportCollectionModalProps {
 }
 
 export function ExportCollectionModal({ isOpen, onClose, connectionId, databaseName, collectionName }: ExportCollectionModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [format, setFormat] = useState<'json' | 'csv'>('json');
     const [filter, setFilter] = useState('');
     const [limit, setLimit] = useState<number | ''>('');

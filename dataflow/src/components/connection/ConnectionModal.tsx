@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { X, Database, Server, HardDrive, Cloud, Save, Loader2, Check, AlertCircle, Eye, EyeOff, ChevronLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useConnections, Connection } from "@/contexts/ConnectionContext";
+import { useConnectionStore, type Connection } from "@/stores/useConnectionStore";
 
 interface ConnectionModalProps {
     isOpen: boolean;
@@ -21,7 +21,7 @@ const CONNECTION_TYPES = [
 ];
 
 export function ConnectionModal({ isOpen, onClose, initialData }: ConnectionModalProps) {
-    const { addConnection, editConnection } = useConnections();
+    const { addConnection, editConnection } = useConnectionStore();
     const [step, setStep] = useState<"select" | "config">(initialData ? "config" : "select");
     const [selectedType, setSelectedType] = useState<ConnectionType | null>(
         initialData ? (initialData.type as ConnectionType) : null

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, FileJson, FileSpreadsheet, FileCode, FileText, Loader2, CheckCircle, FileUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ImportDatabaseModalProps {
     isOpen: boolean;
@@ -20,7 +20,7 @@ export function ImportDatabaseModal({
     databaseName,
     onSuccess
 }: ImportDatabaseModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
 
     // Get connection type to determine appropriate format
     const connection = connections.find(c => c.id === connectionId);

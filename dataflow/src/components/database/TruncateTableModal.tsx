@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Scissors, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { Button } from "@/components/ui/Button";
 
 interface TruncateTableModalProps {
@@ -13,7 +13,7 @@ interface TruncateTableModalProps {
 }
 
 export function TruncateTableModal({ isOpen, onClose, connectionId, databaseName, tableName, onSuccess }: TruncateTableModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 

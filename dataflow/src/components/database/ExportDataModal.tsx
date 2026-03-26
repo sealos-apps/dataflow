@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Download, FileJson, FileSpreadsheet, FileCode, FileText, Loader2, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 interface ExportDataModalProps {
     isOpen: boolean;
@@ -22,7 +22,7 @@ export function ExportDataModal({
     schema,
     tableName
 }: ExportDataModalProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [format, setFormat] = useState<ExportFormat>('csv');
     const [rowCount, setRowCount] = useState<number | ''>(1000);
     const [filter, setFilter] = useState("");

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FileJson, Loader2, Database, Edit2, Trash2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Plus, Save, Copy, Download, Filter, RefreshCcw } from "lucide-react";
-import { useConnections } from "@/contexts/ConnectionContext";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { Button } from "@/components/ui/Button";
@@ -17,7 +17,7 @@ interface CollectionDetailViewProps {
 }
 
 export function CollectionDetailView({ connectionId, databaseName, collectionName, refreshTrigger }: CollectionDetailViewProps) {
-    const { connections } = useConnections();
+    const { connections } = useConnectionStore();
     const [loading, setLoading] = useState(true);
     const [documents, setDocuments] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
