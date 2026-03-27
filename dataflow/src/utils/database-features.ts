@@ -71,10 +71,11 @@ export function resolveSchemaParam(
   databaseName: string,
   schemaName?: string,
 ): string {
-  if (schemaName && !usesDatabaseAsSchema(dbType)) {
-    return schemaName;
+  if (usesDatabaseAsSchema(dbType)) {
+    return databaseName;
   }
-  return databaseName;
+  // Postgres-like: use provided schema or default to "public"
+  return schemaName || 'public';
 }
 
 /**
