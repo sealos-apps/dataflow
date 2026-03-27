@@ -85,7 +85,7 @@ function ModalFormAlert() {
   const Icon = ALERT_ICONS[type]
 
   return (
-    <div className={cn('flex items-start gap-3 rounded-lg border p-3', ALERT_STYLES[type])}>
+    <div role="alert" className={cn('flex items-start gap-3 rounded-lg border p-3', ALERT_STYLES[type])}>
       {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0" />}
       <div className="flex-1 space-y-0.5">
         <p className="text-sm font-medium">{title}</p>
