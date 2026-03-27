@@ -751,6 +751,14 @@ export type DeleteRowMutationVariables = Exact<{
 
 export type DeleteRowMutation = { __typename?: 'Mutation', DeleteRow: { __typename?: 'StatusResponse', Status: boolean } };
 
+export type ExecuteConfirmedSqlMutationVariables = Exact<{
+  query: Scalars['String']['input'];
+  operationType: Scalars['String']['input'];
+}>;
+
+
+export type ExecuteConfirmedSqlMutation = { __typename?: 'Mutation', ExecuteConfirmedSQL: { __typename?: 'AIChatMessage', Type: string, Text: string, RequiresConfirmation: boolean, Result?: { __typename?: 'RowsResult', Rows: Array<Array<string>>, TotalCount: number, Columns: Array<{ __typename?: 'Column', Type: string, Name: string }> } | null } };
+
 export type LoginMutationVariables = Exact<{
   credentials: LoginCredentials;
 }>;
@@ -933,6 +941,50 @@ export function useDeleteRowMutation(baseOptions?: Apollo.MutationHookOptions<De
 export type DeleteRowMutationHookResult = ReturnType<typeof useDeleteRowMutation>;
 export type DeleteRowMutationResult = Apollo.MutationResult<DeleteRowMutation>;
 export type DeleteRowMutationOptions = Apollo.BaseMutationOptions<DeleteRowMutation, DeleteRowMutationVariables>;
+export const ExecuteConfirmedSqlDocument = gql`
+    mutation ExecuteConfirmedSQL($query: String!, $operationType: String!) {
+  ExecuteConfirmedSQL(query: $query, operationType: $operationType) {
+    Type
+    Text
+    Result {
+      Columns {
+        Type
+        Name
+      }
+      Rows
+      TotalCount
+    }
+    RequiresConfirmation
+  }
+}
+    `;
+export type ExecuteConfirmedSqlMutationFn = Apollo.MutationFunction<ExecuteConfirmedSqlMutation, ExecuteConfirmedSqlMutationVariables>;
+
+/**
+ * __useExecuteConfirmedSqlMutation__
+ *
+ * To run a mutation, you first call `useExecuteConfirmedSqlMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useExecuteConfirmedSqlMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [executeConfirmedSqlMutation, { data, loading, error }] = useExecuteConfirmedSqlMutation({
+ *   variables: {
+ *      query: // value for 'query'
+ *      operationType: // value for 'operationType'
+ *   },
+ * });
+ */
+export function useExecuteConfirmedSqlMutation(baseOptions?: Apollo.MutationHookOptions<ExecuteConfirmedSqlMutation, ExecuteConfirmedSqlMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ExecuteConfirmedSqlMutation, ExecuteConfirmedSqlMutationVariables>(ExecuteConfirmedSqlDocument, options);
+      }
+export type ExecuteConfirmedSqlMutationHookResult = ReturnType<typeof useExecuteConfirmedSqlMutation>;
+export type ExecuteConfirmedSqlMutationResult = Apollo.MutationResult<ExecuteConfirmedSqlMutation>;
+export type ExecuteConfirmedSqlMutationOptions = Apollo.BaseMutationOptions<ExecuteConfirmedSqlMutation, ExecuteConfirmedSqlMutationVariables>;
 export const LoginDocument = gql`
     mutation Login($credentials: LoginCredentials!) {
   Login(credentials: $credentials) {
