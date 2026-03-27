@@ -2,6 +2,14 @@ import React, { useState, useEffect } from "react";
 import { X, Table, Save, Loader2, Plus, Trash2, Key, Link as LinkIcon, CheckCircle, XCircle, ChevronDown } from "lucide-react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { cn } from "@/lib/utils";
+import { useRawExecuteLazyQuery, useExecuteConfirmedSqlMutation } from '@graphql';
+import type { SqlDialect } from '@/utils/ddl-sql';
+import {
+  addColumnSQL, dropColumnSQL, modifyColumnSQL,
+  createIndexSQL, dropIndexSQL,
+  addForeignKeySQL, dropForeignKeySQL,
+  columnsQuery, indexesQuery, foreignKeysQuery,
+} from '@/utils/ddl-sql';
 
 interface EditTableModalProps {
     isOpen: boolean;
@@ -85,6 +93,18 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
 
     const conn = connections.find(c => c.id === connectionId);
 
+    const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' });
+    const [executeConfirmedSql] = useExecuteConfirmedSqlMutation();
+
+    const dialect: SqlDialect = (() => {
+      const dbType = conn?.type;
+      const map: Record<string, SqlDialect> = {
+        MYSQL: 'MYSQL', POSTGRES: 'POSTGRES', MARIADB: 'MARIADB',
+        SQLITE3: 'SQLITE3', CLICKHOUSE: 'CLICKHOUSE',
+      };
+      return map[dbType ?? ''] ?? 'POSTGRES';
+    })();
+
     useEffect(() => {
         if (isOpen) {
             fetchTableSchema();
@@ -93,116 +113,110 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
 
     const fetchTableSchema = async () => {
         setIsLoading(true);
-        if (!conn) {
-            setIsLoading(false);
-            return;
-        }
+        if (!conn) { setIsLoading(false); return; }
 
         try {
-            const response = await fetch('/api/connections/fetch-table-schema', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    databaseName,
-                    tableName,
-                    schema
-                }),
+            // Fetch columns
+            const { data: colData } = await rawExecute({
+                variables: { query: columnsQuery(dialect, databaseName, tableName, schema) },
+                context: { database: databaseName },
             });
-
-            const data = await response.json();
-            if (data.success) {
-                const cols = data.columns?.map((col: any, index: number) => ({
-                    id: `col_${index}`,
-                    name: col.name,
-                    type: col.type,
-                    isPrimaryKey: col.isPrimaryKey,
-                    isNullable: col.isNullable,
-                    comment: col.comment || '',
-                    isNew: false
-                })) || [];
+            if (colData?.RawExecute) {
+                const colNames = colData.RawExecute.Columns.map(c => c.Name.toLowerCase());
+                const cols: ColumnDefinition[] = colData.RawExecute.Rows.map((row, i) => {
+                    const get = (name: string) => row[colNames.indexOf(name)] ?? '';
+                    return {
+                        id: `col_${i}`,
+                        name: get('column_name') || get('name'),
+                        type: get('column_type') || get('data_type') || get('type'),
+                        isPrimaryKey: (get('column_key') || get('pk')) === 'PRI' || get('pk') === '1',
+                        isNullable: (get('is_nullable') || get('notnull')) !== 'NO' && get('notnull') !== '1',
+                        comment: get('column_comment') || '',
+                        isNew: false,
+                    };
+                });
                 setColumns(cols);
                 setOriginalColumns(JSON.parse(JSON.stringify(cols)));
+            }
 
-                const idxs = data.indexes?.map((idx: any, index: number) => ({
-                    id: `idx_${index}`,
-                    name: idx.name,
-                    columns: idx.columns || [],
-                    type: idx.type,
-                    isUnique: idx.isUnique,
-                    comment: idx.comment || '',
-                    isNew: false
-                })) || [];
+            // Fetch indexes
+            const { data: idxData } = await rawExecute({
+                variables: { query: indexesQuery(dialect, databaseName, tableName, schema) },
+                context: { database: databaseName },
+            });
+            if (idxData?.RawExecute) {
+                const idxNames = idxData.RawExecute.Columns.map(c => c.Name.toLowerCase());
+                const idxs: IndexDefinition[] = idxData.RawExecute.Rows.map((row, i) => {
+                    const get = (name: string) => row[idxNames.indexOf(name)] ?? '';
+                    return {
+                        id: `idx_${i}`,
+                        name: get('index_name') || get('name'),
+                        columns: (get('columns') || get('column_name') || '').split(',').filter(Boolean),
+                        type: get('index_type') || 'BTREE',
+                        isUnique: get('is_unique') === 'true' || get('is_unique') === 't' || get('non_unique') === '0',
+                        comment: '',
+                        isNew: false,
+                    };
+                });
                 setIndexes(idxs);
                 setOriginalIndexes(JSON.parse(JSON.stringify(idxs)));
+            }
 
-                const fks = data.foreignKeys?.map((fk: any, index: number) => ({
-                    id: `fk_${index}`,
-                    name: fk.name,
-                    column: fk.column,
-                    referencedTable: fk.referencedTable,
-                    referencedColumn: fk.referencedColumn,
-                    onDelete: fk.onDelete || 'RESTRICT',
-                    onUpdate: fk.onUpdate || 'RESTRICT',
-                    isNew: false
-                })) || [];
+            // Fetch foreign keys
+            const { data: fkData } = await rawExecute({
+                variables: { query: foreignKeysQuery(dialect, databaseName, tableName, schema) },
+                context: { database: databaseName },
+            });
+            if (fkData?.RawExecute) {
+                const fkNames = fkData.RawExecute.Columns.map(c => c.Name.toLowerCase());
+                const fks: ForeignKeyDefinition[] = fkData.RawExecute.Rows.map((row, i) => {
+                    const get = (name: string) => row[fkNames.indexOf(name)] ?? '';
+                    return {
+                        id: `fk_${i}`,
+                        name: get('constraint_name'),
+                        column: get('column_name'),
+                        referencedTable: get('referenced_table_name'),
+                        referencedColumn: get('referenced_column_name'),
+                        onDelete: get('delete_rule') || 'RESTRICT',
+                        onUpdate: get('update_rule') || 'RESTRICT',
+                        isNew: false,
+                    };
+                });
                 setForeignKeys(fks);
                 setOriginalForeignKeys(JSON.parse(JSON.stringify(fks)));
-            } else {
-                console.error('Failed to fetch table schema:', data.error);
-                setColumns([]);
-                setIndexes([]);
-                setForeignKeys([]);
             }
         } catch (error) {
             console.error('Error fetching table schema:', error);
-            setColumns([]);
-            setIndexes([]);
-            setForeignKeys([]);
+            setColumns([]); setIndexes([]); setForeignKeys([]);
         }
-
         setIsLoading(false);
     };
 
     if (!isOpen) return null;
 
     // --- API Call Helper ---
-    const executeOperation = async (operation: string, payload: any): Promise<OperationResult> => {
-        if (!conn) {
-            return { success: false, message: 'Connection not found' };
-        }
+    const executeOperation = async (sql: string): Promise<OperationResult> => {
+        const statements = sql.split(';\n').map(s => s.trim()).filter(Boolean);
+        const allSql = sql;
 
-        try {
-            const response = await fetch('/api/connections/update-table-schema', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: conn.type.toLowerCase(),
-                    host: conn.host,
-                    port: conn.port,
-                    user: conn.user,
-                    password: conn.password,
-                    databaseName,
-                    tableName,
-                    schema,
-                    operation,
-                    payload
-                }),
-            });
-
-            const data = await response.json();
-            return {
-                success: data.success,
-                message: data.message || data.error || 'Unknown result',
-                executedSql: data.executedSql
-            };
-        } catch (error: any) {
-            return { success: false, message: error.message };
+        for (const stmt of statements) {
+            try {
+                const { data, errors } = await executeConfirmedSql({
+                    variables: { query: stmt, operationType: 'DDL' },
+                    context: { database: databaseName },
+                });
+                if (errors?.length) {
+                    return { success: false, message: errors[0].message, executedSql: allSql };
+                }
+                const msg = data?.ExecuteConfirmedSQL;
+                if (msg?.Type === 'error') {
+                    return { success: false, message: msg.Text, executedSql: allSql };
+                }
+            } catch (err: any) {
+                return { success: false, message: err.message, executedSql: allSql };
+            }
         }
+        return { success: true, message: 'Operation completed', executedSql: allSql };
     };
 
     // --- Column Handlers ---
@@ -230,7 +244,8 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
 
         // Execute DROP COLUMN
         setIsExecuting(true);
-        const result = await executeOperation('dropColumn', { columnName: col.name });
+        const sql = dropColumnSQL(dialect, tableName, col.name, schema);
+        const result = await executeOperation(sql);
         setOperationResults([result]);
         setShowResultModal(true);
         setIsExecuting(false);
@@ -254,16 +269,10 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
 
         setIsExecuting(true);
 
-        const payload = {
-            columnName: col.name,
-            columnType: col.type,
-            isNullable: col.isNullable,
-            isPrimaryKey: col.isPrimaryKey,
-            comment: col.comment
-        };
-
-        const operation = col.isNew ? 'addColumn' : 'modifyColumn';
-        const result = await executeOperation(operation, payload);
+        const sql = col.isNew
+            ? addColumnSQL(dialect, tableName, col.name, col.type, col.isNullable, schema)
+            : modifyColumnSQL(dialect, tableName, col.name, col.type, col.isNullable, schema);
+        const result = await executeOperation(sql);
 
         setOperationResults([result]);
         setShowResultModal(true);
@@ -304,7 +313,8 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
         }
 
         setIsExecuting(true);
-        const result = await executeOperation('dropIndex', { indexName: idx.name });
+        const sql = dropIndexSQL(dialect, tableName, idx.name, schema);
+        const result = await executeOperation(sql);
         setOperationResults([result]);
         setShowResultModal(true);
         setIsExecuting(false);
@@ -345,11 +355,11 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
 
         // For existing indexes, we need to drop and recreate
         if (!idx.isNew) {
-            // Find the original name to drop
             const originalIdx = originalIndexes.find(oi => oi.id === idx.id);
             const nameToDrop = originalIdx ? originalIdx.name : idx.name;
 
-            const dropResult = await executeOperation('dropIndex', { indexName: nameToDrop });
+            const dropSql = dropIndexSQL(dialect, tableName, nameToDrop, schema);
+            const dropResult = await executeOperation(dropSql);
             if (!dropResult.success) {
                 setOperationResults([dropResult]);
                 setShowResultModal(true);
@@ -358,13 +368,8 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
             }
         }
 
-        const result = await executeOperation('addIndex', {
-            indexName: idx.name,
-            indexColumns: idx.columns,
-            indexType: idx.type,
-            isUnique: idx.isUnique,
-            indexComment: idx.comment
-        });
+        const createSql = createIndexSQL(dialect, tableName, idx.name, idx.columns, idx.isUnique, schema);
+        const result = await executeOperation(createSql);
 
         setOperationResults([result]);
         setShowResultModal(true);
@@ -402,7 +407,8 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
         }
 
         setIsExecuting(true);
-        const result = await executeOperation('dropForeignKey', { fkName: fk.name });
+        const sql = dropForeignKeySQL(dialect, tableName, fk.name, schema);
+        const result = await executeOperation(sql);
         setOperationResults([result]);
         setShowResultModal(true);
         setIsExecuting(false);
@@ -428,7 +434,8 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
 
         // For existing FKs, drop first
         if (!fk.isNew) {
-            const dropResult = await executeOperation('dropForeignKey', { fkName: fk.name });
+            const dropSql = dropForeignKeySQL(dialect, tableName, fk.name, schema);
+            const dropResult = await executeOperation(dropSql);
             if (!dropResult.success) {
                 setOperationResults([dropResult]);
                 setShowResultModal(true);
@@ -437,14 +444,8 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
             }
         }
 
-        const result = await executeOperation('addForeignKey', {
-            fkName: fk.name,
-            fkColumn: fk.column,
-            referencedTable: fk.referencedTable,
-            referencedColumn: fk.referencedColumn,
-            onDelete: fk.onDelete,
-            onUpdate: fk.onUpdate
-        });
+        const sql = addForeignKeySQL(dialect, tableName, fk.name, fk.column, fk.referencedTable, fk.referencedColumn, fk.onDelete, fk.onUpdate, schema);
+        const result = await executeOperation(sql);
 
         setOperationResults([result]);
         setShowResultModal(true);
