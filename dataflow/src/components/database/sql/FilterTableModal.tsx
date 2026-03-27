@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { X, Filter, Plus, Trash2, Check } from "lucide-react";
+import { X, Filter, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 
 interface FilterCondition {
     id: string;
@@ -124,29 +127,15 @@ export function FilterTableModal({
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {columns.map(col => (
-                                <div
-                                    key={col}
-                                    className={`
-                                        flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors
-                                        ${selectedColumns.has(col)
-                                            ? 'bg-primary/5 border-primary/30 text-foreground'
-                                            : 'bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/50'}
-                                    `}
-                                    onClick={() => toggleColumn(col)}
-                                >
-                                    <div className={`
-                                        h-4 w-4 rounded border flex items-center justify-center
-                                        ${selectedColumns.has(col) ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground'}
-                                    `}>
-                                        {selectedColumns.has(col) && <Check className="h-3 w-3" />}
-                                    </div>
+                                <div key={col} className={`flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors ${selectedColumns.has(col) ? 'bg-primary/5 border-primary/30 text-foreground' : 'bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/50'}`} onClick={() => toggleColumn(col)}>
+                                    <Checkbox checked={selectedColumns.has(col)} tabIndex={-1} className="pointer-events-none" />
                                     <span className="text-sm truncate" title={col}>{col}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="h-px bg-border" />
+                    <Separator />
 
                     {/* Filter Conditions Section */}
                     <div className="space-y-3">
@@ -173,33 +162,33 @@ export function FilterTableModal({
                             <div className="space-y-2">
                                 {conditions.map((condition) => (
                                     <div key={condition.id} className="flex items-center gap-2">
-                                        <select
-                                            className="h-9 rounded-md border bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                            value={condition.column}
-                                            onChange={(e) => updateCondition(condition.id, 'column', e.target.value)}
-                                        >
-                                            {columns.map(col => (
-                                                <option key={col} value={col}>{col}</option>
-                                            ))}
-                                        </select>
+                                        <Select value={condition.column} onValueChange={(v) => updateCondition(condition.id, 'column', v)}>
+                                            <SelectTrigger className="h-9">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {columns.map(col => <SelectItem key={col} value={col}>{col}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
 
-                                        <select
-                                            className="h-9 w-24 rounded-md border bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                            value={condition.operator}
-                                            onChange={(e) => updateCondition(condition.id, 'operator', e.target.value)}
-                                        >
-                                            <option value="=">=</option>
-                                            <option value="!=">!=</option>
-                                            <option value=">">&gt;</option>
-                                            <option value=">=">&gt;=</option>
-                                            <option value="<">&lt;</option>
-                                            <option value="<=">&lt;=</option>
-                                            <option value="LIKE">LIKE</option>
-                                            <option value="NOT LIKE">NOT LIKE</option>
-                                            <option value="IN">IN</option>
-                                            <option value="IS NULL">IS NULL</option>
-                                            <option value="IS NOT NULL">IS NOT NULL</option>
-                                        </select>
+                                        <Select value={condition.operator} onValueChange={(v) => updateCondition(condition.id, 'operator', v)}>
+                                            <SelectTrigger className="h-9 w-24">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="=">=</SelectItem>
+                                                <SelectItem value="!=">!=</SelectItem>
+                                                <SelectItem value=">">&gt;</SelectItem>
+                                                <SelectItem value=">=">&gt;=</SelectItem>
+                                                <SelectItem value="<">&lt;</SelectItem>
+                                                <SelectItem value="<=">&lt;=</SelectItem>
+                                                <SelectItem value="LIKE">LIKE</SelectItem>
+                                                <SelectItem value="NOT LIKE">NOT LIKE</SelectItem>
+                                                <SelectItem value="IN">IN</SelectItem>
+                                                <SelectItem value="IS NULL">IS NULL</SelectItem>
+                                                <SelectItem value="IS NOT NULL">IS NOT NULL</SelectItem>
+                                            </SelectContent>
+                                        </Select>
 
                                         <Input
                                             className="flex-1 h-9"
