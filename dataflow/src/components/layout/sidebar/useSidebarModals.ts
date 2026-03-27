@@ -10,13 +10,11 @@ export type ModalState =
   | { type: "delete_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
   | { type: "export_data"; params: { connectionId: string; databaseName: string; schema: string | null; tableName: string } }
   | { type: "export_database"; params: { connectionId: string; databaseName: string } }
-  | { type: "import_database"; params: { connectionId: string; databaseName: string } }
-  | { type: "import_data"; params: { connectionId: string; databaseName: string; schema?: string | null; tableName?: string } }
   | { type: "empty_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
   | { type: "truncate_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
   | { type: "copy_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
+  | { type: "rename_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
   | { type: "export_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
-  | { type: "import_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
   | { type: "drop_collection"; params: { connectionId: string; databaseName: string; collectionName: string } };
 
 type Action =
