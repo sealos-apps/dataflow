@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -150,12 +151,10 @@ export function RedisKeyModal({ isOpen, onClose, onSave, initialData }: RedisKey
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-xs font-medium text-muted-foreground">Type</label>
-                            <select
-                                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            <Select
                                 value={keyType}
-                                onChange={(e) => {
-                                    setKeyType(e.target.value);
-                                    // Reset values on type change
+                                onValueChange={(v) => {
+                                    setKeyType(v);
                                     setStringValue('');
                                     setHashPairs([{ field: '', value: '' }]);
                                     setListItems(['']);
@@ -163,10 +162,13 @@ export function RedisKeyModal({ isOpen, onClose, onSave, initialData }: RedisKey
                                 }}
                                 disabled={isLoading}
                             >
-                                {REDIS_TYPES.map(t => (
-                                    <option key={t} value={t}>{t.toUpperCase()}</option>
-                                ))}
-                            </select>
+                                <SelectTrigger className="w-full h-9">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {REDIS_TYPES.map(t => <SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-xs font-medium text-muted-foreground">TTL (s)</label>
