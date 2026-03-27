@@ -3,7 +3,7 @@ import { useAnalysisStore } from "@/stores/useAnalysisStore";
 import { Plus, Layout } from "lucide-react";
 
 import { EditorCanvas } from "./EditorCanvas";
-import { ChartSelectorModal } from "./ChartSelectorModal";
+import { ChartCreateModal } from "./ChartCreateModal";
 import { MaximizeChartModal } from "./MaximizeChartModal";
 import { ComponentSettingsModal } from "./ComponentSettingsModal";
 
@@ -95,7 +95,7 @@ export function DashboardEditor() {
                 </div>
             </div>
 
-            <ChartSelectorModal
+            <ChartCreateModal
                 isOpen={isChartModalOpen}
                 onClose={() => toggleChartModal(false)}
             />
