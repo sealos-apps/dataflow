@@ -35,6 +35,7 @@ export function TabContent({ refreshTrigger }: TabContentProps) {
                 return (
                     <SQLEditorView
                         key={tab.id}
+                        tabId={tab.id}
                         context={{
                             connectionId: tab.connectionId,
                             databaseName: tab.databaseName,

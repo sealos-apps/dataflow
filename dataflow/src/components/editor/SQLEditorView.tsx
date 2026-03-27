@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Play, AlignLeft, CheckCircle, AlertCircle, FileText, Loader2, XCircle, CheckCircle2, GalleryVerticalEnd, PenTool } from "lucide-react";
+import { Play, AlignLeft, CheckCircle, AlertCircle, FileText, Loader2, XCircle, CheckCircle2, GalleryVerticalEnd, PenTool, Database, ChevronDown, Network } from "lucide-react";
 import { format } from 'sql-formatter';
 import { cn } from "@/lib/utils";
 import MonacoEditor from "./MonacoEditorWrapper";
 import type { editor } from 'monaco-editor';
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useRawExecuteLazyQuery } from '@graphql';
-import { getEditorLanguage, isReadOperation } from "@/utils/database-features";
+import { getEditorLanguage, isReadOperation, supportsSchema } from "@/utils/database-features";
+import { useTabStore } from "@/stores/useTabStore";
 
 interface SQLEditorViewProps {
+    tabId: string;
     context?: {
         connectionId: string;
         databaseName?: string;
@@ -18,7 +20,8 @@ interface SQLEditorViewProps {
     onSqlChange?: (sql: string) => void;
 }
 
-export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorViewProps) {
+/** SQL editor with integrated database/schema selectors and query execution. */
+export function SQLEditorView({ tabId, context, initialSql, onSqlChange }: SQLEditorViewProps) {
     const { connections } = useConnectionStore();
     const connectionType = connections.find((c) => c.id === context?.connectionId)?.type ?? 'POSTGRES';
     const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' });
@@ -29,6 +32,57 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
     const [executionTime, setExecutionTime] = useState<number | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+    const { updateTab } = useTabStore();
+    const { fetchDatabases, fetchSchemas } = useConnectionStore();
+    const [databases, setDatabases] = useState<string[]>([]);
+    const [schemas, setSchemas] = useState<string[]>([]);
+    const [selectedDatabase, setSelectedDatabase] = useState(context?.databaseName ?? '');
+    const [selectedSchema, setSelectedSchema] = useState(context?.schemaName ?? '');
+    const [dbDropdownOpen, setDbDropdownOpen] = useState(false);
+    const [schemaDropdownOpen, setSchemaDropdownOpen] = useState(false);
+    const toolbarRef = useRef<HTMLDivElement>(null);
+
+    // Fetch databases on mount
+    useEffect(() => {
+        if (!context?.connectionId) return;
+        fetchDatabases(context.connectionId).then(setDatabases).catch(console.error);
+    }, [context?.connectionId, fetchDatabases]);
+
+    // Fetch schemas when database changes (Postgres only)
+    useEffect(() => {
+        if (!context?.connectionId || !selectedDatabase || !supportsSchema(connectionType)) return;
+        fetchSchemas(context.connectionId, selectedDatabase).then(setSchemas).catch(console.error);
+    }, [context?.connectionId, selectedDatabase, connectionType, fetchSchemas]);
+
+    // Click-outside handler to close dropdowns
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+                setDbDropdownOpen(false);
+                setSchemaDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleDatabaseChange = (db: string) => {
+        setSelectedDatabase(db);
+        setDbDropdownOpen(false);
+        if (supportsSchema(connectionType)) {
+            setSelectedSchema('');
+            updateTab(tabId, { databaseName: db, schemaName: undefined });
+        } else {
+            updateTab(tabId, { databaseName: db });
+        }
+    };
+
+    const handleSchemaChange = (schema: string) => {
+        setSelectedSchema(schema);
+        setSchemaDropdownOpen(false);
+        updateTab(tabId, { schemaName: schema });
+    };
+
     const handleRun = async () => {
         if (!query.trim()) return;
 
@@ -38,9 +92,15 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
         const startTime = Date.now();
 
         try {
+            // Build the query with schema context for Postgres
+            let execQuery = query;
+            if (supportsSchema(connectionType) && selectedSchema) {
+                execQuery = `SET search_path TO ${selectedSchema};\n${query}`;
+            }
+
             const { data, error } = await rawExecute({
-                variables: { query },
-                context: { database: context?.databaseName },
+                variables: { query: execQuery },
+                context: { database: selectedDatabase || context?.databaseName },
             });
 
             const endTime = Date.now();
@@ -151,52 +211,95 @@ export function SQLEditorView({ context, initialSql, onSqlChange }: SQLEditorVie
 
     return (
         <div className="flex h-full flex-col bg-background" ref={containerRef}>
-            {/* Context Info Bar */}
-            {context && (
-                <div className="flex items-center gap-2 px-4 py-1.5 border-b bg-muted/5 text-xs shrink-0">
-                    <span className="text-muted-foreground">Connected to:</span>
-                    <span className="font-medium">
-                        {connections.find(c => c.id === context.connectionId)?.name || context.connectionId}
-                    </span>
-                    {context.databaseName && (
-                        <>
-                            <span className="text-muted-foreground">/</span>
-                            <span className="font-medium text-purple-600">{context.databaseName}</span>
-                        </>
-                    )}
-                    {context.schemaName && (
-                        <>
-                            <span className="text-muted-foreground">/</span>
-                            <span className="font-medium text-orange-600">{context.schemaName}</span>
-                        </>
+            {/* Toolbar */}
+            <div ref={toolbarRef} className="flex h-12 items-center justify-between border-b px-4 bg-muted/10 shrink-0">
+                {/* Left: Action Buttons */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleRun}
+                        disabled={isExecuting}
+                        className="flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed min-w-[70px]"
+                    >
+                        {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                        Run
+                    </button>
+                    {getEditorLanguage(connectionType) === 'sql' && (
+                        <button
+                            onClick={handleFormat}
+                            disabled={!query.trim()}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <AlignLeft className="h-4 w-4" />
+                            Format
+                        </button>
                     )}
                 </div>
-            )}
 
-            {/* Toolbar */}
-            <div className="flex h-12 items-center justify-between border-b px-4 bg-muted/10 shrink-0">
-                <div className="flex items-center gap-4">
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
+                {/* Right: Database/Schema Selectors */}
+                <div className="flex items-center gap-2">
+                    {/* Database Selector */}
+                    <div className="relative">
                         <button
-                            onClick={handleRun}
-                            disabled={isExecuting}
-                            className="flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed min-w-[70px]"
+                            onClick={() => { setDbDropdownOpen(!dbDropdownOpen); setSchemaDropdownOpen(false); }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                         >
-                            {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-                            Run
+                            <Database className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium max-w-[140px] truncate">{selectedDatabase || 'Select database'}</span>
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
-                        {getEditorLanguage(connectionType) === 'sql' && (
-                            <button
-                                onClick={handleFormat}
-                                disabled={!query.trim()}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <AlignLeft className="h-4 w-4" />
-                                Format
-                            </button>
+                        {dbDropdownOpen && (
+                            <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-[280px] overflow-y-auto rounded-md border bg-popover shadow-md">
+                                {databases.map((db) => (
+                                    <button
+                                        key={db}
+                                        onClick={() => handleDatabaseChange(db)}
+                                        className={cn(
+                                            "w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors",
+                                            db === selectedDatabase && "bg-muted font-medium"
+                                        )}
+                                    >
+                                        {db}
+                                    </button>
+                                ))}
+                                {databases.length === 0 && (
+                                    <div className="px-3 py-2 text-sm text-muted-foreground">No databases</div>
+                                )}
+                            </div>
                         )}
                     </div>
+
+                    {/* Schema Selector (Postgres only) */}
+                    {supportsSchema(connectionType) && (
+                        <div className="relative">
+                            <button
+                                onClick={() => { setSchemaDropdownOpen(!schemaDropdownOpen); setDbDropdownOpen(false); }}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
+                            >
+                                <Network className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium max-w-[140px] truncate">{selectedSchema || 'Select schema'}</span>
+                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
+                            {schemaDropdownOpen && (
+                                <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-[280px] overflow-y-auto rounded-md border bg-popover shadow-md">
+                                    {schemas.map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => handleSchemaChange(s)}
+                                            className={cn(
+                                                "w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors",
+                                                s === selectedSchema && "bg-muted font-medium"
+                                            )}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                    {schemas.length === 0 && (
+                                        <div className="px-3 py-2 text-sm text-muted-foreground">No schemas</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
