@@ -15,6 +15,7 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -539,19 +540,17 @@ export function RedisDetailView({ connectionId, databaseName }: RedisDetailViewP
                         <div className="flex items-center gap-6">
                             <div className="flex items-center gap-2">
                                 <span className="whitespace-nowrap">Rows per page:</span>
-                                <select
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                    className="bg-transparent border border-border/50 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/20"
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                    <option value={100}>100</option>
-                                </select>
+                                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                                    <SelectTrigger size="sm" className="w-auto gap-1 bg-transparent border-border/50">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="20">20</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                        <SelectItem value="100">100</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="flex items-center gap-1">
                                 <Button
