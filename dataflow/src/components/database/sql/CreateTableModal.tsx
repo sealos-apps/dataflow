@@ -3,13 +3,15 @@ import { AlertModal } from "@/components/ui/AlertModal";
 
 import { X, Table, Save, Loader2, Plus, Trash2 } from "lucide-react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
-import { cn } from "@/lib/utils";
+import { resolveSchemaParam } from "@/utils/database-features";
+import type { RecordInput } from "@graphql";
 
 interface CreateTableModalProps {
     isOpen: boolean;
     onClose: () => void;
     connectionId: string;
     databaseName: string;
+    schema?: string;
     onSuccess?: () => void; // Callback to refresh tree data
 }
 
@@ -25,8 +27,8 @@ const COLUMN_TYPES = [
     "INT", "VARCHAR(255)", "TEXT", "BOOLEAN", "DATE", "DATETIME", "DECIMAL", "FLOAT", "JSON"
 ];
 
-export function CreateTableModal({ isOpen, onClose, connectionId, databaseName, onSuccess }: CreateTableModalProps) {
-    const { createTable } = useConnectionStore();
+export function CreateTableModal({ isOpen, onClose, connectionId, databaseName, schema, onSuccess }: CreateTableModalProps) {
+    const { createTable, connections } = useConnectionStore();
     const [tableName, setTableName] = useState("");
     const [columns, setColumns] = useState<ColumnDefinition[]>([
         { id: "1", name: "id", type: "INT", isPrimaryKey: true, isNullable: false }
@@ -74,17 +76,34 @@ export function CreateTableModal({ isOpen, onClose, connectionId, databaseName, 
 
         setIsSaving(true);
         try {
-            const success = await createTable(connectionId, databaseName, tableName, columns);
+            const conn = connections.find(c => c.id === connectionId);
+            const schemaParam = resolveSchemaParam(conn?.type, databaseName, schema);
 
-            if (success) {
+            const fields: RecordInput[] = columns.map(col => ({
+                Key: col.name,
+                Value: col.type,
+                Extra: [
+                    { Key: 'Nullable', Value: col.isNullable ? 'true' : 'false' },
+                    { Key: 'Primary', Value: col.isPrimaryKey ? 'true' : 'false' },
+                ],
+            }));
+
+            const result = await createTable(schemaParam, tableName, fields);
+
+            if (result.success) {
                 setAlert({
                     isOpen: true,
                     type: 'success',
                     title: 'Table Created',
-                    message: `Table "${tableName}" has been successfully created.`
+                    message: result.message ?? `Table "${tableName}" has been successfully created.`,
                 });
             } else {
-                throw new Error("Failed to create table");
+                setAlert({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Creation Failed',
+                    message: result.message ?? 'Failed to create table.',
+                });
             }
         } catch (error) {
             setAlert({
