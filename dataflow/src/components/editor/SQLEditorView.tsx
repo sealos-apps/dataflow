@@ -54,10 +54,16 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
         fetchDatabases(context.connectionId).then(setDatabases).catch(console.error);
     }, [context?.connectionId, fetchDatabases]);
 
-    // Fetch schemas when database changes (Postgres only)
+    // Fetch schemas when database changes (Postgres only), default to "public" or first available
     useEffect(() => {
         if (!context?.connectionId || !selectedDatabase || !supportsSchema(connectionType)) return;
-        fetchSchemas(context.connectionId, selectedDatabase).then(setSchemas).catch(console.error);
+        fetchSchemas(context.connectionId, selectedDatabase).then((result) => {
+            setSchemas(result);
+            if (!selectedSchema && result.length > 0) {
+                const defaultSchema = result.includes('public') ? 'public' : result[0];
+                setSelectedSchema(defaultSchema);
+            }
+        }).catch(console.error);
     }, [context?.connectionId, selectedDatabase, connectionType, fetchSchemas]);
 
     // Click-outside handler to close dropdowns
