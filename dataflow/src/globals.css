@@ -16,7 +16,7 @@
   font-display: swap;
 }
 
-@plugin "tailwindcss-animate";
+@import "tw-animate-css";
 
 @theme {
   --color-background: var(--background);
