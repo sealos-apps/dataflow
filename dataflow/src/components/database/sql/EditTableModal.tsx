@@ -4,6 +4,9 @@ import { useConnectionStore } from "@/stores/useConnectionStore";
 import { cn } from "@/lib/utils";
 import { useRawExecuteLazyQuery, useExecuteConfirmedSqlMutation } from '@graphql';
 import type { SqlDialect } from '@/utils/ddl-sql';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   addColumnSQL, dropColumnSQL, modifyColumnSQL,
   createIndexSQL, dropIndexSQL,
@@ -483,56 +486,31 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                         </button>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="flex items-center gap-1 px-6 pt-4 border-b shrink-0">
-                        <button
-                            onClick={() => setActiveTab('fields')}
-                            className={cn(
-                                "px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                                activeTab === 'fields'
-                                    ? "border-primary text-primary"
-                                    : "border-transparent text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <Table className="h-4 w-4" />
-                            Fields ({columns.length})
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('indexes')}
-                            className={cn(
-                                "px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                                activeTab === 'indexes'
-                                    ? "border-primary text-primary"
-                                    : "border-transparent text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <Key className="h-4 w-4" />
-                            Indexes ({indexes.length})
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('foreignKeys')}
-                            className={cn(
-                                "px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                                activeTab === 'foreignKeys'
-                                    ? "border-primary text-primary"
-                                    : "border-transparent text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <LinkIcon className="h-4 w-4" />
-                            Foreign Keys ({foreignKeys.length})
-                        </button>
-                    </div>
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'fields' | 'indexes' | 'foreignKeys')} className="flex flex-col flex-1 overflow-hidden">
+                        <TabsList variant="line" className="px-6 pt-4 shrink-0 w-full justify-start">
+                            <TabsTrigger value="fields" className="gap-2">
+                                <Table className="h-4 w-4" />
+                                Fields ({columns.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="indexes" className="gap-2">
+                                <Key className="h-4 w-4" />
+                                Indexes ({indexes.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="foreignKeys" className="gap-2">
+                                <LinkIcon className="h-4 w-4" />
+                                Foreign Keys ({foreignKeys.length})
+                            </TabsTrigger>
+                        </TabsList>
 
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-6">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center h-40">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {/* Fields Tab */}
-                                {activeTab === 'fields' && (
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center h-40">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Fields Tab */}
+                                    <TabsContent value="fields">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-end">
                                             <button
@@ -568,29 +546,20 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                                                 />
                                                             </td>
                                                             <td className="p-2">
-                                                                <select
-                                                                    value={col.type}
-                                                                    onChange={(e) => updateColumn(col.id, "type", e.target.value)}
-                                                                    className="w-full rounded border-transparent bg-transparent px-2 py-1 focus:border-primary focus:bg-background outline-none text-xs"
-                                                                >
-                                                                    {COLUMN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                                                </select>
+                                                                <Select value={col.type} onValueChange={(v) => updateColumn(col.id, "type", v)}>
+                                                                    <SelectTrigger size="sm" className="w-full border-transparent bg-transparent text-xs">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {COLUMN_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </td>
                                                             <td className="p-2 text-center">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={col.isPrimaryKey}
-                                                                    onChange={(e) => updateColumn(col.id, "isPrimaryKey", e.target.checked)}
-                                                                    className="rounded border-muted-foreground"
-                                                                />
+                                                                <Checkbox checked={col.isPrimaryKey} onCheckedChange={(checked) => updateColumn(col.id, "isPrimaryKey", checked === true)} />
                                                             </td>
                                                             <td className="p-2 text-center">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={col.isNullable}
-                                                                    onChange={(e) => updateColumn(col.id, "isNullable", e.target.checked)}
-                                                                    className="rounded border-muted-foreground"
-                                                                />
+                                                                <Checkbox checked={col.isNullable} onCheckedChange={(checked) => updateColumn(col.id, "isNullable", checked === true)} />
                                                             </td>
                                                             <td className="p-2">
                                                                 <input
@@ -627,10 +596,10 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                             </table>
                                         </div>
                                     </div>
-                                )}
+                                    </TabsContent>
 
-                                {/* Indexes Tab */}
-                                {activeTab === 'indexes' && (
+                                    {/* Indexes Tab */}
+                                    <TabsContent value="indexes">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-end">
                                             <button
@@ -681,21 +650,17 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                                                     />
                                                                 </td>
                                                                 <td className="p-2">
-                                                                    <select
-                                                                        value={idx.type}
-                                                                        onChange={(e) => updateIndex(idx.id, "type", e.target.value)}
-                                                                        className="w-full rounded border-transparent bg-transparent px-2 py-1 focus:border-primary focus:bg-background outline-none text-xs"
-                                                                    >
-                                                                        {INDEX_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                                                    </select>
+                                                                    <Select value={idx.type} onValueChange={(v) => updateIndex(idx.id, "type", v)}>
+                                                                        <SelectTrigger size="sm" className="w-full border-transparent bg-transparent text-xs">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {INDEX_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </td>
                                                                 <td className="p-2 text-center">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={idx.isUnique}
-                                                                        onChange={(e) => updateIndex(idx.id, "isUnique", e.target.checked)}
-                                                                        className="rounded border-muted-foreground"
-                                                                    />
+                                                                    <Checkbox checked={idx.isUnique} onCheckedChange={(checked) => updateIndex(idx.id, "isUnique", checked === true)} />
                                                                 </td>
                                                                 <td className="p-2">
                                                                     <input
@@ -733,10 +698,10 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                             </table>
                                         </div>
                                     </div>
-                                )}
+                                    </TabsContent>
 
-                                {/* Foreign Keys Tab */}
-                                {activeTab === 'foreignKeys' && (
+                                    {/* Foreign Keys Tab */}
+                                    <TabsContent value="foreignKeys">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-end">
                                             <button
@@ -780,14 +745,14 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                                                     />
                                                                 </td>
                                                                 <td className="p-2">
-                                                                    <select
-                                                                        value={fk.column}
-                                                                        onChange={(e) => updateForeignKey(fk.id, "column", e.target.value)}
-                                                                        className="w-full rounded border-transparent bg-transparent px-2 py-1 focus:border-primary focus:bg-background outline-none text-xs"
-                                                                    >
-                                                                        <option value="">Select Column</option>
-                                                                        {columnNames.map(c => <option key={c} value={c}>{c}</option>)}
-                                                                    </select>
+                                                                    <Select value={fk.column} onValueChange={(v) => updateForeignKey(fk.id, "column", v)}>
+                                                                        <SelectTrigger size="sm" className="w-full border-transparent bg-transparent text-xs">
+                                                                            <SelectValue placeholder="Select Column" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {columnNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </td>
                                                                 <td className="p-2">
                                                                     <input
@@ -808,22 +773,24 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                                                     />
                                                                 </td>
                                                                 <td className="p-2">
-                                                                    <select
-                                                                        value={fk.onDelete}
-                                                                        onChange={(e) => updateForeignKey(fk.id, "onDelete", e.target.value)}
-                                                                        className="w-full rounded border-transparent bg-transparent px-2 py-1 focus:border-primary focus:bg-background outline-none text-xs"
-                                                                    >
-                                                                        {FK_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
-                                                                    </select>
+                                                                    <Select value={fk.onDelete} onValueChange={(v) => updateForeignKey(fk.id, "onDelete", v)}>
+                                                                        <SelectTrigger size="sm" className="w-full border-transparent bg-transparent text-xs">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {FK_ACTIONS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </td>
                                                                 <td className="p-2">
-                                                                    <select
-                                                                        value={fk.onUpdate}
-                                                                        onChange={(e) => updateForeignKey(fk.id, "onUpdate", e.target.value)}
-                                                                        className="w-full rounded border-transparent bg-transparent px-2 py-1 focus:border-primary focus:bg-background outline-none text-xs"
-                                                                    >
-                                                                        {FK_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
-                                                                    </select>
+                                                                    <Select value={fk.onUpdate} onValueChange={(v) => updateForeignKey(fk.id, "onUpdate", v)}>
+                                                                        <SelectTrigger size="sm" className="w-full border-transparent bg-transparent text-xs">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {FK_ACTIONS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </td>
                                                                 <td className="p-2">
                                                                     <div className="flex items-center gap-1">
@@ -852,10 +819,11 @@ export function EditTableModal({ isOpen, onClose, connectionId, databaseName, ta
                                             </table>
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                    </TabsContent>
+                                </>
+                            )}
+                        </div>
+                    </Tabs>
 
                     {/* Footer */}
                     <div className="flex items-center justify-end gap-3 border-t bg-muted/5 px-6 py-4 shrink-0">
@@ -1016,15 +984,10 @@ function MultiSelect({
                     ) : (
                         options.map(opt => (
                             <label key={opt} className="flex items-center gap-2 p-1.5 hover:bg-muted rounded cursor-pointer text-xs">
-                                <input
-                                    type="checkbox"
-                                    checked={selected.includes(opt)}
-                                    onChange={(e) => {
-                                        if (e.target.checked) onChange([...selected, opt]);
-                                        else onChange(selected.filter(s => s !== opt));
-                                    }}
-                                    className="rounded border-muted-foreground h-3.5 w-3.5"
-                                />
+                                <Checkbox className="h-3.5 w-3.5" checked={selected.includes(opt)} onCheckedChange={(checked) => {
+                                    if (checked === true) onChange([...selected, opt]);
+                                    else onChange(selected.filter(s => s !== opt));
+                                }} />
                                 {opt}
                             </label>
                         ))

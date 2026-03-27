@@ -52,7 +52,13 @@ export function DashboardEditor() {
                 {/* Toolbar buttons removed as requested */}
 
                 <div className="flex items-center gap-3 ml-auto">
-                    {/* ... existing buttons ... */}
+                    <button
+                        onClick={() => toggleChartModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        添加图表
+                    </button>
                 </div>
             </div>
 
