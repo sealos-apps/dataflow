@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, memo, useCallback } from 'react';
+import React, { useRef, useEffect, useState, memo, useImperativeHandle } from 'react';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
 import {
@@ -24,21 +24,41 @@ echarts.use([
     SVGRenderer,
 ]);
 
+export interface NativeEChartsHandle {
+    exportPNG: (pixelRatio?: number) => Promise<Blob | null>;
+}
+
 interface NativeEChartsProps {
     option: any;
     style?: React.CSSProperties;
     className?: string;
+    ref?: React.Ref<NativeEChartsHandle>;
 }
 
 /**
  * Native ECharts component that bypasses echarts-for-react completely
  * to avoid the resize observer crash bug in React 18 StrictMode
  */
-export const NativeECharts = memo(function NativeECharts({ option, style, className }: NativeEChartsProps) {
+export const NativeECharts = memo(function NativeECharts({ option, style, className, ref }: NativeEChartsProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const [isReady, setIsReady] = useState(false);
     const observerRef = useRef<ResizeObserver | null>(null);
+
+    useImperativeHandle(ref, () => ({
+        exportPNG: async (pixelRatio = 2) => {
+            const chart = chartRef.current;
+            const container = containerRef.current;
+            if (!chart || chart.isDisposed() || !container) return null;
+
+            const svgDataURL = chart.getDataURL({ type: 'svg' });
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            const { svgDataURLToPNG } = await import('@/lib/export-utils');
+            return svgDataURLToPNG(svgDataURL, width, height, pixelRatio);
+        },
+    }));
 
     // Initialize chart when container is ready with dimensions
     useEffect(() => {
