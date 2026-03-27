@@ -7,13 +7,13 @@ import { AlertModal } from "@/components/ui/AlertModal";
 interface DeleteTableModalProps {
     isOpen: boolean;
     onClose: () => void;
-    connectionId: string;
     databaseName: string;
+    schema?: string;
     tableName: string;
     onSuccess?: () => void;
 }
 
-export function DeleteTableModal({ isOpen, onClose, connectionId, databaseName, tableName, onSuccess }: DeleteTableModalProps) {
+export function DeleteTableModal({ isOpen, onClose, databaseName, schema, tableName, onSuccess }: DeleteTableModalProps) {
     const { deleteTable } = useConnectionStore();
     const [confirmName, setConfirmName] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
@@ -38,8 +38,8 @@ export function DeleteTableModal({ isOpen, onClose, connectionId, databaseName, 
 
         setIsDeleting(true);
         try {
-            const success = await deleteTable(connectionId, databaseName, tableName);
-            if (success) {
+            const result = await deleteTable(databaseName, schema, tableName);
+            if (result.success) {
                 setAlert({
                     isOpen: true,
                     type: 'success',
@@ -47,7 +47,12 @@ export function DeleteTableModal({ isOpen, onClose, connectionId, databaseName, 
                     message: `Table "${tableName}" has been successfully deleted.`
                 });
             } else {
-                throw new Error("Failed to delete table");
+                setAlert({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Deletion Failed',
+                    message: result.message ?? "Failed to delete table."
+                });
             }
         } catch (error) {
             setAlert({
