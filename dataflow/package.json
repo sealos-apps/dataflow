@@ -27,6 +27,7 @@
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.5",
     "graphql": "16.11.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.555.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.0",
