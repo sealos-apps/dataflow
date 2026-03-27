@@ -98,14 +98,8 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
         const startTime = Date.now();
 
         try {
-            // Build the query with schema context for Postgres
-            let execQuery = query;
-            if (supportsSchema(connectionType) && selectedSchema) {
-                execQuery = `SET search_path TO "${selectedSchema.replace(/"/g, '""')}";\n${query}`;
-            }
-
             const { data, error } = await rawExecute({
-                variables: { query: execQuery },
+                variables: { query },
                 context: { database: selectedDatabase || context?.databaseName },
             });
 
