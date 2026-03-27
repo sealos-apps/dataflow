@@ -4,6 +4,7 @@ import { useReducer, useCallback, useState } from "react";
 export type ModalState =
   | { type: "create_database"; params: { connectionId: string } }
   | { type: "create_table"; params: { connectionId: string; databaseName: string; schema?: string } }
+  | { type: "create_collection"; params: { connectionId: string; databaseName: string } }
   | { type: "edit_database"; params: { connectionId: string; databaseName: string } }
   | { type: "delete_database"; params: { connectionId: string; databaseName: string } }
   | { type: "edit_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }

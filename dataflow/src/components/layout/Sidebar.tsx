@@ -19,6 +19,7 @@ import { ClearTableDataModal } from "../database/sql/ClearTableDataModal";
 import { CopyTableModal } from "../database/sql/CopyTableModal";
 import { RenameTableModal } from "../database/sql/RenameTableModal";
 import { ExportCollectionModal } from "../database/mongodb/ExportCollectionModal";
+import { CreateCollectionModal } from "../database/mongodb/CreateCollectionModal";
 
 
 import type { TreeNodeData } from "./sidebar/types";
@@ -176,6 +177,15 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
               connectionId: node.connectionId,
               databaseName: node.type === "database" ? node.name : node.metadata.database!,
               schema: node.type === "schema" ? node.name : undefined,
+            },
+          });
+          break;
+        case "new_collection":
+          openModal({
+            type: "create_collection",
+            params: {
+              connectionId: node.connectionId,
+              databaseName: node.name,
             },
           });
           break;
@@ -427,6 +437,22 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
                 p.databaseName,
                 p.schema || (isPostgres ? "public" : undefined),
               );
+            }}
+          />
+        );
+      })()}
+
+      {/* Create Collection Modal (MongoDB) */}
+      {activeModal?.type === "create_collection" && (() => {
+        const p = activeModal.params;
+        return (
+          <CreateCollectionModal
+            isOpen
+            onClose={closeModal}
+            connectionId={p.connectionId}
+            databaseName={p.databaseName}
+            onSuccess={() => {
+              refreshSchemaOrDb(p.connectionId, p.databaseName, undefined);
             }}
           />
         );

@@ -81,7 +81,14 @@ export function getDatabaseMenuItems(
   return [
     { label: "New Query", onClick: () => onAction("new_query"), icon: React.createElement(Terminal, { className: "h-4 w-4" }) },
     { separator: true },
-    ...(connectionType !== "REDIS"
+    ...(connectionType === "MONGODB"
+      ? [
+          { label: "New Collection", onClick: () => onAction("new_collection"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
+          { separator: true },
+          { label: "Export Database", onClick: () => onAction("export_database"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
+          { separator: true },
+        ] as ContextMenuItem[]
+      : connectionType !== "REDIS"
       ? [
           { label: "New Table", onClick: () => onAction("new_table"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
           { separator: true },
