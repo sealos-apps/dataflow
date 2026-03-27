@@ -24,8 +24,8 @@ import {
     EyeOff
 } from "lucide-react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
-import { ExportDataModal } from "@/components/database/ExportDataModal";
-import { FilterTableModal } from "@/components/database/FilterTableModal";
+import { ExportDataModal } from "./ExportDataModal";
+import { FilterTableModal } from "./FilterTableModal";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { Button } from "@/components/ui/Button";

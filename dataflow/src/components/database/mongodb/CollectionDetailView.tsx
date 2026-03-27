@@ -6,8 +6,8 @@ import { AlertModal } from "@/components/ui/AlertModal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
-import { ExportCollectionModal } from "@/components/database/ExportCollectionModal";
-import { FilterCollectionModal } from "@/components/database/FilterCollectionModal";
+import { ExportCollectionModal } from "./ExportCollectionModal";
+import { FilterCollectionModal } from "./FilterCollectionModal";
 import {
     useGetStorageUnitRowsLazyQuery,
     useAddRowMutation,

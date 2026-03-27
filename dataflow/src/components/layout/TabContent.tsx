@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { useTabStore, type Tab } from '@/stores/useTabStore';
 import { SQLEditorView } from '@/components/editor/SQLEditorView';
-import { TableDetailView } from '@/components/database/TableDetailView';
-import { CollectionDetailView } from '@/components/database/CollectionDetailView';
-import { RedisDetailView } from '@/components/database/RedisDetailView';
+import { TableDetailView } from '@/components/database/sql/TableDetailView';
+import { CollectionDetailView } from '@/components/database/mongodb/CollectionDetailView';
+import { RedisDetailView } from '@/components/database/redis/RedisDetailView';
 import { Database } from 'lucide-react';
 
 interface TabContentProps {
