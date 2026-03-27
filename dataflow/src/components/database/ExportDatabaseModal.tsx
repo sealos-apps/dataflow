@@ -69,6 +69,7 @@ export function ExportDatabaseModal({
         try {
             const { data: tablesData, error: tablesError } = await fetchTables({
                 variables: { schema },
+                context: { database: databaseName },
             });
 
             if (tablesError) throw new Error(tablesError.message);
@@ -88,6 +89,7 @@ export function ExportDatabaseModal({
                     const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
                     const { data, error } = await executeQuery({
                         variables: { query: `SELECT * FROM ${qualifiedName}` },
+                        context: { database: databaseName },
                     });
 
                     if (error || !data?.RawExecute) {

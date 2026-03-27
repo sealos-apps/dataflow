@@ -70,7 +70,10 @@ export function ExportDataModal({
             if (filter.trim()) query += ` WHERE ${filter.trim()}`;
             if (rowCount !== '') query += ` LIMIT ${rowCount}`;
 
-            const { data, error } = await executeQuery({ variables: { query } });
+            const { data, error } = await executeQuery({
+                variables: { query },
+                context: { database: databaseName },
+            });
 
             if (error) throw new Error(error.message);
             if (!data?.RawExecute) throw new Error('No data returned from query');
