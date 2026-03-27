@@ -1,141 +1,177 @@
-import React, { useState } from "react";
-import { X, AlertTriangle, Trash2, Loader2 } from "lucide-react";
-import { useConnectionStore } from "@/stores/useConnectionStore";
+import { createContext, use, useState, useCallback, type ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
+import { useConnectionStore } from '@/stores/useConnectionStore'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/Input'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { useModalState } from '@/components/database/modals/useModalState'
 
-import { AlertModal } from "@/components/ui/AlertModal";
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
 
-interface DeleteTableModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    databaseName: string;
-    schema?: string;
-    tableName: string;
-    onSuccess?: () => void;
+interface DeleteTableCtxValue {
+  confirmName: string
+  setConfirmName: (v: string) => void
+  tableName: string
+  canDelete: boolean
 }
 
-export function DeleteTableModal({ isOpen, onClose, databaseName, schema, tableName, onSuccess }: DeleteTableModalProps) {
-    const { deleteTable } = useConnectionStore();
-    const [confirmName, setConfirmName] = useState("");
-    const [isDeleting, setIsDeleting] = useState(false);
+const DeleteTableCtx = createContext<DeleteTableCtxValue | null>(null)
 
-    // Alert State
-    const [alert, setAlert] = useState<{
-        isOpen: boolean;
-        type: 'success' | 'error';
-        title: string;
-        message: string;
-    }>({
-        isOpen: false,
-        type: 'success', // Default
-        title: '',
-        message: ''
-    });
+/** Hook to access DeleteTable domain context. Throws outside provider. */
+function useDeleteTableCtx(): DeleteTableCtxValue {
+  const ctx = use(DeleteTableCtx)
+  if (!ctx) throw new Error('useDeleteTableCtx must be used within DeleteTableProvider')
+  return ctx
+}
 
-    if (!isOpen) return null;
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
-    const handleDelete = async () => {
-        if (confirmName !== tableName) return;
+/** Owns business logic for deleting a SQL table with name confirmation. */
+function DeleteTableProvider({
+  databaseName,
+  schema,
+  tableName,
+  onSuccess,
+  children,
+}: {
+  databaseName: string
+  schema?: string
+  tableName: string
+  onSuccess?: () => void
+  children: ReactNode
+}) {
+  const { deleteTable } = useConnectionStore()
+  const [confirmName, setConfirmName] = useState('')
+  const canDelete = confirmName === tableName
+  const { state, actions: baseActions } = useModalState()
 
-        setIsDeleting(true);
-        try {
-            const result = await deleteTable(databaseName, schema, tableName);
-            if (result.success) {
-                setAlert({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Table Deleted',
-                    message: `Table "${tableName}" has been successfully deleted.`
-                });
-            } else {
-                setAlert({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Deletion Failed',
-                    message: result.message ?? "Failed to delete table."
-                });
-            }
-        } catch (error) {
-            setAlert({
-                isOpen: true,
-                type: 'error',
-                title: 'Deletion Failed',
-                message: error instanceof Error ? error.message : "An unknown error occurred while deleting the table."
-            });
-        } finally {
-            setIsDeleting(false);
-        }
-    };
+  const actions = {
+    ...baseActions,
+    submit: async () => {
+      if (!canDelete) return
+      baseActions.setSubmitting(true)
+      const result = await deleteTable(databaseName, schema, tableName)
+      baseActions.setSubmitting(false)
+      if (result.success) {
+        onSuccess?.()
+      } else {
+        baseActions.setAlert({
+          type: 'error',
+          title: 'Failed to delete table',
+          message: result.message ?? 'Unknown error',
+        })
+      }
+    },
+  }
 
-    const handleAlertClose = () => {
-        setAlert(prev => ({ ...prev, isOpen: false }));
-        if (alert.type === 'success') {
-            if (onSuccess) onSuccess();
-            onClose();
-        }
-    };
+  return (
+    <DeleteTableCtx value={{ confirmName, setConfirmName, tableName, canDelete }}>
+      <ModalForm.Provider
+        state={state}
+        actions={actions}
+        meta={{ title: 'Delete Table', icon: AlertTriangle, isDestructive: true }}
+      >
+        {children}
+      </ModalForm.Provider>
+    </DeleteTableCtx>
+  )
+}
 
-    return (
-        <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <div className="w-full max-w-md rounded-xl bg-background shadow-2xl border animate-in fade-in zoom-in duration-200">
-                    <div className="flex items-center justify-between border-b px-6 py-4">
-                        <h2 className="text-lg font-semibold flex items-center gap-2 text-red-600">
-                            <AlertTriangle className="h-5 w-5" />
-                            Delete Table
-                        </h2>
-                        <button onClick={onClose} className="rounded-full p-1 hover:bg-muted transition-colors">
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
+// ---------------------------------------------------------------------------
+// Subcomponents
+// ---------------------------------------------------------------------------
 
-                    <div className="p-6 space-y-4">
-                        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 border border-red-100">
-                            <p className="font-medium">Warning: This action cannot be undone.</p>
-                            <p className="mt-1">
-                                This will permanently delete the table <strong>{tableName}</strong> and all its data.
-                            </p>
-                        </div>
+/** Warning banner explaining the destructive action. */
+function DeleteTableWarning() {
+  const { tableName } = useDeleteTableCtx()
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                Type table name to confirm
-                            </label>
-                            <input
-                                type="text"
-                                value={confirmName}
-                                onChange={(e) => setConfirmName(e.target.value)}
-                                placeholder={tableName}
-                                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                            />
-                        </div>
-                    </div>
+  return (
+    <div className="rounded-lg bg-destructive/5 p-4 text-sm border border-destructive/10">
+      <p className="font-medium text-destructive">Warning: This action cannot be undone.</p>
+      <p className="mt-1 text-muted-foreground">
+        This will permanently delete the table{' '}
+        <strong className="text-foreground">{tableName}</strong> and all its data.
+      </p>
+    </div>
+  )
+}
 
-                    <div className="flex items-center justify-end gap-3 border-t bg-muted/5 px-6 py-4">
-                        <button
-                            onClick={onClose}
-                            className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleDelete}
-                            disabled={confirmName !== tableName || isDeleting}
-                            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                            Delete Table
-                        </button>
-                    </div>
-                </div>
-            </div>
+/** Confirmation input — user must type the table name to enable deletion. */
+function DeleteTableConfirmation() {
+  const { confirmName, setConfirmName, tableName } = useDeleteTableCtx()
+  const { state } = useModalForm()
 
-            <AlertModal
-                isOpen={alert.isOpen}
-                onClose={handleAlertClose}
-                title={alert.title}
-                message={alert.message}
-                type={alert.type}
-            />
-        </>
-    );
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Type table name to confirm
+      </label>
+      <Input
+        value={confirmName}
+        onChange={(e) => setConfirmName(e.target.value)}
+        placeholder={tableName}
+        disabled={state.isSubmitting}
+      />
+    </div>
+  )
+}
+
+/** Submit button disabled until confirmation name matches. */
+function DeleteTableSubmitButton() {
+  const { canDelete } = useDeleteTableCtx()
+  return <ModalForm.SubmitButton label="Delete Table" disabled={!canDelete} />
+}
+
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
+
+interface DeleteTableModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  databaseName: string
+  schema?: string
+  tableName: string
+  onSuccess?: () => void
+}
+
+/** Modal for deleting a SQL table with name confirmation. */
+export function DeleteTableModal({
+  open,
+  onOpenChange,
+  databaseName,
+  schema,
+  tableName,
+  onSuccess,
+}: DeleteTableModalProps) {
+  const handleSuccess = useCallback(() => {
+    onSuccess?.()
+    onOpenChange(false)
+  }, [onSuccess, onOpenChange])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DeleteTableProvider
+          databaseName={databaseName}
+          schema={schema}
+          tableName={tableName}
+          onSuccess={handleSuccess}
+        >
+          <ModalForm.Header />
+          <DeleteTableWarning />
+          <DeleteTableConfirmation />
+          <ModalForm.Alert />
+          <ModalForm.Footer>
+            <ModalForm.CancelButton />
+            <DeleteTableSubmitButton />
+          </ModalForm.Footer>
+        </DeleteTableProvider>
+      </DialogContent>
+    </Dialog>
+  )
 }
