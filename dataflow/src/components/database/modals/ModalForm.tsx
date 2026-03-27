@@ -46,14 +46,14 @@ function ModalFormProvider<S extends ModalState, A extends ModalActions>({
   )
 }
 
-/** Renders the modal title with optional icon and description. Uses Dialog primitives. */
+/** Renders the modal title with optional icon and description. Uses Dialog primitives. Applies destructive styling when `meta.isDestructive`. */
 function ModalFormHeader() {
   const { meta } = useModalForm()
   const Icon = meta.icon
 
   return (
     <DialogHeader>
-      <DialogTitle className="flex items-center gap-2">
+      <DialogTitle className={cn('flex items-center gap-2', meta.isDestructive && 'text-destructive')}>
         {Icon && <Icon className="h-5 w-5" />}
         {meta.title}
       </DialogTitle>
@@ -120,15 +120,15 @@ function ModalFormFooter({ children }: { children?: ReactNode }) {
   )
 }
 
-/** Submit button that shows a loading spinner when `isSubmitting` is true. */
-function ModalFormSubmitButton({ label }: { label?: string }) {
+/** Submit button that shows a loading spinner when `isSubmitting` is true. Accepts optional `disabled` for form validation. */
+function ModalFormSubmitButton({ label, disabled }: { label?: string; disabled?: boolean }) {
   const { state, actions, meta } = useModalForm()
 
   return (
     <Button
       type="button"
       onClick={actions.submit}
-      disabled={state.isSubmitting}
+      disabled={disabled || state.isSubmitting}
       variant={meta.isDestructive ? 'destructive' : 'default'}
     >
       {state.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
