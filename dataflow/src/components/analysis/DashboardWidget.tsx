@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { DashboardComponent, useAnalysisStore } from "@/stores/useAnalysisStore";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal, Trash2, Maximize2, Settings } from "lucide-react";
-import { SafeECharts } from "@/components/ui/SafeECharts";
+import { MoreHorizontal, Trash2, Maximize2, Settings, ImageDown } from "lucide-react";
+import { SafeECharts, NativeEChartsHandle } from "@/components/ui/SafeECharts";
 import { buildWidgetChartOption } from "./chart-utils";
+import { downloadBlob } from "@/lib/export-utils";
+import { ContextMenu } from "../ui/ContextMenu";
 
 interface DashboardWidgetProps {
     component: DashboardComponent;
@@ -15,10 +17,6 @@ interface DashboardWidgetProps {
     onSelect: (id: string) => void;
 }
 
-import { ContextMenu } from "../ui/ContextMenu";
-
-// ... imports
-
 export function DashboardWidget({
     component,
     isReadOnly,
@@ -29,11 +27,19 @@ export function DashboardWidget({
     onSelect
 }: DashboardWidgetProps) {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const chartRef = useRef<NativeEChartsHandle>(null);
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleExportPNG = async () => {
+        setContextMenu(null);
+        const blob = await chartRef.current?.exportPNG(2);
+        if (!blob) return;
+        downloadBlob(blob, `${component.title || 'chart'}.png`);
     };
 
     const menuItems = [
@@ -42,6 +48,11 @@ export function DashboardWidget({
             icon: <Maximize2 className="w-4 h-4" />,
             onClick: () => onMaximize?.(component.id)
         },
+        ...(component.type === 'chart' ? [{
+            label: "导出 PNG",
+            icon: <ImageDown className="w-4 h-4" />,
+            onClick: handleExportPNG
+        }] : []),
         {
             label: "编辑",
             icon: <Settings className="w-4 h-4" />,
@@ -93,7 +104,7 @@ export function DashboardWidget({
             {/* Widget Content */}
             <div className="flex-1 p-0 overflow-hidden relative">
                 <div className="absolute inset-0 p-3 z-10">
-                    <WidgetContent component={component} />
+                    <WidgetContent component={component} chartRef={chartRef} />
                 </div>
                 {!isReadOnly && <div className="absolute inset-0 z-0" />}
             </div>
@@ -111,13 +122,14 @@ export function DashboardWidget({
     );
 }
 
-function WidgetContent({ component }: { component: DashboardComponent }) {
+function WidgetContent({ component, chartRef }: { component: DashboardComponent; chartRef: React.RefObject<NativeEChartsHandle | null> }) {
     switch (component.type) {
         case 'chart': {
             const option = buildWidgetChartOption(component.config);
             if (!option) return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No chart data</div>;
             return (
                 <SafeECharts
+                    ref={chartRef}
                     option={option}
                     className="h-full w-full overflow-hidden"
                 />
