@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { AlertModal } from "@/components/ui/AlertModal";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 
 import { X, Table, Save, Loader2, Plus, Trash2 } from "lucide-react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
@@ -195,29 +197,20 @@ export function CreateTableModal({ isOpen, onClose, connectionId, databaseName, 
                                                             />
                                                         </td>
                                                         <td className="p-2">
-                                                            <select
-                                                                value={col.type}
-                                                                onChange={(e) => updateColumn(col.id, "type", e.target.value)}
-                                                                className="w-full rounded border-transparent bg-transparent px-2 py-1 focus:border-primary focus:bg-background outline-none"
-                                                            >
-                                                                {COLUMN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                                            </select>
+                                                            <Select value={col.type} onValueChange={(v) => updateColumn(col.id, "type", v)}>
+                                                                <SelectTrigger size="sm" className="w-full border-transparent bg-transparent">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {COLUMN_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
                                                         </td>
                                                         <td className="p-2 text-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={col.isPrimaryKey}
-                                                                onChange={(e) => updateColumn(col.id, "isPrimaryKey", e.target.checked)}
-                                                                className="rounded border-muted-foreground"
-                                                            />
+                                                            <Checkbox checked={col.isPrimaryKey} onCheckedChange={(checked) => updateColumn(col.id, "isPrimaryKey", checked === true)} />
                                                         </td>
                                                         <td className="p-2 text-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={col.isNullable}
-                                                                onChange={(e) => updateColumn(col.id, "isNullable", e.target.checked)}
-                                                                className="rounded border-muted-foreground"
-                                                            />
+                                                            <Checkbox checked={col.isNullable} onCheckedChange={(checked) => updateColumn(col.id, "isNullable", checked === true)} />
                                                         </td>
                                                         <td className="p-2 text-center">
                                                             <button
