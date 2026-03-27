@@ -58,7 +58,7 @@ interface ConnectionState {
   createDatabase: (databaseName: string) => Promise<DDLResult>;
   renameDatabase: (oldName: string, newName: string) => Promise<DDLResult>;
   deleteDatabase: (databaseName: string) => Promise<DDLResult>;
-  createTable: (schema: string, tableName: string, fields: RecordInput[]) => Promise<DDLResult>;
+  createTable: (databaseName: string, schema: string, tableName: string, fields: RecordInput[]) => Promise<DDLResult>;
   renameTable: (databaseName: string, schema: string | undefined, oldName: string, newName: string) => Promise<DDLResult>;
   deleteTable: (databaseName: string, schema: string | undefined, tableName: string) => Promise<DDLResult>;
   clearTableData: (databaseName: string, schema: string | undefined, tableName: string, mode: 'truncate' | 'delete') => Promise<DDLResult>;
@@ -222,7 +222,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
     return executeDDL(sql);
   },
 
-  createTable: async (schema, tableName, fields) => {
+  createTable: async (databaseName, schema, tableName, fields) => {
     try {
       const { data, errors } = await graphqlClient.mutate<
         AddStorageUnitMutation,
@@ -230,6 +230,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
       >({
         mutation: AddStorageUnitDocument,
         variables: { schema, storageUnit: tableName, fields },
+        context: { database: databaseName },
       });
       if (errors?.length) {
         return { success: false, message: errors[0].message };

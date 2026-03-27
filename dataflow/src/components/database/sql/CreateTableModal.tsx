@@ -88,7 +88,7 @@ export function CreateTableModal({ isOpen, onClose, connectionId, databaseName, 
                 ],
             }));
 
-            const result = await createTable(schemaParam, tableName, fields);
+            const result = await createTable(databaseName, schemaParam, tableName, fields);
 
             if (result.success) {
                 setAlert({
