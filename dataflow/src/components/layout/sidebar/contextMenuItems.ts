@@ -26,7 +26,10 @@ export function getConnectionMenuItems(
   systemObjectsState?: SystemObjectsState
 ): ContextMenuItem[] {
   const { onAction } = callbacks;
-  const systemItems: ContextMenuItem[] = systemObjectsState && systemObjectsState.systemSchemas.length > 0
+  // Connection-level toggle only applies to types where systemSchemas are
+  // database names (MongoDB, MySQL, ClickHouse). For Postgres, systemSchemas
+  // are schema names — the toggle belongs at the database level instead.
+  const systemItems: ContextMenuItem[] = connectionType !== "POSTGRES" && systemObjectsState && systemObjectsState.systemSchemas.length > 0
     ? [
         { separator: true },
         {
@@ -60,7 +63,10 @@ export function getDatabaseMenuItems(
   systemObjectsState?: SystemObjectsState
 ): ContextMenuItem[] {
   const { onAction } = callbacks;
-  const systemItems: ContextMenuItem[] = systemObjectsState && systemObjectsState.systemSchemas.length > 0
+  // Database-level toggle only applies to Postgres where systemSchemas are
+  // schema names filtered within a database. For other types, collections/tables
+  // have no frontend-level system object filtering.
+  const systemItems: ContextMenuItem[] = connectionType === "POSTGRES" && systemObjectsState && systemObjectsState.systemSchemas.length > 0
     ? [
         { separator: true },
         {

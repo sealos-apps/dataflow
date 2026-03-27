@@ -32,8 +32,16 @@ export function useSidebarTree() {
       const { systemSchemas, showSystemObjectsFor } = useConnectionStore.getState();
 
       if (node.type === "connection") {
+        const conn = connections.find((c) => c.id === node.connectionId);
         let dbs = await fetchDatabases(node.connectionId);
-        if (!showSystemObjectsFor.has(node.id) && systemSchemas.length > 0) {
+        if (showSystemObjectsFor.has(node.id) && systemSchemas.length > 0 && conn?.type !== 'POSTGRES') {
+          // Merge system databases that the backend may not return due to
+          // permission restrictions (e.g. MongoDB admin/local/config)
+          const dbSet = new Set(dbs);
+          for (const sys of systemSchemas) {
+            if (!dbSet.has(sys)) dbs.push(sys);
+          }
+        } else if (!showSystemObjectsFor.has(node.id) && systemSchemas.length > 0) {
           dbs = dbs.filter(db => !systemSchemas.includes(db));
         }
         return dbs.map((db) => ({
