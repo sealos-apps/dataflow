@@ -412,8 +412,8 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         const p = activeModal.params;
         return (
           <CreateDatabaseModal
-            isOpen
-            onClose={closeModal}
+            open
+            onOpenChange={(open) => { if (!open) closeModal(); }}
             connectionId={p.connectionId}
             onSuccess={() => {
               const conn = connections.find((c) => c.id === p.connectionId);

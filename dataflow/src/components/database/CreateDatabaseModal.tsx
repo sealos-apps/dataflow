@@ -1,72 +1,144 @@
-import React, { useState } from "react";
-import { X, Database, Save, Loader2 } from "lucide-react";
-import { useConnectionStore } from "@/stores/useConnectionStore";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { createContext, use, useState, useCallback, type ReactNode } from 'react'
+import { Database } from 'lucide-react'
+import { useConnectionStore } from '@/stores/useConnectionStore'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/Input'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { useModalState } from '@/components/database/modals/useModalState'
 
-interface CreateDatabaseModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    connectionId: string;
-    onSuccess?: () => void; // Callback to refresh database list
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
+
+interface CreateDatabaseCtxValue {
+  dbName: string
+  setDbName: (v: string) => void
 }
 
-export function CreateDatabaseModal({ isOpen, onClose, connectionId, onSuccess }: CreateDatabaseModalProps) {
-    const { createDatabase } = useConnectionStore();
-    const [dbName, setDbName] = useState("");
-    const [isCreating, setIsCreating] = useState(false);
+const CreateDatabaseCtx = createContext<CreateDatabaseCtxValue | null>(null)
 
-    if (!isOpen) return null;
+function useCreateDatabaseCtx(): CreateDatabaseCtxValue {
+  const ctx = use(CreateDatabaseCtx)
+  if (!ctx) throw new Error('useCreateDatabaseCtx must be used within CreateDatabaseProvider')
+  return ctx
+}
 
-    const handleCreate = async () => {
-        if (!dbName) return;
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
-        setIsCreating(true);
-        const result = await createDatabase(dbName);
-        setIsCreating(false);
+/** Owns business logic for creating a new database. */
+function CreateDatabaseProvider({
+  connectionId,
+  onSuccess,
+  children,
+}: {
+  connectionId: string
+  onSuccess?: () => void
+  children: ReactNode
+}) {
+  const { createDatabase } = useConnectionStore()
+  const [dbName, setDbName] = useState('')
+  const { state, actions: baseActions } = useModalState()
 
-        if (result.success) {
-            onSuccess?.();
-        }
+  const actions = {
+    ...baseActions,
+    submit: async () => {
+      if (!dbName) return
+      baseActions.setSubmitting(true)
+      const result = await createDatabase(dbName)
+      baseActions.setSubmitting(false)
+      if (result.success) {
+        onSuccess?.()
+      } else {
+        baseActions.setAlert({
+          type: 'error',
+          title: 'Failed to create database',
+          message: result.message ?? 'Unknown error',
+        })
+      }
+    },
+  }
 
-        onClose();
-    };
+  return (
+    <CreateDatabaseCtx value={{ dbName, setDbName }}>
+      <ModalForm.Provider
+        state={state}
+        actions={actions}
+        meta={{ title: 'Create Database', icon: Database }}
+      >
+        {children}
+      </ModalForm.Provider>
+    </CreateDatabaseCtx>
+  )
+}
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-xl bg-background shadow-2xl border animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between border-b px-6 py-4">
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                        <Database className="h-5 w-5 text-purple-500" />
-                        Create Database
-                    </h2>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-8 w-8">
-                        <X className="h-5 w-5" />
-                    </Button>
-                </div>
+// ---------------------------------------------------------------------------
+// Subcomponents
+// ---------------------------------------------------------------------------
 
-                <div className="p-6 space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Database Name
-                        </label>
-                        <Input
-                            value={dbName}
-                            onChange={(e) => setDbName(e.target.value)}
-                            placeholder="Enter database name"
-                        />
-                    </div>
+/** Input field for the new database name. */
+function CreateDatabaseFields() {
+  const { dbName, setDbName } = useCreateDatabaseCtx()
+  const { state } = useModalForm()
 
-                </div>
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Database Name
+      </label>
+      <Input
+        value={dbName}
+        onChange={(e) => setDbName(e.target.value)}
+        placeholder="Enter database name"
+        disabled={state.isSubmitting}
+      />
+    </div>
+  )
+}
 
-                <div className="flex items-center justify-end gap-3 border-t bg-muted/5 px-6 py-4">
-                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleCreate} disabled={!dbName || isCreating} className="gap-2">
-                        {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
+/** Submit button disabled when database name is empty. */
+function CreateSubmitButton() {
+  const { dbName } = useCreateDatabaseCtx()
+  return <ModalForm.SubmitButton label="Save" disabled={!dbName} />
+}
+
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
+
+interface CreateDatabaseModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  connectionId: string
+  onSuccess?: () => void
+}
+
+/** Modal for creating a new database. */
+export function CreateDatabaseModal({
+  open,
+  onOpenChange,
+  connectionId,
+  onSuccess,
+}: CreateDatabaseModalProps) {
+  const handleSuccess = useCallback(() => {
+    onSuccess?.()
+    onOpenChange(false)
+  }, [onSuccess, onOpenChange])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <CreateDatabaseProvider connectionId={connectionId} onSuccess={handleSuccess}>
+          <ModalForm.Header />
+          <CreateDatabaseFields />
+          <ModalForm.Alert />
+          <ModalForm.Footer>
+            <ModalForm.CancelButton />
+            <CreateSubmitButton />
+          </ModalForm.Footer>
+        </CreateDatabaseProvider>
+      </DialogContent>
+    </Dialog>
+  )
 }
