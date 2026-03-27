@@ -430,8 +430,8 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         const isPostgres = conn?.type === "POSTGRES";
         return (
           <CreateTableModal
-            isOpen
-            onClose={closeModal}
+            open
+            onOpenChange={(open) => { if (!open) closeModal(); }}
             connectionId={p.connectionId}
             databaseName={p.databaseName}
             schema={p.schema}
