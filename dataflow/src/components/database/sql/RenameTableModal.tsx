@@ -1,148 +1,168 @@
-import React, { useState, useEffect } from "react";
-import { X, Table, Loader2 } from "lucide-react";
-import { useConnectionStore } from "@/stores/useConnectionStore";
+import { createContext, use, useState, useCallback, type ReactNode } from 'react'
+import { Table } from 'lucide-react'
+import { useConnectionStore } from '@/stores/useConnectionStore'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/Input'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { useModalState } from '@/components/database/modals/useModalState'
 
-import { AlertModal } from "@/components/ui/AlertModal";
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
 
-interface RenameTableModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    databaseName: string;
-    schema?: string;
-    tableName: string;
-    onSuccess?: () => void;
+interface RenameTableCtxValue {
+  newName: string
+  setNewName: (v: string) => void
+  tableName: string
 }
 
-export function RenameTableModal({ isOpen, onClose, databaseName, schema, tableName, onSuccess }: RenameTableModalProps) {
-    const { renameTable } = useConnectionStore();
-    const [newName, setNewName] = useState(tableName);
-    const [isSaving, setIsSaving] = useState(false);
+const RenameTableCtx = createContext<RenameTableCtxValue | null>(null)
 
-    // Alert State
-    const [alert, setAlert] = useState<{
-        isOpen: boolean;
-        type: 'success' | 'error';
-        title: string;
-        message: string;
-    }>({
-        isOpen: false,
-        type: 'success',
-        title: '',
-        message: ''
-    });
+/** Hook to access RenameTable domain context. Throws outside provider. */
+function useRenameTableCtx(): RenameTableCtxValue {
+  const ctx = use(RenameTableCtx)
+  if (!ctx) throw new Error('useRenameTableCtx must be used within RenameTableProvider')
+  return ctx
+}
 
-    useEffect(() => {
-        setNewName(tableName);
-    }, [tableName]);
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
-    if (!isOpen) return null;
+/** Owns business logic for renaming a SQL table. */
+function RenameTableProvider({
+  databaseName,
+  schema,
+  tableName,
+  onSuccess,
+  children,
+}: {
+  databaseName: string
+  schema?: string
+  tableName: string
+  onSuccess?: () => void
+  children: ReactNode
+}) {
+  const { renameTable } = useConnectionStore()
+  const [newName, setNewName] = useState(tableName)
+  const { state, actions: baseActions } = useModalState()
 
-    const handleRename = async () => {
-        if (!newName.trim() || newName === tableName) return;
+  const actions = {
+    ...baseActions,
+    submit: async () => {
+      if (!newName.trim() || newName === tableName) return
+      baseActions.setSubmitting(true)
+      const result = await renameTable(databaseName, schema, tableName, newName)
+      baseActions.setSubmitting(false)
+      if (result.success) {
+        onSuccess?.()
+      } else {
+        baseActions.setAlert({
+          type: 'error',
+          title: 'Failed to rename table',
+          message: result.message ?? 'Unknown error',
+        })
+      }
+    },
+  }
 
-        setIsSaving(true);
-        try {
-            const result = await renameTable(databaseName, schema, tableName, newName);
-            if (result.success) {
-                setAlert({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Table Renamed',
-                    message: `Table renamed from "${tableName}" to "${newName}".`
-                });
-            } else {
-                setAlert({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Rename Failed',
-                    message: result.message ?? "Failed to rename table."
-                });
-            }
-        } catch (error) {
-            setAlert({
-                isOpen: true,
-                type: 'error',
-                title: 'Rename Failed',
-                message: error instanceof Error ? error.message : "An unknown error occurred while renaming the table."
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
+  return (
+    <RenameTableCtx value={{ newName, setNewName, tableName }}>
+      <ModalForm.Provider
+        state={state}
+        actions={actions}
+        meta={{ title: 'Rename Table', icon: Table }}
+      >
+        {children}
+      </ModalForm.Provider>
+    </RenameTableCtx>
+  )
+}
 
-    const handleAlertClose = () => {
-        setAlert(prev => ({ ...prev, isOpen: false }));
-        if (alert.type === 'success') {
-            if (onSuccess) onSuccess();
-            onClose();
-        }
-    };
+// ---------------------------------------------------------------------------
+// Subcomponents
+// ---------------------------------------------------------------------------
 
-    return (
-        <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <div className="w-full max-w-md rounded-xl bg-background shadow-2xl border animate-in fade-in zoom-in duration-200">
-                    <div className="flex items-center justify-between border-b px-6 py-4">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Table className="h-5 w-5 text-blue-500" />
-                            Rename Table
-                        </h2>
-                        <button onClick={onClose} className="rounded-full p-1 hover:bg-muted transition-colors">
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
+/** Shows current table name (disabled) and new name input. */
+function RenameTableFields() {
+  const { newName, setNewName, tableName } = useRenameTableCtx()
+  const { state } = useModalForm()
 
-                    <div className="p-6 space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                Current Name
-                            </label>
-                            <input
-                                value={tableName}
-                                disabled
-                                className="w-full rounded-md border bg-muted/50 px-3 py-2 text-sm"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                New Name
-                            </label>
-                            <input
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                placeholder="Enter new table name"
-                                autoFocus
-                                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            />
-                        </div>
-                    </div>
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Current Name
+        </label>
+        <Input value={tableName} disabled />
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          New Name
+        </label>
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Enter new table name"
+          disabled={state.isSubmitting}
+          autoFocus
+        />
+      </div>
+    </div>
+  )
+}
 
-                    <div className="flex items-center justify-end gap-3 border-t bg-muted/5 px-6 py-4">
-                        <button
-                            onClick={onClose}
-                            className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleRename}
-                            disabled={isSaving || !newName.trim() || newName === tableName}
-                            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                            Rename
-                        </button>
-                    </div>
-                </div>
-            </div>
+/** Submit button disabled when name is empty or unchanged. */
+function RenameTableSubmitButton() {
+  const { newName, tableName } = useRenameTableCtx()
+  return <ModalForm.SubmitButton label="Rename" disabled={!newName.trim() || newName === tableName} />
+}
 
-            <AlertModal
-                isOpen={alert.isOpen}
-                onClose={handleAlertClose}
-                title={alert.title}
-                message={alert.message}
-                type={alert.type}
-            />
-        </>
-    );
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
+
+interface RenameTableModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  databaseName: string
+  schema?: string
+  tableName: string
+  onSuccess?: () => void
+}
+
+/** Modal for renaming a SQL table. */
+export function RenameTableModal({
+  open,
+  onOpenChange,
+  databaseName,
+  schema,
+  tableName,
+  onSuccess,
+}: RenameTableModalProps) {
+  const handleSuccess = useCallback(() => {
+    onSuccess?.()
+    onOpenChange(false)
+  }, [onSuccess, onOpenChange])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <RenameTableProvider
+          databaseName={databaseName}
+          schema={schema}
+          tableName={tableName}
+          onSuccess={handleSuccess}
+        >
+          <ModalForm.Header />
+          <RenameTableFields />
+          <ModalForm.Alert />
+          <ModalForm.Footer>
+            <ModalForm.CancelButton />
+            <RenameTableSubmitButton />
+          </ModalForm.Footer>
+        </RenameTableProvider>
+      </DialogContent>
+    </Dialog>
+  )
 }
