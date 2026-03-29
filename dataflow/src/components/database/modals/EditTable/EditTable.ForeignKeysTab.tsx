@@ -52,7 +52,7 @@ export function EditTableForeignKeysTab() {
           <tbody className="divide-y">
             {foreignKeys.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                <td colSpan={7} className="p-8 text-center text-muted-foreground">
                   No foreign keys found
                 </td>
               </tr>

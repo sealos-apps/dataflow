@@ -112,7 +112,7 @@ export function EditTableModal({
             <ModalForm.Alert />
           </div>
           <DialogFooter className="shrink-0 border-t bg-muted/5 px-6 py-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => handleClose(false)}>
               Close
             </Button>
           </DialogFooter>
