@@ -21,6 +21,9 @@ import {
   type AddStorageUnitMutation,
   type AddStorageUnitMutationVariables,
   type RecordInput,
+  RawExecuteDocument,
+  type RawExecuteQuery,
+  type RawExecuteQueryVariables,
 } from '@graphql';
 import type { SqlDialect } from '@/utils/ddl-sql';
 import {
@@ -65,6 +68,7 @@ interface ConnectionState {
   deleteTable: (databaseName: string, schema: string | undefined, tableName: string) => Promise<DDLResult>;
   clearTableData: (databaseName: string, schema: string | undefined, tableName: string, mode: 'truncate' | 'delete') => Promise<DDLResult>;
   copyTable: (databaseName: string, schema: string | undefined, sourceTable: string, targetTable: string, copyData: boolean) => Promise<DDLResult>;
+  dropCollection: (databaseName: string, collectionName: string) => Promise<DDLResult>;
   selectItem: (item: SelectedItem | null) => void;
   fetchDatabases: (connectionId: string) => Promise<string[]>;
   fetchSchemas: (connectionId: string, database: string) => Promise<string[]>;
@@ -275,6 +279,27 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
       if (!result.success) return result;
     }
     return { success: true };
+  },
+
+  /** Drop a MongoDB collection via RawExecute. The database is determined by the active session. */
+  dropCollection: async (databaseName, collectionName) => {
+    try {
+      const { data, errors } = await graphqlClient.query<
+        RawExecuteQuery,
+        RawExecuteQueryVariables
+      >({
+        query: RawExecuteDocument,
+        variables: { query: `db.${collectionName}.drop()` },
+        fetchPolicy: 'no-cache',
+      });
+      if (errors?.length) {
+        return { success: false, message: errors[0].message };
+      }
+      const acknowledged = data?.RawExecute?.Rows?.[0]?.[0];
+      return { success: acknowledged === 'true' };
+    } catch (err: any) {
+      return { success: false, message: err.message ?? 'Unknown error' };
+    }
   },
 }));
 
