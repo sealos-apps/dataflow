@@ -39,7 +39,7 @@ export function CreateCollectionProvider({
   databaseName: string
   onSuccess?: () => void
   children: ReactNode
-}) {
+}): JSX.Element {
   const { createTable, connections } = useConnectionStore()
   const [collectionName, setCollectionName] = useState('')
   const { state, actions: baseActions } = useModalState()
