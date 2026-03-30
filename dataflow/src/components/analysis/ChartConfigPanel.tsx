@@ -1,17 +1,14 @@
 import React from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ChartConfig, ChartType, SortTarget, SortOrder } from './chart-utils';
-
-interface ChartConfigPanelProps {
-    config: ChartConfig;
-    columns: string[];
-    onConfigChange: (updates: Partial<ChartConfig>) => void;
-    onOpenDataConfig: () => void;
-}
+import type { ChartType, SortTarget, SortOrder } from './chart-utils';
+import { useChartCreateCtx } from './ChartCreateProvider';
 
 /** Right-column configuration panel for chart creation: type, axes, options, and sort settings. */
-export function ChartConfigPanel({ config, columns, onConfigChange, onOpenDataConfig }: ChartConfigPanelProps) {
+export function ChartConfigPanel() {
+    const { chartConfig: config, queryData, handleConfigChange: onConfigChange, setActiveView } = useChartCreateCtx()
+    const columns = queryData?.columns ?? []
+
     const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
 
     const chartTypeLabels: Record<ChartType, string> = {
@@ -51,7 +48,7 @@ export function ChartConfigPanel({ config, columns, onConfigChange, onOpenDataCo
 
             {/* 1. Data Configuration button */}
             <button
-                onClick={onOpenDataConfig}
+                onClick={() => setActiveView('data-config')}
                 className="w-full px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
             >
                 Data Configuration

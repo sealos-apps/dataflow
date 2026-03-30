@@ -100,8 +100,8 @@ export function DashboardEditor() {
             </div>
 
             <ChartCreateModal
-                isOpen={isChartModalOpen}
-                onClose={() => toggleChartModal(false)}
+                open={isChartModalOpen}
+                onOpenChange={(open) => { if (!open) toggleChartModal(false) }}
             />
 
             <ComponentSettingsModal
