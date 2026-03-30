@@ -70,3 +70,6 @@ dataflow/docs/superpowers/
 dataflow/public/monaco-editor/
 
 dataflow/.env
+
+.agents/
+.worktrees/
