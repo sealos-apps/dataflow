@@ -1,11 +1,10 @@
-import { createContext, use, useState, type ReactNode } from 'react'
+import { createContext, use, useCallback, useState, type ReactNode } from 'react'
 import { FileJson, FileSpreadsheet, FileCode, FileText, Table2 } from 'lucide-react'
 import { useRawExecuteLazyQuery } from '@/generated/graphql'
 import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from '@/utils/export-utils'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 import { FormatSelector, type FormatOption } from '@/components/database/modals/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/modals/ExportProgress'
 
@@ -41,6 +40,7 @@ interface ExportDataCtxValue {
   filter: string
   setFilter: (v: string) => void
   isSuccess: boolean
+  handleExport: () => void
 }
 
 const ExportDataCtx = createContext<ExportDataCtxValue | null>(null)
@@ -56,8 +56,35 @@ function useExportDataCtx(): ExportDataCtxValue {
 // Provider
 // ---------------------------------------------------------------------------
 
-/** Owns export logic: builds SQL query, executes via GraphQL, converts to selected format, triggers download. */
+/** Wraps ModalForm.Provider (complex mode, no onSubmit) and domain context for SQL table export. */
 function ExportDataProvider({
+  databaseName,
+  schema,
+  tableName,
+  children,
+}: {
+  databaseName: string
+  schema?: string | null
+  tableName: string
+  children: ReactNode
+}) {
+  return (
+    <ModalForm.Provider
+      meta={{
+        title: 'Export Data',
+        description: schema ? `${databaseName}.${schema}.${tableName}` : `${databaseName}.${tableName}`,
+        icon: Table2,
+      }}
+    >
+      <ExportDataBridge databaseName={databaseName} schema={schema} tableName={tableName}>
+        {children}
+      </ExportDataBridge>
+    </ModalForm.Provider>
+  )
+}
+
+/** Inner bridge that owns domain state and export logic, accessing ModalForm actions via useModalForm(). */
+function ExportDataBridge({
   databaseName,
   schema,
   tableName,
@@ -72,67 +99,54 @@ function ExportDataProvider({
   const [rowCount, setRowCount] = useState<number | ''>(1000)
   const [filter, setFilter] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
-  const { state, actions: baseActions } = useModalState()
+  const { actions } = useModalForm()
   const [executeQuery] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      baseActions.setSubmitting(true)
-      baseActions.closeAlert()
-      setIsSuccess(false)
+  const handleExport = useCallback(async () => {
+    actions.setSubmitting(true)
+    actions.closeAlert()
+    setIsSuccess(false)
 
-      try {
-        const qualifiedName = schema ? `${schema}.${tableName}` : tableName
-        let query = `SELECT * FROM ${qualifiedName}`
-        if (filter.trim()) query += ` WHERE ${filter.trim()}`
-        if (rowCount !== '') query += ` LIMIT ${rowCount}`
+    try {
+      const qualifiedName = schema ? `${schema}.${tableName}` : tableName
+      let query = `SELECT * FROM ${qualifiedName}`
+      if (filter.trim()) query += ` WHERE ${filter.trim()}`
+      if (rowCount !== '') query += ` LIMIT ${rowCount}`
 
-        const { data, error } = await executeQuery({
-          variables: { query },
-          context: { database: databaseName },
-        })
+      const { data, error } = await executeQuery({
+        variables: { query },
+        context: { database: databaseName },
+      })
 
-        if (error) throw new Error(error.message)
-        if (!data?.RawExecute) throw new Error('No data returned from query')
+      if (error) throw new Error(error.message)
+      if (!data?.RawExecute) throw new Error('No data returned from query')
 
-        const { Columns, Rows } = data.RawExecute
-        let blob: Blob
+      const { Columns, Rows } = data.RawExecute
+      let blob: Blob
 
-        switch (format) {
-          case 'csv': blob = toCSV(Columns, Rows); break
-          case 'json': blob = toJSON(Columns, Rows); break
-          case 'sql': blob = toSQL(qualifiedName, Columns, Rows); break
-          case 'excel': blob = toExcel(tableName, Columns, Rows); break
-        }
-
-        downloadBlob(blob, `${tableName}.${FORMAT_EXTENSIONS[format]}`)
-        setIsSuccess(true)
-      } catch (err: any) {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Export failed',
-          message: err.message || 'Unknown error',
-        })
-      } finally {
-        baseActions.setSubmitting(false)
+      switch (format) {
+        case 'csv': blob = toCSV(Columns, Rows); break
+        case 'json': blob = toJSON(Columns, Rows); break
+        case 'sql': blob = toSQL(qualifiedName, Columns, Rows); break
+        case 'excel': blob = toExcel(tableName, Columns, Rows); break
       }
-    },
-  }
+
+      downloadBlob(blob, `${tableName}.${FORMAT_EXTENSIONS[format]}`)
+      setIsSuccess(true)
+    } catch (err: any) {
+      actions.setAlert({
+        type: 'error',
+        title: 'Export failed',
+        message: err.message || 'Unknown error',
+      })
+    } finally {
+      actions.setSubmitting(false)
+    }
+  }, [actions, databaseName, executeQuery, filter, format, rowCount, schema, tableName])
 
   return (
-    <ExportDataCtx value={{ format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess }}>
-      <ModalForm.Provider
-        state={state}
-        actions={actions}
-        meta={{
-          title: 'Export Data',
-          description: schema ? `${databaseName}.${schema}.${tableName}` : `${databaseName}.${tableName}`,
-          icon: Table2,
-        }}
-      >
-        {children}
-      </ModalForm.Provider>
+    <ExportDataCtx value={{ format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess, handleExport }}>
+      {children}
     </ExportDataCtx>
   )
 }
@@ -181,10 +195,10 @@ function ExportDataFields() {
   )
 }
 
-/** Footer bridge: reads isSuccess from domain context, delegates to shared ExportFooter. */
+/** Footer bridge: reads isSuccess and handleExport from domain context, delegates to shared ExportFooter. */
 function ExportDataFooterBridge() {
-  const { isSuccess } = useExportDataCtx()
-  return <ExportFooter isSuccess={isSuccess} />
+  const { isSuccess, handleExport } = useExportDataCtx()
+  return <ExportFooter isSuccess={isSuccess} onClick={handleExport} />
 }
 
 // ---------------------------------------------------------------------------

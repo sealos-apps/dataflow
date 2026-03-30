@@ -4,8 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { addAuthHeader } from '@/config/auth-headers'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { downloadBlob } from '@/utils/export-utils'
-import { ModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
 import type { FormatOption } from '@/components/database/modals/FormatSelector'
 
 type RedisExportFormat = 'json' | 'csv'
@@ -23,6 +22,7 @@ interface ExportRedisCtxValue {
   patternSummary: string
   typesSummary: string
   formatOptions: FormatOption<RedisExportFormat>[]
+  handleExport: () => void
 }
 
 const ExportRedisCtx = createContext<ExportRedisCtxValue | null>(null)
@@ -43,7 +43,7 @@ interface ExportRedisProviderProps {
   children: ReactNode
 }
 
-/** Owns Redis export state and keeps export filter controls read-only until backend support exists. */
+/** Wraps ModalForm.Provider (complex mode, no onSubmit) and domain context for Redis export. */
 export function ExportRedisProvider({
   open,
   connectionId,
@@ -52,14 +52,48 @@ export function ExportRedisProvider({
   initialTypes = [],
   children,
 }: ExportRedisProviderProps) {
+  return (
+    <ModalForm.Provider
+      meta={{
+        title: 'Export Redis Data',
+        description: databaseName,
+        icon: Download,
+      }}
+    >
+      <ExportRedisBridge
+        open={open}
+        connectionId={connectionId}
+        databaseName={databaseName}
+        initialPattern={initialPattern}
+        initialTypes={initialTypes}
+      >
+        {children}
+      </ExportRedisBridge>
+    </ModalForm.Provider>
+  )
+}
+
+/** Inner bridge that owns domain state and export logic, accessing ModalForm actions via useModalForm(). */
+function ExportRedisBridge({
+  open,
+  connectionId,
+  databaseName,
+  initialPattern,
+  initialTypes,
+  children,
+}: {
+  open: boolean
+  connectionId: string
+  databaseName: string
+  initialPattern: string
+  initialTypes: string[]
+  children: ReactNode
+}) {
   const { connections } = useConnectionStore()
   const [format, setFormat] = useState<RedisExportFormat>('json')
   const [isSuccess, setIsSuccess] = useState(false)
   const [statusText, setStatusText] = useState('')
-  const {
-    state,
-    actions: { closeAlert, reset, setAlert, setSubmitting },
-  } = useModalState()
+  const { actions } = useModalForm()
 
   const patternSummary = useMemo(() => initialPattern || '*', [initialPattern])
   const typesSummary = useMemo(
@@ -72,12 +106,12 @@ export function ExportRedisProvider({
     setFormat('json')
     setIsSuccess(false)
     setStatusText('')
-    reset()
-  }, [open, reset])
+    actions.reset()
+  }, [open, actions])
 
-  const submit = useCallback(async () => {
-    setSubmitting(true)
-    closeAlert()
+  const handleExport = useCallback(async () => {
+    actions.setSubmitting(true)
+    actions.closeAlert()
     setIsSuccess(false)
     setStatusText('Starting Redis export...')
 
@@ -117,16 +151,16 @@ export function ExportRedisProvider({
       setStatusText('Export complete! File downloaded.')
       setIsSuccess(true)
     } catch (error) {
-      setAlert({
+      actions.setAlert({
         type: 'error',
         title: 'Export failed',
         message: error instanceof Error ? error.message : 'Unknown error',
       })
       setStatusText('')
     } finally {
-      setSubmitting(false)
+      actions.setSubmitting(false)
     }
-  }, [closeAlert, connectionId, connections, databaseName, format, setAlert, setSubmitting])
+  }, [actions, connectionId, connections, databaseName, format])
 
   return (
     <ExportRedisCtx
@@ -138,25 +172,10 @@ export function ExportRedisProvider({
         patternSummary,
         typesSummary,
         formatOptions: REDIS_EXPORT_FORMATS,
+        handleExport,
       }}
     >
-      <ModalForm.Provider
-        state={state}
-        actions={{
-          closeAlert,
-          reset,
-          setAlert,
-          setSubmitting,
-          submit,
-        }}
-        meta={{
-          title: 'Export Redis Data',
-          description: databaseName,
-          icon: Download,
-        }}
-      >
-        {children}
-      </ModalForm.Provider>
+      {children}
     </ExportRedisCtx>
   )
 }

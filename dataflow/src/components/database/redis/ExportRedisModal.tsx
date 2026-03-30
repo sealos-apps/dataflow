@@ -74,6 +74,6 @@ function ExportRedisFields() {
 }
 
 function ExportRedisFooterBridge() {
-  const { isSuccess } = useExportRedisCtx()
-  return <ExportFooter isSuccess={isSuccess} />
+  const { isSuccess, handleExport } = useExportRedisCtx()
+  return <ExportFooter isSuccess={isSuccess} onClick={handleExport} />
 }

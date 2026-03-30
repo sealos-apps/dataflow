@@ -25,8 +25,7 @@ import {
   addForeignKeySQL,
   dropForeignKeySQL,
 } from '@/utils/ddl-sql'
-import { ModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
 import type { ModalMeta } from '@/components/database/modals/types'
 import type {
   ColumnDefinition,
@@ -54,13 +53,7 @@ interface EditTableProviderProps {
   children: ReactNode
 }
 
-interface OperationResult {
-  success: boolean
-  message: string
-  executedSql?: string
-}
-
-/** Provider that owns all state, schema fetching, DDL execution, and per-row CRUD handlers for editing a table. */
+/** Wraps ModalForm.Provider (complex mode, no onSubmit) and domain context for editing table schema. */
 export function EditTableProvider({
   connectionId,
   databaseName,
@@ -68,8 +61,45 @@ export function EditTableProvider({
   schema,
   children,
 }: EditTableProviderProps) {
+  const meta: ModalMeta = { title: `Edit Table: ${tableName}`, icon: Table }
+
+  return (
+    <ModalForm.Provider meta={meta}>
+      <EditTableBridge
+        connectionId={connectionId}
+        databaseName={databaseName}
+        tableName={tableName}
+        schema={schema}
+      >
+        {children}
+      </EditTableBridge>
+    </ModalForm.Provider>
+  )
+}
+
+interface OperationResult {
+  success: boolean
+  message: string
+  executedSql?: string
+}
+
+/** Inner bridge that owns all state, schema fetching, DDL execution, and per-row CRUD handlers. */
+function EditTableBridge({
+  connectionId,
+  databaseName,
+  tableName,
+  schema,
+  children,
+}: {
+  connectionId: string
+  databaseName: string
+  tableName: string
+  schema?: string
+  children: ReactNode
+}) {
   const { connections } = useConnectionStore()
   const conn = connections.find(c => c.id === connectionId)
+  const { actions: modalActions } = useModalForm()
 
   const dialect: SqlDialect = (() => {
     const dbType = conn?.type
@@ -89,8 +119,6 @@ export function EditTableProvider({
   const [activeTab, setActiveTab] = useState<EditTableTab>('fields')
   const [isLoading, setIsLoading] = useState(true)
   const [isExecuting, setIsExecuting] = useState(false)
-
-  const { state: modalState, actions: baseActions } = useModalState()
 
   const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
   const [executeConfirmedSql] = useExecuteConfirmedSqlMutation()
@@ -178,7 +206,7 @@ export function EditTableProvider({
         setOriginalForeignKeys(structuredClone(fks))
       }
     } catch (error) {
-      baseActions.setAlert({
+      modalActions.setAlert({
         type: 'error',
         title: 'Failed to load schema',
         message: String(error),
@@ -224,13 +252,13 @@ export function EditTableProvider({
 
   const showResult = (result: OperationResult) => {
     if (result.success) {
-      baseActions.setAlert({
+      modalActions.setAlert({
         type: 'success',
         title: 'Operation completed',
         message: result.executedSql ?? '',
       })
     } else {
-      baseActions.setAlert({
+      modalActions.setAlert({
         type: 'error',
         title: 'Operation failed',
         message: result.message + (result.executedSql ? `\n\nSQL: ${result.executedSql}` : ''),
@@ -496,17 +524,12 @@ export function EditTableProvider({
     saveForeignKey,
   }
 
-  const modalActions = { ...baseActions, submit: async () => {} }
-  const meta: ModalMeta = { title: `Edit Table: ${tableName}`, icon: Table }
-
   return (
     <EditTableCtx value={{
       state: { columns, indexes, foreignKeys, activeTab, isLoading, isExecuting, dialect, columnNames },
       actions,
     }}>
-      <ModalForm.Provider state={modalState} actions={modalActions} meta={meta}>
-        {children}
-      </ModalForm.Provider>
+      {children}
     </EditTableCtx>
   )
 }

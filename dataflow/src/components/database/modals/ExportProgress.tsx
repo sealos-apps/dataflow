@@ -45,14 +45,17 @@ export function ExportProgress({ isExporting, isSuccess, statusText }: ExportPro
 interface ExportFooterProps {
   /** When true, shows only a Close button. When false, shows Cancel + Start Export. */
   isSuccess: boolean
+  /** Click handler for the export button. Falls back to `actions.submit` from ModalForm context. */
+  onClick?: () => void
 }
 
 /**
- * Footer for export modals. Reads `isSubmitting` and `submit` from ModalForm context.
+ * Footer for export modals. Reads `isSubmitting` from ModalForm context.
  * Shows "Start Export" when idle, spinner when exporting, "Close" after success.
  */
-export function ExportFooter({ isSuccess }: ExportFooterProps) {
+export function ExportFooter({ isSuccess, onClick }: ExportFooterProps) {
   const { state, actions } = useModalForm()
+  const handleClick = onClick ?? actions.submit
 
   if (isSuccess) {
     return (
@@ -71,7 +74,7 @@ export function ExportFooter({ isSuccess }: ExportFooterProps) {
           Cancel
         </Button>
       </DialogClose>
-      <Button onClick={actions.submit} disabled={state.isSubmitting} className="gap-2">
+      <Button onClick={handleClick} disabled={state.isSubmitting} className="gap-2">
         {state.isSubmitting ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (

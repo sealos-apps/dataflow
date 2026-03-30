@@ -1,11 +1,10 @@
-import { createContext, use, useState, type ReactNode } from 'react'
+import { createContext, use, useCallback, useState, type ReactNode } from 'react'
 import { Database, FileJson, FileSpreadsheet, FileCode, FileText } from 'lucide-react'
 import { useRawExecuteLazyQuery, useGetStorageUnitsLazyQuery } from '@/generated/graphql'
 import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from '@/utils/export-utils'
 import JSZip from 'jszip'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 import { FormatSelector, type FormatOption } from '@/components/database/modals/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/modals/ExportProgress'
 
@@ -38,6 +37,7 @@ interface ExportDatabaseCtxValue {
   setFormat: (v: ExportFormat) => void
   isSuccess: boolean
   statusText: string
+  handleExport: () => void
 }
 
 const ExportDatabaseCtx = createContext<ExportDatabaseCtxValue | null>(null)
@@ -53,12 +53,33 @@ function useExportDatabaseCtx(): ExportDatabaseCtxValue {
 // Provider
 // ---------------------------------------------------------------------------
 
-/**
- * Owns multi-table export logic: fetches table list via GraphQL, iterates each table,
- * converts to selected format, bundles into ZIP via JSZip, triggers download.
- * Partial failures surface as an info alert alongside success.
- */
+/** Wraps ModalForm.Provider (complex mode, no onSubmit) and domain context for database ZIP export. */
 function ExportDatabaseProvider({
+  databaseName,
+  schema,
+  children,
+}: {
+  databaseName: string
+  schema: string
+  children: ReactNode
+}) {
+  return (
+    <ModalForm.Provider
+      meta={{ title: 'Export Database', description: databaseName, icon: Database }}
+    >
+      <ExportDatabaseBridge databaseName={databaseName} schema={schema}>
+        {children}
+      </ExportDatabaseBridge>
+    </ModalForm.Provider>
+  )
+}
+
+/**
+ * Inner bridge that owns domain state and multi-table export logic.
+ * Fetches table list via GraphQL, iterates each table, converts to selected format,
+ * bundles into ZIP via JSZip, triggers download. Partial failures surface as an info alert.
+ */
+function ExportDatabaseBridge({
   databaseName,
   schema,
   children,
@@ -70,99 +91,90 @@ function ExportDatabaseProvider({
   const [format, setFormat] = useState<ExportFormat>('sql')
   const [isSuccess, setIsSuccess] = useState(false)
   const [statusText, setStatusText] = useState('')
-  const { state, actions: baseActions } = useModalState()
+  const { actions } = useModalForm()
   const [fetchTables] = useGetStorageUnitsLazyQuery({ fetchPolicy: 'no-cache' })
   const [executeQuery] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      baseActions.setSubmitting(true)
-      baseActions.closeAlert()
-      setIsSuccess(false)
-      setStatusText('Fetching table list...')
+  const handleExport = useCallback(async () => {
+    actions.setSubmitting(true)
+    actions.closeAlert()
+    setIsSuccess(false)
+    setStatusText('Fetching table list...')
 
-      try {
-        const { data: tablesData, error: tablesError } = await fetchTables({
-          variables: { schema },
-          context: { database: databaseName },
-        })
+    try {
+      const { data: tablesData, error: tablesError } = await fetchTables({
+        variables: { schema },
+        context: { database: databaseName },
+      })
 
-        if (tablesError) throw new Error(tablesError.message)
-        const tables = tablesData?.StorageUnit ?? []
-        if (tables.length === 0) throw new Error('No tables found in database')
+      if (tablesError) throw new Error(tablesError.message)
+      const tables = tablesData?.StorageUnit ?? []
+      if (tables.length === 0) throw new Error('No tables found in database')
 
-        const zip = new JSZip()
-        const failedTables: string[] = []
+      const zip = new JSZip()
+      const failedTables: string[] = []
 
-        for (let i = 0; i < tables.length; i++) {
-          const table = tables[i]
-          const tableName = table.Name
-          setStatusText(`Exporting table ${i + 1} of ${tables.length}... (${tableName})`)
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables[i]
+        const tableName = table.Name
+        setStatusText(`Exporting table ${i + 1} of ${tables.length}... (${tableName})`)
 
-          try {
-            const qualifiedName = schema ? `${schema}.${tableName}` : tableName
-            const { data, error } = await executeQuery({
-              variables: { query: `SELECT * FROM ${qualifiedName}` },
-              context: { database: databaseName },
-            })
-
-            if (error || !data?.RawExecute) {
-              failedTables.push(tableName)
-              continue
-            }
-
-            const { Columns, Rows } = data.RawExecute
-            let blob: Blob
-
-            switch (format) {
-              case 'csv': blob = toCSV(Columns, Rows); break
-              case 'json': blob = toJSON(Columns, Rows); break
-              case 'sql': blob = toSQL(qualifiedName, Columns, Rows); break
-              case 'excel': blob = toExcel(tableName, Columns, Rows); break
-            }
-
-            zip.file(`${tableName}.${FORMAT_EXTENSIONS[format]}`, blob)
-          } catch {
-            failedTables.push(tableName)
-          }
-        }
-
-        setStatusText('Generating zip file...')
-
-        const zipBlob = await zip.generateAsync({ type: 'blob' })
-        downloadBlob(zipBlob, `export_${databaseName}.zip`)
-
-        setIsSuccess(true)
-
-        if (failedTables.length > 0) {
-          baseActions.setAlert({
-            type: 'info',
-            title: 'Partial export',
-            message: `Exported ${tables.length - failedTables.length} of ${tables.length} tables. Failed: ${failedTables.join(', ')}`,
+        try {
+          const qualifiedName = schema ? `${schema}.${tableName}` : tableName
+          const { data, error } = await executeQuery({
+            variables: { query: `SELECT * FROM ${qualifiedName}` },
+            context: { database: databaseName },
           })
+
+          if (error || !data?.RawExecute) {
+            failedTables.push(tableName)
+            continue
+          }
+
+          const { Columns, Rows } = data.RawExecute
+          let blob: Blob
+
+          switch (format) {
+            case 'csv': blob = toCSV(Columns, Rows); break
+            case 'json': blob = toJSON(Columns, Rows); break
+            case 'sql': blob = toSQL(qualifiedName, Columns, Rows); break
+            case 'excel': blob = toExcel(tableName, Columns, Rows); break
+          }
+
+          zip.file(`${tableName}.${FORMAT_EXTENSIONS[format]}`, blob)
+        } catch {
+          failedTables.push(tableName)
         }
-      } catch (err: any) {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Export failed',
-          message: err.message || 'Unknown error',
-        })
-      } finally {
-        baseActions.setSubmitting(false)
       }
-    },
-  }
+
+      setStatusText('Generating zip file...')
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      downloadBlob(zipBlob, `export_${databaseName}.zip`)
+
+      setIsSuccess(true)
+
+      if (failedTables.length > 0) {
+        actions.setAlert({
+          type: 'info',
+          title: 'Partial export',
+          message: `Exported ${tables.length - failedTables.length} of ${tables.length} tables. Failed: ${failedTables.join(', ')}`,
+        })
+      }
+    } catch (err: any) {
+      actions.setAlert({
+        type: 'error',
+        title: 'Export failed',
+        message: err.message || 'Unknown error',
+      })
+    } finally {
+      actions.setSubmitting(false)
+    }
+  }, [actions, databaseName, executeQuery, fetchTables, format, schema])
 
   return (
-    <ExportDatabaseCtx value={{ format, setFormat, isSuccess, statusText }}>
-      <ModalForm.Provider
-        state={state}
-        actions={actions}
-        meta={{ title: 'Export Database', description: databaseName, icon: Database }}
-      >
-        {children}
-      </ModalForm.Provider>
+    <ExportDatabaseCtx value={{ format, setFormat, isSuccess, statusText, handleExport }}>
+      {children}
     </ExportDatabaseCtx>
   )
 }
@@ -185,10 +197,10 @@ function ExportDatabaseFields() {
   )
 }
 
-/** Footer bridge: reads isSuccess from domain context, delegates to shared ExportFooter. */
+/** Footer bridge: reads isSuccess and handleExport from domain context, delegates to shared ExportFooter. */
 function ExportDatabaseFooterBridge() {
-  const { isSuccess } = useExportDatabaseCtx()
-  return <ExportFooter isSuccess={isSuccess} />
+  const { isSuccess, handleExport } = useExportDatabaseCtx()
+  return <ExportFooter isSuccess={isSuccess} onClick={handleExport} />
 }
 
 // ---------------------------------------------------------------------------
