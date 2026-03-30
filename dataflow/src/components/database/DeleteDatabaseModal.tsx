@@ -4,7 +4,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -44,32 +43,21 @@ function DeleteDatabaseProvider({
   const { deleteDatabase } = useConnectionStore()
   const [confirmName, setConfirmName] = useState('')
   const canDelete = confirmName === databaseName
-  const { state, actions: baseActions } = useModalState()
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      if (!canDelete) return
-      baseActions.setSubmitting(true)
-      const result = await deleteDatabase(databaseName)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to delete database',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+  const handleSubmit = useCallback(async () => {
+    if (!canDelete) return
+    const result = await deleteDatabase(databaseName)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [canDelete, databaseName, deleteDatabase, onSuccess])
 
   return (
     <DeleteDatabaseCtx value={{ confirmName, setConfirmName, databaseName, canDelete }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Delete Database', icon: AlertTriangle, isDestructive: true }}
       >
         {children}

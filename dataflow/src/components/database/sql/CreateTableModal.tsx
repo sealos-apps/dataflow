@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 import { resolveSchemaParam } from '@/utils/database-features'
 import type { RecordInput } from '@graphql'
 
@@ -71,7 +70,6 @@ function CreateTableProvider({
   const [columns, setColumns] = useState<ColumnDefinition[]>([
     { id: '1', name: 'id', type: 'INT', isPrimaryKey: true, isNullable: false },
   ])
-  const { state, actions: baseActions } = useModalState()
 
   const addColumn = useCallback(() => {
     setColumns(prev => [
@@ -97,42 +95,32 @@ function CreateTableProvider({
     [],
   )
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      if (!tableName || columns.length === 0) return
-      baseActions.setSubmitting(true)
+  const handleSubmit = useCallback(async () => {
+    if (!tableName || columns.length === 0) return
 
-      const conn = connections.find(c => c.id === connectionId)
-      const schemaParam = resolveSchemaParam(conn?.type, databaseName, schema)
-      const fields: RecordInput[] = columns.map(col => ({
-        Key: col.name,
-        Value: col.type,
-        Extra: [
-          { Key: 'Nullable', Value: col.isNullable ? 'true' : 'false' },
-          { Key: 'Primary', Value: col.isPrimaryKey ? 'true' : 'false' },
-        ],
-      }))
+    const conn = connections.find(c => c.id === connectionId)
+    const schemaParam = resolveSchemaParam(conn?.type, databaseName, schema)
+    const fields: RecordInput[] = columns.map(col => ({
+      Key: col.name,
+      Value: col.type,
+      Extra: [
+        { Key: 'Nullable', Value: col.isNullable ? 'true' : 'false' },
+        { Key: 'Primary', Value: col.isPrimaryKey ? 'true' : 'false' },
+      ],
+    }))
 
-      const result = await createTable(databaseName, schemaParam, tableName, fields)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to create table',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+    const result = await createTable(databaseName, schemaParam, tableName, fields)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [tableName, columns, connections, connectionId, databaseName, schema, createTable, onSuccess])
 
   return (
     <CreateTableCtx value={{ tableName, setTableName, columns, addColumn, removeColumn, updateColumn }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Create Table', icon: Table }}
       >
         {children}

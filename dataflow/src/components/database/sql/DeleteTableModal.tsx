@@ -4,7 +4,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -47,32 +46,21 @@ function DeleteTableProvider({
   const { deleteTable } = useConnectionStore()
   const [confirmName, setConfirmName] = useState('')
   const canDelete = confirmName === tableName
-  const { state, actions: baseActions } = useModalState()
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      if (!canDelete) return
-      baseActions.setSubmitting(true)
-      const result = await deleteTable(databaseName, schema, tableName)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to delete table',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+  const handleSubmit = useCallback(async () => {
+    if (!canDelete) return
+    const result = await deleteTable(databaseName, schema, tableName)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [canDelete, databaseName, schema, tableName, deleteTable, onSuccess])
 
   return (
     <DeleteTableCtx value={{ confirmName, setConfirmName, tableName, canDelete }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Delete Table', icon: AlertTriangle, isDestructive: true }}
       >
         {children}

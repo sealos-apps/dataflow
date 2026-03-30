@@ -4,7 +4,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -42,32 +41,21 @@ function EditDatabaseProvider({
 }) {
   const { renameDatabase } = useConnectionStore()
   const [newName, setNewName] = useState(databaseName)
-  const { state, actions: baseActions } = useModalState()
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      if (!newName || newName === databaseName) return
-      baseActions.setSubmitting(true)
-      const result = await renameDatabase(databaseName, newName)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to rename database',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+  const handleSubmit = useCallback(async () => {
+    if (!newName || newName === databaseName) return
+    const result = await renameDatabase(databaseName, newName)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [newName, databaseName, renameDatabase, onSuccess])
 
   return (
     <EditDatabaseCtx value={{ newName, setNewName, databaseName }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Rename Database', icon: Database }}
       >
         {children}

@@ -4,7 +4,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -48,33 +47,22 @@ function CopyTableProvider({
   const { copyTable } = useConnectionStore()
   const [newTableName, setNewTableName] = useState(`${tableName}_copy`)
   const [copyOption, setCopyOption] = useState<'structure' | 'structure_data'>('structure_data')
-  const { state, actions: baseActions } = useModalState()
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      if (!newTableName.trim()) return
-      baseActions.setSubmitting(true)
-      const copyData = copyOption === 'structure_data'
-      const result = await copyTable(databaseName, schema, tableName, newTableName, copyData)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to copy table',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+  const handleSubmit = useCallback(async () => {
+    if (!newTableName.trim()) return
+    const copyData = copyOption === 'structure_data'
+    const result = await copyTable(databaseName, schema, tableName, newTableName, copyData)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [newTableName, copyOption, databaseName, schema, tableName, copyTable, onSuccess])
 
   return (
     <CopyTableCtx value={{ newTableName, setNewTableName, copyOption, setCopyOption, tableName }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Copy Table', icon: Copy }}
       >
         {children}

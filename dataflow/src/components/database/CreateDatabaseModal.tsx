@@ -4,7 +4,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -39,32 +38,21 @@ function CreateDatabaseProvider({
 }) {
   const { createDatabase } = useConnectionStore()
   const [dbName, setDbName] = useState('')
-  const { state, actions: baseActions } = useModalState()
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      if (!dbName) return
-      baseActions.setSubmitting(true)
-      const result = await createDatabase(dbName)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to create database',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+  const handleSubmit = useCallback(async () => {
+    if (!dbName) return
+    const result = await createDatabase(dbName)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [dbName, createDatabase, onSuccess])
 
   return (
     <CreateDatabaseCtx value={{ dbName, setDbName }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Create Database', icon: Database }}
       >
         {children}

@@ -4,7 +4,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { useModalState } from '@/components/database/modals/useModalState'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -45,31 +44,20 @@ function ClearTableDataProvider({
 }) {
   const { clearTableData } = useConnectionStore()
   const [mode, setMode] = useState<'truncate' | 'delete'>('truncate')
-  const { state, actions: baseActions } = useModalState()
 
-  const actions = {
-    ...baseActions,
-    submit: async () => {
-      baseActions.setSubmitting(true)
-      const result = await clearTableData(databaseName, schema, tableName, mode)
-      baseActions.setSubmitting(false)
-      if (result.success) {
-        onSuccess?.()
-      } else {
-        baseActions.setAlert({
-          type: 'error',
-          title: 'Failed to clear data',
-          message: result.message ?? 'Unknown error',
-        })
-      }
-    },
-  }
+  const handleSubmit = useCallback(async () => {
+    const result = await clearTableData(databaseName, schema, tableName, mode)
+    if (result.success) {
+      onSuccess?.()
+    } else {
+      throw new Error(result.message ?? 'Unknown error')
+    }
+  }, [databaseName, schema, tableName, mode, clearTableData, onSuccess])
 
   return (
     <ClearTableDataCtx value={{ mode, setMode, tableName }}>
       <ModalForm.Provider
-        state={state}
-        actions={actions}
+        onSubmit={handleSubmit}
         meta={{ title: 'Clear Table Data', icon: Eraser, isDestructive: true }}
       >
         {children}
