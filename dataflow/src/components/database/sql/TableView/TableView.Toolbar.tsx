@@ -4,14 +4,13 @@ import {
   Filter,
   Download,
   RefreshCw,
-  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
 import { useTableView } from './TableViewProvider'
 
-/** Secondary toolbar rendered inside the table card area with search, add data, filter, export, refresh, and AI analysis buttons. */
+/** Secondary toolbar rendered inside the table card area with search, add data, filter, export, and refresh buttons. */
 export function TableViewToolbar() {
   const { state, actions } = useTableView()
 
@@ -77,14 +76,6 @@ export function TableViewToolbar() {
             <RefreshCw className="h-3.5 w-3.5" />
           </div>
           Refresh
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 gap-2"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          AI Analysis
         </Button>
       </div>
     </div>
