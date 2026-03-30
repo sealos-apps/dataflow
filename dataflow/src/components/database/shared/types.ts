@@ -25,7 +25,7 @@ export interface ToolbarProps {
   /** Optional count displayed next to title (e.g., total rows). */
   count?: number
   /** Action buttons rendered on the right side. */
-  children: React.ReactNode
+  children?: React.ReactNode
 }
 
 /** A single dismissible filter chip. */

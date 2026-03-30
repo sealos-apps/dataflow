@@ -115,8 +115,8 @@ export function DashboardEditor() {
             />
 
             <MaximizeChartModal
-                isOpen={!!maximizedComponentId}
-                onClose={() => setMaximizedComponentId(null)}
+                open={!!maximizedComponentId}
+                onOpenChange={(open) => { if (!open) setMaximizedComponentId(null) }}
                 componentId={maximizedComponentId}
             />
 
