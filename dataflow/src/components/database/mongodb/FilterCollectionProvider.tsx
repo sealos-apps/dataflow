@@ -94,6 +94,46 @@ function createEmptyCondition(fields: string[]): FilterConditionDraft {
   }
 }
 
+function createConditionForField(field: string): FilterConditionDraft {
+  return {
+    id: Math.random().toString(36).slice(2, 11),
+    field,
+    operator: '$eq',
+    value: '',
+  }
+}
+
+function getNormalizedField(value: string): string {
+  return value.trim()
+}
+
+function findFirstUnusedField(fields: string[], conditions: FilterConditionDraft[]): string | null {
+  const usedFields = new Set(
+    conditions
+      .map((condition) => getNormalizedField(condition.field))
+      .filter((field) => field.length > 0),
+  )
+
+  for (const field of fields) {
+    if (!usedFields.has(field)) return field
+  }
+
+  return null
+}
+
+function getDuplicateFields(conditions: FilterConditionDraft[]): string[] {
+  const counts = new Map<string, number>()
+  for (const condition of conditions) {
+    const field = getNormalizedField(condition.field)
+    if (!field) continue
+    counts.set(field, (counts.get(field) ?? 0) + 1)
+  }
+
+  return Array.from(counts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([field]) => field)
+}
+
 function parseInitialFilter(initialFilter: FlatMongoFilter | undefined): ParsedFilterResult {
   if (!initialFilter || Object.keys(initialFilter).length === 0) {
     return { conditions: [], hasUnsupported: false }
@@ -209,10 +249,7 @@ function buildFlatFilter(conditions: FilterConditionDraft[]): FlatMongoFilter {
     const operatorValue =
       condition.operator === '$in' ? parseInDraftValue(condition.value) : parseDraftToken(condition.value)
 
-    const current = filter[field]
-    const currentObject = isPlainObject(current) ? current : {}
     filter[field] = {
-      ...currentObject,
       [condition.operator]: operatorValue,
     }
   }
@@ -277,27 +314,67 @@ export function FilterCollectionProvider({
   }, [open, initialFilter, fields, baseActions])
 
   const addCondition = useCallback(() => {
-    setConditions((prev) => [...prev, createEmptyCondition(fields)])
-  }, [fields])
+    const nextField = findFirstUnusedField(fields, conditions)
+    if (!nextField) {
+      baseActions.setAlert({
+        type: 'info',
+        title: 'No additional fields available',
+        message: 'Each field can only be used once in this filter.',
+      })
+      return
+    }
+
+    setConditions((prev) => [...prev, createConditionForField(nextField)])
+  }, [fields, conditions, baseActions])
 
   const removeCondition = useCallback((id: string) => {
     setConditions((prev) => prev.filter((condition) => condition.id !== id))
   }, [])
 
   const updateCondition = useCallback((id: string, updates: Partial<FilterConditionDraft>) => {
-    setConditions((prev) =>
-      prev.map((condition) => (condition.id === id ? { ...condition, ...updates } : condition)),
-    )
-  }, [])
+    setConditions((prev) => {
+      const target = prev.find((condition) => condition.id === id)
+      if (!target) return prev
+
+      const requestedField =
+        typeof updates.field === 'string' ? getNormalizedField(updates.field) : getNormalizedField(target.field)
+      if (requestedField) {
+        const isTakenByAnother = prev.some(
+          (condition) =>
+            condition.id !== id && getNormalizedField(condition.field) === requestedField,
+        )
+        if (isTakenByAnother) {
+          baseActions.setAlert({
+            type: 'error',
+            title: 'Duplicate field not allowed',
+            message: `Field "${requestedField}" is already used in another condition.`,
+          })
+          return prev
+        }
+      }
+
+      return prev.map((condition) => (condition.id === id ? { ...condition, ...updates } : condition))
+    })
+  }, [baseActions])
 
   const clearConditions = useCallback(() => {
     setConditions([])
   }, [])
 
   const submit = useCallback(async () => {
+    const duplicates = getDuplicateFields(conditions)
+    if (duplicates.length > 0) {
+      baseActions.setAlert({
+        type: 'error',
+        title: 'Duplicate fields detected',
+        message: 'Each field can only appear once in the filter conditions.',
+      })
+      return
+    }
+
     onApply(buildFlatFilter(conditions))
     onOpenChange(false)
-  }, [conditions, onApply, onOpenChange])
+  }, [conditions, onApply, onOpenChange, baseActions])
 
   const actions = {
     ...baseActions,
