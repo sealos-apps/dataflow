@@ -37,6 +37,7 @@ export interface FilterCollectionCtxValue {
   removeCondition: (id: string) => void
   updateCondition: (id: string, updates: Partial<FilterConditionDraft>) => void
   clearConditions: () => void
+  clearAndClose: () => void
 }
 
 const FilterCollectionCtx = createContext<FilterCollectionCtxValue | null>(null)
@@ -177,7 +178,7 @@ function parseInitialFilter(initialFilter: FlatMongoFilter | undefined): ParsedF
         continue
       }
 
-      if (!isPrimitive(regexValue)) {
+      if (typeof regexValue !== 'string') {
         hasUnsupported = true
         continue
       }
@@ -186,7 +187,7 @@ function parseInitialFilter(initialFilter: FlatMongoFilter | undefined): ParsedF
         id: Math.random().toString(36).slice(2, 11),
         field,
         operator: '$regex',
-        value: draftValueFromPrimitive(regexValue),
+        value: regexValue,
       })
       continue
     }
@@ -366,6 +367,11 @@ export function FilterCollectionProvider({
     setConditions([])
   }, [])
 
+  const clearAndClose = useCallback(() => {
+    onApply({})
+    onOpenChange(false)
+  }, [onApply, onOpenChange])
+
   const submit = useCallback(async () => {
     const duplicates = getDuplicateFields(conditions)
     if (duplicates.length > 0) {
@@ -395,6 +401,7 @@ export function FilterCollectionProvider({
         removeCondition,
         updateCondition,
         clearConditions,
+        clearAndClose,
       }}
     >
       <ModalForm.Provider state={state} actions={actions} meta={{ title: 'Filter Collection', icon: Filter }}>

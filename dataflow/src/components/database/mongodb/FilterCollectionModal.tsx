@@ -194,12 +194,12 @@ function FilterModalAlert() {
 }
 
 function FilterCollectionFooter() {
-  const { clearConditions } = useFilterCollectionCtx()
+  const { clearAndClose } = useFilterCollectionCtx()
   const { state, actions } = useModalForm()
 
   return (
     <DialogFooter className="justify-between gap-2 sm:justify-between">
-      <Button type="button" variant="ghost" onClick={clearConditions} disabled={state.isSubmitting}>
+      <Button type="button" variant="ghost" onClick={clearAndClose} disabled={state.isSubmitting}>
         Clear Filters
       </Button>
       <div className="flex items-center gap-2">
