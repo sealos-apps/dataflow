@@ -1,237 +1,222 @@
-import React, { useState, useEffect } from "react";
-import { X, Download, FileJson, FileSpreadsheet, FileCode, FileText, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useRawExecuteLazyQuery } from "@/generated/graphql";
-import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from "@/utils/export-utils";
+import { createContext, use, useState, type ReactNode } from 'react'
+import { FileJson, FileSpreadsheet, FileCode, FileText, Table2 } from 'lucide-react'
+import { useRawExecuteLazyQuery } from '@/generated/graphql'
+import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from '@/utils/export-utils'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/Input'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { useModalState } from '@/components/database/modals/useModalState'
+import { FormatSelector, type FormatOption } from '@/components/database/modals/FormatSelector'
+import { ExportProgress, ExportFooter } from '@/components/database/modals/ExportProgress'
 
-interface ExportDataModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    connectionId: string;
-    databaseName: string;
-    schema?: string | null;
-    tableName: string;
-}
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
-type ExportFormat = 'csv' | 'json' | 'sql' | 'excel';
+type ExportFormat = 'csv' | 'json' | 'sql' | 'excel'
 
-const FORMAT_OPTIONS = [
-    { id: 'csv' as const, label: 'CSV', icon: FileText },
-    { id: 'json' as const, label: 'JSON', icon: FileJson },
-    { id: 'sql' as const, label: 'SQL', icon: FileCode },
-    { id: 'excel' as const, label: 'Excel', icon: FileSpreadsheet },
-];
+const FORMAT_OPTIONS: FormatOption<ExportFormat>[] = [
+  { id: 'csv', label: 'CSV', icon: FileText },
+  { id: 'json', label: 'JSON', icon: FileJson },
+  { id: 'sql', label: 'SQL', icon: FileCode },
+  { id: 'excel', label: 'Excel', icon: FileSpreadsheet },
+]
 
 const FORMAT_EXTENSIONS: Record<ExportFormat, string> = {
-    csv: 'csv',
-    json: 'json',
-    sql: 'sql',
-    excel: 'xlsx',
-};
+  csv: 'csv',
+  json: 'json',
+  sql: 'sql',
+  excel: 'xlsx',
+}
 
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
+
+interface ExportDataCtxValue {
+  format: ExportFormat
+  setFormat: (v: ExportFormat) => void
+  rowCount: number | ''
+  setRowCount: (v: number | '') => void
+  filter: string
+  setFilter: (v: string) => void
+  isSuccess: boolean
+}
+
+const ExportDataCtx = createContext<ExportDataCtxValue | null>(null)
+
+/** Hook to access ExportDataModal domain state. Throws if used outside the provider. */
+function useExportDataCtx(): ExportDataCtxValue {
+  const ctx = use(ExportDataCtx)
+  if (!ctx) throw new Error('useExportDataCtx must be used within ExportDataProvider')
+  return ctx
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
+/** Owns export logic: builds SQL query, executes via GraphQL, converts to selected format, triggers download. */
+function ExportDataProvider({
+  databaseName,
+  schema,
+  tableName,
+  children,
+}: {
+  databaseName: string
+  schema?: string | null
+  tableName: string
+  children: ReactNode
+}) {
+  const [format, setFormat] = useState<ExportFormat>('csv')
+  const [rowCount, setRowCount] = useState<number | ''>(1000)
+  const [filter, setFilter] = useState('')
+  const [isSuccess, setIsSuccess] = useState(false)
+  const { state, actions: baseActions } = useModalState()
+  const [executeQuery] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
+
+  const actions = {
+    ...baseActions,
+    submit: async () => {
+      baseActions.setSubmitting(true)
+      baseActions.closeAlert()
+      setIsSuccess(false)
+
+      try {
+        const qualifiedName = schema ? `${schema}.${tableName}` : tableName
+        let query = `SELECT * FROM ${qualifiedName}`
+        if (filter.trim()) query += ` WHERE ${filter.trim()}`
+        if (rowCount !== '') query += ` LIMIT ${rowCount}`
+
+        const { data, error } = await executeQuery({
+          variables: { query },
+          context: { database: databaseName },
+        })
+
+        if (error) throw new Error(error.message)
+        if (!data?.RawExecute) throw new Error('No data returned from query')
+
+        const { Columns, Rows } = data.RawExecute
+        let blob: Blob
+
+        switch (format) {
+          case 'csv': blob = toCSV(Columns, Rows); break
+          case 'json': blob = toJSON(Columns, Rows); break
+          case 'sql': blob = toSQL(qualifiedName, Columns, Rows); break
+          case 'excel': blob = toExcel(tableName, Columns, Rows); break
+        }
+
+        downloadBlob(blob, `${tableName}.${FORMAT_EXTENSIONS[format]}`)
+        setIsSuccess(true)
+      } catch (err: any) {
+        baseActions.setAlert({
+          type: 'error',
+          title: 'Export failed',
+          message: err.message || 'Unknown error',
+        })
+      } finally {
+        baseActions.setSubmitting(false)
+      }
+    },
+  }
+
+  return (
+    <ExportDataCtx value={{ format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess }}>
+      <ModalForm.Provider
+        state={state}
+        actions={actions}
+        meta={{
+          title: 'Export Data',
+          description: schema ? `${databaseName}.${schema}.${tableName}` : `${databaseName}.${tableName}`,
+          icon: Table2,
+        }}
+      >
+        {children}
+      </ModalForm.Provider>
+    </ExportDataCtx>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Subcomponents
+// ---------------------------------------------------------------------------
+
+/** Format selector, row limit, filter, and progress display. */
+function ExportDataFields() {
+  const { format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess } = useExportDataCtx()
+  const { state } = useModalForm()
+  const disabled = state.isSubmitting || isSuccess
+
+  return (
+    <div className="space-y-6">
+      <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
+
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Row Limit</label>
+        <Input
+          type="number"
+          value={rowCount}
+          onChange={(e) => setRowCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+          placeholder="Leave empty for all rows"
+          disabled={disabled}
+        />
+        <p className="text-xs text-muted-foreground">
+          Leave empty to export all rows (warning: large tables may take time)
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Filter Data (Optional)</label>
+        <textarea
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Enter SQL WHERE clause (e.g., id > 100 AND status = 'active')"
+          disabled={disabled}
+          className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+        />
+      </div>
+
+      <ExportProgress isExporting={state.isSubmitting} isSuccess={isSuccess} />
+    </div>
+  )
+}
+
+/** Footer bridge: reads isSuccess from domain context, delegates to shared ExportFooter. */
+function ExportDataFooterBridge() {
+  const { isSuccess } = useExportDataCtx()
+  return <ExportFooter isSuccess={isSuccess} />
+}
+
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
+
+interface ExportDataModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  databaseName: string
+  schema?: string | null
+  tableName: string
+}
+
+/** Modal for exporting a single SQL table with optional row limit and WHERE filter. */
 export function ExportDataModal({
-    isOpen,
-    onClose,
-    connectionId,
-    databaseName,
-    schema,
-    tableName
+  open,
+  onOpenChange,
+  databaseName,
+  schema,
+  tableName,
 }: ExportDataModalProps) {
-    const [format, setFormat] = useState<ExportFormat>('csv');
-    const [rowCount, setRowCount] = useState<number | ''>(1000);
-    const [filter, setFilter] = useState("");
-    const [isExporting, setIsExporting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    const [executeQuery] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' });
-
-    useEffect(() => {
-        if (isOpen) {
-            setFormat('csv');
-            setRowCount(1000);
-            setFilter("");
-            setIsExporting(false);
-            setIsSuccess(false);
-            setErrorMessage(null);
-        }
-    }, [isOpen]);
-
-    if (!isOpen) return null;
-
-    const handleExport = async () => {
-        setIsExporting(true);
-        setIsSuccess(false);
-        setErrorMessage(null);
-
-        try {
-            const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
-            let query = `SELECT * FROM ${qualifiedName}`;
-            if (filter.trim()) query += ` WHERE ${filter.trim()}`;
-            if (rowCount !== '') query += ` LIMIT ${rowCount}`;
-
-            const { data, error } = await executeQuery({
-                variables: { query },
-                context: { database: databaseName },
-            });
-
-            if (error) throw new Error(error.message);
-            if (!data?.RawExecute) throw new Error('No data returned from query');
-
-            const { Columns, Rows } = data.RawExecute;
-            let blob: Blob;
-
-            switch (format) {
-                case 'csv':
-                    blob = toCSV(Columns, Rows);
-                    break;
-                case 'json':
-                    blob = toJSON(Columns, Rows);
-                    break;
-                case 'sql':
-                    blob = toSQL(qualifiedName, Columns, Rows);
-                    break;
-                case 'excel':
-                    blob = toExcel(tableName, Columns, Rows);
-                    break;
-            }
-
-            downloadBlob(blob, `${tableName}.${FORMAT_EXTENSIONS[format]}`);
-            setIsSuccess(true);
-        } catch (err: any) {
-            setErrorMessage(err.message || 'Export failed');
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-[500px] bg-background border rounded-lg shadow-lg flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b">
-                    <div>
-                        <h2 className="text-lg font-semibold">Export Data</h2>
-                        <p className="text-sm text-muted-foreground">
-                            {schema ? `${databaseName}.${schema}.${tableName}` : `${databaseName}.${tableName}`}
-                        </p>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="rounded-full p-1 hover:bg-muted transition-colors"
-                        disabled={isExporting}
-                    >
-                        <X className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-6 space-y-6 overflow-y-auto">
-                    {/* Format Selection */}
-                    <div className="space-y-3">
-                        <label className="text-sm font-medium">Export Format</label>
-                        <div className="grid grid-cols-4 gap-3">
-                            {FORMAT_OPTIONS.map((option) => (
-                                <button
-                                    key={option.id}
-                                    onClick={() => setFormat(option.id)}
-                                    disabled={isExporting}
-                                    className={cn(
-                                        "flex flex-col items-center justify-center p-3 rounded-md border transition-all",
-                                        format === option.id
-                                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                            : "hover:border-primary/50 hover:bg-muted/50"
-                                    )}
-                                >
-                                    <option.icon className={cn(
-                                        "h-6 w-6 mb-2",
-                                        format === option.id ? "text-primary" : "text-muted-foreground"
-                                    )} />
-                                    <span className="text-xs font-medium">{option.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Row Count */}
-                    <div className="space-y-3">
-                        <label className="text-sm font-medium">Row Limit</label>
-                        <input
-                            type="number"
-                            value={rowCount}
-                            onChange={(e) => setRowCount(e.target.value === '' ? '' : parseInt(e.target.value))}
-                            placeholder="Leave empty for all rows"
-                            disabled={isExporting}
-                            className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Leave empty to export all rows (warning: large tables may take time)
-                        </p>
-                    </div>
-
-                    {/* Filter */}
-                    <div className="space-y-3">
-                        <label className="text-sm font-medium">Filter Data (Optional)</label>
-                        <textarea
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                            placeholder="Enter SQL WHERE clause (e.g., id > 100 AND status = 'active')"
-                            disabled={isExporting}
-                            className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
-                        />
-                    </div>
-
-                    {/* Status */}
-                    {(isExporting || isSuccess || errorMessage) && (
-                        <div className="space-y-2 pt-2">
-                            <div className="flex items-center gap-2 text-sm">
-                                {isExporting && (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                        <span className="text-muted-foreground">Exporting...</span>
-                                    </>
-                                )}
-                                {isSuccess && (
-                                    <span className="text-green-600 font-medium">Export complete! File downloaded.</span>
-                                )}
-                                {errorMessage && (
-                                    <span className="text-red-600">{errorMessage}</span>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t bg-muted/20 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        disabled={isExporting}
-                        className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-md transition-colors"
-                    >
-                        {isSuccess ? 'Close' : 'Cancel'}
-                    </button>
-                    {!isSuccess && (
-                        <button
-                            onClick={handleExport}
-                            disabled={isExporting}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isExporting ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Exporting...
-                                </>
-                            ) : (
-                                <>
-                                    <Download className="h-4 w-4" />
-                                    Start Export
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <ExportDataProvider databaseName={databaseName} schema={schema} tableName={tableName}>
+          <ModalForm.Header />
+          <ExportDataFields />
+          <ModalForm.Alert />
+          <ExportDataFooterBridge />
+        </ExportDataProvider>
+      </DialogContent>
+    </Dialog>
+  )
 }
