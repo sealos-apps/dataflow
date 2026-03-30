@@ -1,6 +1,7 @@
 import { Edit2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRedisView } from './RedisViewProvider'
 import type { RedisKey } from './types'
 
@@ -17,6 +18,7 @@ const TYPE_COLORS: Record<string, string> = {
 /** A single row in the Redis key list table. */
 export function RedisViewKeyRow({ redisKey }: { redisKey: RedisKey }) {
   const { actions } = useRedisView()
+  const canEdit = redisKey.type === 'string'
 
   return (
     <tr className="group transition-colors hover:bg-muted/30">
@@ -39,14 +41,28 @@ export function RedisViewKeyRow({ redisKey }: { redisKey: RedisKey }) {
       </td>
       <td className="px-6 py-2 text-right whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/30 transition-colors z-20 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] border-b border-border/50">
         <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-primary"
-            onClick={() => actions.handleEditKey(redisKey)}
-          >
-            <Edit2 className="h-3.5 w-3.5" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                    onClick={() => actions.handleEditKey(redisKey)}
+                    disabled={!canEdit}
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!canEdit && (
+                <TooltipContent side="top">
+                  Editing is currently supported only for string keys
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           <Button
             variant="ghost"
             size="icon"

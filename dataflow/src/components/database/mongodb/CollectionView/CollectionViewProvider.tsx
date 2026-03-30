@@ -11,6 +11,7 @@ import {
 import { resolveSchemaParam } from '@/utils/database-features'
 import type { CollectionViewContextValue } from './types'
 import type { AlertState } from '@/components/database/shared/types'
+import type { FlatMongoFilter } from '@/components/database/mongodb/filter-collection.types'
 
 const CollectionViewCtx = createContext<CollectionViewContextValue | null>(null)
 
@@ -65,7 +66,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
 
   // ---- Filter state ----
   const [showFilterModal, setShowFilterModal] = useState(false)
-  const [activeFilter, setActiveFilter] = useState<any>({})
+  const [activeFilter, setActiveFilter] = useState<FlatMongoFilter>({})
   const [availableFields, setAvailableFields] = useState<string[]>([])
 
   // ---- Alert state ----
@@ -126,17 +127,17 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
       //   $regex: { field: { $regex: "...", $options: "i" } }
       //   others: { field: { $gt: value } }
       const filterConditions: WhereCondition[] = []
-      for (const [fieldName, cond] of Object.entries(activeFilter)) {
-        if (cond === undefined || cond === null) continue
-        if (typeof cond !== 'object' || Array.isArray(cond)) {
+      for (const [fieldName, condition] of Object.entries(activeFilter)) {
+        if (condition === undefined || condition === null) continue
+        if (typeof condition !== 'object' || Array.isArray(condition)) {
           // Primitive value -> $eq
           filterConditions.push({
             Type: WhereConditionType.Atomic,
-            Atomic: { Key: fieldName, Operator: 'eq', Value: String(cond), ColumnType: 'string' },
+            Atomic: { Key: fieldName, Operator: 'eq', Value: String(condition), ColumnType: 'string' },
           })
         } else {
           // Object with MongoDB operators: { $regex: "...", $options: "..." } or { $gt: value }
-          for (const [op, val] of Object.entries(cond as Record<string, any>)) {
+          for (const [op, val] of Object.entries(condition as Record<string, unknown>)) {
             if (op === '$options') continue // Skip $options (handled with $regex)
             const operator = op.replace('$', '')
             const value = Array.isArray(val) ? val.join(', ') : String(val ?? '')
@@ -365,7 +366,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
   }, [])
 
   // ---- Filter apply ----
-  const handleFilterApply = useCallback((filter: any) => {
+  const handleFilterApply = useCallback((filter: FlatMongoFilter) => {
     setActiveFilter(filter)
     setCurrentPage(1)
   }, [])

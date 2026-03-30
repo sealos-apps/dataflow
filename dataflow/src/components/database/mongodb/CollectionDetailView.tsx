@@ -89,7 +89,9 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
 
       <EditDocumentModal
         open={state.editingDoc !== null}
-        onOpenChange={(open) => { if (!open) actions.setEditingDoc(null) }}
+        onOpenChange={(open) => {
+          if (!open) actions.setEditingDoc(null)
+        }}
         content={state.editContent}
         onContentChange={actions.setEditContent}
         onSave={actions.handleSave}
@@ -97,15 +99,17 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
 
       <ExportCollectionModal
         open={state.showExportModal}
-        onOpenChange={(open) => { if (!open) actions.setShowExportModal(false) }}
+        onOpenChange={(open) => {
+          if (!open) actions.setShowExportModal(false)
+        }}
         connectionId={connectionId}
         databaseName={databaseName}
         collectionName={collectionName}
       />
 
       <FilterCollectionModal
-        isOpen={state.showFilterModal}
-        onClose={() => actions.setShowFilterModal(false)}
+        open={state.showFilterModal}
+        onOpenChange={actions.setShowFilterModal}
         onApply={actions.handleFilterApply}
         fields={state.availableFields}
         initialFilter={state.activeFilter}
@@ -118,7 +122,7 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
         title="Delete Document"
         message="Are you sure you want to delete this document? This action cannot be undone."
         confirmText="Delete"
-        isDestructive={true}
+        isDestructive
       />
 
       <AlertModal

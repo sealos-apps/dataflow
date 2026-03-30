@@ -1,4 +1,5 @@
 import type { AlertState } from '@/components/database/shared/types'
+import type { FlatMongoFilter } from '@/components/database/mongodb/filter-collection.types'
 
 /** Context value exposed by CollectionViewProvider. */
 export interface CollectionViewContextValue {
@@ -16,7 +17,7 @@ export interface CollectionViewState {
   totalDocuments: number
   totalPages: number
   searchTerm: string
-  activeFilter: any
+  activeFilter: FlatMongoFilter
   availableFields: string[]
   selectedDocIndex: number | null
   showAddModal: boolean
@@ -48,7 +49,7 @@ export interface CollectionViewActions {
   handleConfirmDelete: () => Promise<void>
   setShowDeleteModal: (open: boolean) => void
   setShowFilterModal: (open: boolean) => void
-  handleFilterApply: (filter: any) => void
+  handleFilterApply: (filter: FlatMongoFilter) => void
   setShowExportModal: (open: boolean) => void
   setSelectedDocIndex: (index: number | null) => void
   showAlert: (title: string, message: string, type: AlertState['type']) => void

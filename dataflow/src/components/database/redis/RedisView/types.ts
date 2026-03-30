@@ -1,4 +1,5 @@
 import type { AlertState } from '@/components/database/shared/types'
+import type { RedisKeyDraft } from '@/components/database/redis/redis-key.types'
 
 /** A single Redis key entry. */
 export interface RedisKey {
@@ -25,7 +26,7 @@ export interface RedisViewState {
   filterTypes: string[]
   isFilterModalOpen: boolean
   isAddModalOpen: boolean
-  editingKey: { key: string; type: string; value: any; ttl?: number } | undefined
+  editingKey: RedisKeyDraft | undefined
   deletingKey: RedisKey | undefined
   showExportModal: boolean
   alertState: AlertState
@@ -39,7 +40,7 @@ export interface RedisViewActions {
   handleApplyFilter: (newPattern: string, newTypes: string[]) => void
   setIsFilterModalOpen: (open: boolean) => void
   handleEditKey: (key: RedisKey) => Promise<void>
-  handleSaveKey: (keyData: any) => Promise<void>
+  handleSaveKey: (draft: RedisKeyDraft) => Promise<void>
   handleConfirmDelete: () => Promise<void>
   openAddModal: () => void
   setIsAddModalOpen: (open: boolean) => void

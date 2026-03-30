@@ -59,10 +59,12 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
       )}
 
       <RedisKeyModal
-        isOpen={state.isAddModalOpen}
-        onClose={() => {
-          actions.setIsAddModalOpen(false)
-          actions.setEditingKey(undefined)
+        open={state.isAddModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            actions.setIsAddModalOpen(false)
+            actions.setEditingKey(undefined)
+          }
         }}
         onSave={actions.handleSaveKey}
         initialData={state.editingKey}
@@ -73,14 +75,14 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
         onClose={() => actions.setDeletingKey(undefined)}
         onConfirm={actions.handleConfirmDelete}
         title="Delete Key"
-        message={`Are you sure you want to delete key "${state.deletingKey?.key}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete key "${state.deletingKey?.key ?? ''}"? This action cannot be undone.`}
         confirmText="Delete"
         isDestructive
       />
 
       <ExportRedisModal
-        isOpen={state.showExportModal}
-        onClose={() => actions.setShowExportModal(false)}
+        open={state.showExportModal}
+        onOpenChange={actions.setShowExportModal}
         connectionId={connectionId}
         databaseName={databaseName}
         initialPattern={state.pattern}
@@ -96,8 +98,8 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
       />
 
       <RedisFilterModal
-        isOpen={state.isFilterModalOpen}
-        onClose={() => actions.setIsFilterModalOpen(false)}
+        open={state.isFilterModalOpen}
+        onOpenChange={actions.setIsFilterModalOpen}
         onApply={actions.handleApplyFilter}
         initialPattern={state.pattern}
         initialTypes={state.filterTypes}

@@ -1,265 +1,214 @@
-import React, { useState, useEffect } from "react";
-import { Filter, X, Plus, Trash2, Search, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { cn } from "@/lib/utils";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Plus, Search, Trash2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import {
+  FilterCollectionProvider,
+  useFilterCollectionCtx,
+} from './FilterCollectionProvider'
+import type {
+  FlatMongoFilter,
+  MongoFilterOperator,
+} from './filter-collection.types'
 
 interface FilterCollectionModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onApply: (filter: any) => void;
-    fields: string[];
-    initialFilter?: any;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onApply: (filter: FlatMongoFilter) => void
+  fields: string[]
+  initialFilter?: FlatMongoFilter
 }
 
-interface FilterCondition {
-    id: string;
-    field: string;
-    operator: string;
-    value: string;
+const OPERATOR_OPTIONS: Array<{ value: MongoFilterOperator; label: string }> = [
+  { value: '$eq', label: 'Equals (=)' },
+  { value: '$ne', label: 'Not Equals (!=)' },
+  { value: '$regex', label: 'Contains' },
+  { value: '$gt', label: 'Greater Than (>)' },
+  { value: '$lt', label: 'Less Than (<)' },
+  { value: '$gte', label: 'Greater/Equal (>=)' },
+  { value: '$lte', label: 'Less/Equal (<=)' },
+  { value: '$in', label: 'In (comma separated)' },
+]
+
+/** Modal for building flat MongoDB collection filters. */
+export function FilterCollectionModal({
+  open,
+  onOpenChange,
+  onApply,
+  fields,
+  initialFilter,
+}: FilterCollectionModalProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <FilterCollectionProvider
+          open={open}
+          fields={fields}
+          initialFilter={initialFilter}
+          onApply={onApply}
+          onOpenChange={onOpenChange}
+        >
+          <ModalForm.Header />
+          <FilterConditionList />
+          <FilterModalAlert />
+          <FilterCollectionFooter />
+        </FilterCollectionProvider>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
-const OPERATORS = [
-    { value: '$eq', label: 'Equals (=)' },
-    { value: '$ne', label: 'Not Equals (!=)' },
-    { value: '$regex', label: 'Contains' },
-    { value: '$gt', label: 'Greater Than (>)' },
-    { value: '$lt', label: 'Less Than (<)' },
-    { value: '$gte', label: 'Greater/Equal (>=)' },
-    { value: '$lte', label: 'Less/Equal (<=)' },
-    { value: '$in', label: 'In (comma separated)' },
-];
+function FilterConditionList() {
+  const { conditions, fields, addCondition, removeCondition, updateCondition } = useFilterCollectionCtx()
+  const { state } = useModalForm()
+  const usedFields = new Set(conditions.map((condition) => condition.field.trim()).filter(Boolean))
+  const canAddCondition = fields.some((field) => !usedFields.has(field))
 
-export function FilterCollectionModal({ isOpen, onClose, onApply, fields, initialFilter }: FilterCollectionModalProps) {
-    const [conditions, setConditions] = useState<FilterCondition[]>([]);
-
-    // Reset or load initial filter when opening
-    useEffect(() => {
-        if (isOpen) {
-            if (initialFilter && Object.keys(initialFilter).length > 0) {
-                // Try to parse existing filter back to conditions
-                // This is a simplified parser and might not cover all cases
-                const newConditions: FilterCondition[] = [];
-                Object.entries(initialFilter).forEach(([key, value]: [string, any]) => {
-                    if (typeof value === 'object' && value !== null) {
-                        // Handle operators like { $eq: ... }
-                        Object.entries(value).forEach(([op, val]) => {
-                            if (OPERATORS.some(o => o.value === op)) {
-                                newConditions.push({
-                                    id: Math.random().toString(36).substr(2, 9),
-                                    field: key,
-                                    operator: op,
-                                    value: Array.isArray(val) ? val.join(', ') : String(val)
-                                });
-                            }
-                        });
-                    } else {
-                        // Simple equality { field: value }
-                        newConditions.push({
-                            id: Math.random().toString(36).substr(2, 9),
-                            field: key,
-                            operator: '$eq',
-                            value: String(value)
-                        });
-                    }
-                });
-                setConditions(newConditions);
-            } else {
-                setConditions([{ id: '1', field: fields[0] || '', operator: '$eq', value: '' }]);
-            }
-        }
-    }, [isOpen, initialFilter, fields]);
-
-    const handleAddCondition = () => {
-        setConditions([
-            ...conditions,
-            { id: Math.random().toString(36).substr(2, 9), field: fields[0] || '', operator: '$eq', value: '' }
-        ]);
-    };
-
-    const handleRemoveCondition = (id: string) => {
-        setConditions(conditions.filter(c => c.id !== id));
-    };
-
-    const updateCondition = (id: string, updates: Partial<FilterCondition>) => {
-        setConditions(conditions.map(c => c.id === id ? { ...c, ...updates } : c));
-    };
-
-    const handleApply = () => {
-        const filterObj: any = {};
-
-        conditions.forEach(c => {
-            if (!c.field) return;
-
-            let val: any = c.value;
-
-            // Type inference basic
-            if (!isNaN(Number(c.value)) && c.value.trim() !== '') {
-                val = Number(c.value);
-            } else if (c.value.toLowerCase() === 'true') {
-                val = true;
-            } else if (c.value.toLowerCase() === 'false') {
-                val = false;
-            } else if (c.value.toLowerCase() === 'null') {
-                val = null;
-            }
-
-            // Handle $in operator
-            if (c.operator === '$in') {
-                val = c.value.split(',').map(v => {
-                    const trimmed = v.trim();
-                    if (!isNaN(Number(trimmed)) && trimmed !== '') return Number(trimmed);
-                    return trimmed;
-                });
-            }
-
-            // Handle $regex
-            if (c.operator === '$regex') {
-                // MongoDB regex needs options usually, simple contains
-                // We pass string, backend or mongodb driver usually handles it if passed as regex object or $regex operator
-                // Here we just pass the $regex operator with the string value
-                // NOTE: For full regex support, simpler to just pass string. 
-                // Frontend will send { field: { $regex: value, $options: 'i' } } ideally
-            }
-
-            if (c.operator === '$eq') {
-                // Determine if we merge or overwrite. For simple UI, overwrite or use complex $and
-                filterObj[c.field] = val;
-            } else if (c.operator === '$regex') {
-                filterObj[c.field] = { $regex: String(c.value), $options: 'i' };
-            } else {
-                filterObj[c.field] = { ...filterObj[c.field], [c.operator]: val };
-            }
-        });
-
-        onApply(filterObj);
-        onClose();
-    };
-
-    if (!isOpen) return null;
-
+  if (conditions.length === 0) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-            <div className="bg-card w-full max-w-2xl rounded-xl shadow-2xl border animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Filter className="h-5 w-5 text-primary" />
-                        Filter Collection
-                    </h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onClose}
-                        className="h-8 w-8 rounded-full"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
+      <div className="rounded-lg border border-dashed p-6 text-center">
+        <p className="text-sm text-muted-foreground">No filters applied</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addCondition}
+          disabled={state.isSubmitting || !canAddCondition}
+          className="mt-4"
+        >
+          <Plus className="h-4 w-4" />
+          Add Condition
+        </Button>
+      </div>
+    )
+  }
 
-                <div className="p-6 overflow-y-auto flex-1">
-                    {conditions.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <Filter className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                            <p>No filters applied</p>
-                            <Button variant="outline" size="sm" onClick={handleAddCondition} className="mt-4">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Condition
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {conditions.map((condition, index) => (
-                                <div key={condition.id} className="flex items-start gap-3 p-4 border rounded-lg bg-muted/5 group hover:bg-muted/10 transition-colors">
-                                    <div className="flex-1 grid grid-cols-12 gap-3">
-                                        {/* Field Selector */}
-                                        <div className="col-span-4">
-                                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Field</label>
-                                            <Select value={condition.field} onValueChange={(v) => updateCondition(condition.id, { field: v })}>
-                                                <SelectTrigger className="w-full h-9 text-sm">
-                                                    <SelectValue placeholder="Select field" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {fields.map(field => <SelectItem key={field} value={field}>{field}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+  return (
+    <div className="space-y-3">
+      {conditions.map((condition) => {
+        const fieldOptions = fields.filter(
+          (field) => field === condition.field || !usedFields.has(field),
+        )
 
-                                        {/* Operator Selector */}
-                                        <div className="col-span-3">
-                                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Operator</label>
-                                            <Select value={condition.operator} onValueChange={(v) => updateCondition(condition.id, { operator: v })}>
-                                                <SelectTrigger className="w-full h-9 text-sm">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {OPERATORS.map(op => <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+        return (
+          <div key={condition.id} className="rounded-lg border p-4">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-4 space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Field</label>
+                <Select
+                  value={condition.field}
+                  onValueChange={(value) => updateCondition(condition.id, { field: value })}
+                  disabled={state.isSubmitting}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fieldOptions.map((field) => (
+                      <SelectItem key={field} value={field}>
+                        {field}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                                        {/* Value Input */}
-                                        <div className="col-span-5">
-                                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Value</label>
-                                            <Input
-                                                className="h-9 text-sm"
-                                                value={condition.value}
-                                                onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
-                                                placeholder={condition.operator === '$in' ? "e.g. val1, val2" : "Value"}
-                                            />
-                                        </div>
-                                    </div>
+              <div className="col-span-3 space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Operator</label>
+                <Select
+                  value={condition.operator}
+                  onValueChange={(value) =>
+                    updateCondition(condition.id, { operator: value as MongoFilterOperator })
+                  }
+                  disabled={state.isSubmitting}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPERATOR_OPTIONS.map((operator) => (
+                      <SelectItem key={operator.value} value={operator.value}>
+                        {operator.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                                    {/* Remove Button */}
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleRemoveCondition(condition.id)}
-                                        className="h-9 w-9 mt-5 text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100 transition-opacity"
-                                        title="Remove condition"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
+              <div className="col-span-4 space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Value</label>
+                <Input
+                  value={condition.value}
+                  onChange={(event) => updateCondition(condition.id, { value: event.target.value })}
+                  placeholder={condition.operator === '$in' ? 'e.g. foo, bar' : 'Value'}
+                  className="h-9"
+                  disabled={state.isSubmitting}
+                />
+              </div>
 
-                            <Button variant="outline" size="sm" onClick={handleAddCondition} className="w-full border-dashed">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Another Condition
-                            </Button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center justify-between p-6 border-t bg-muted/20 rounded-b-xl">
-                    <Button
-                        variant="ghost"
-                        onClick={() => {
-                            setConditions([]);
-                            onApply({});
-                            onClose();
-                        }}
-                        className="text-muted-foreground hover:text-destructive"
-                    >
-                        Clear Filters
-                    </Button>
-                    <div className="flex gap-3">
-                        <Button
-                            variant="ghost"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleApply}
-                            className="gap-2"
-                        >
-                            <Search className="h-4 w-4" />
-                            Apply Filter
-                        </Button>
-                    </div>
-                </div>
+              <div className="col-span-1 flex items-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeCondition(condition.id)}
+                  disabled={state.isSubmitting}
+                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                  title="Remove condition"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-        </div>
-    );
+          </div>
+        )
+      })}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={addCondition}
+        disabled={state.isSubmitting || !canAddCondition}
+        className="w-full border-dashed"
+      >
+        <Plus className="h-4 w-4" />
+        Add Another Condition
+      </Button>
+    </div>
+  )
+}
+
+function FilterModalAlert() {
+  const { state } = useModalForm()
+  if (!state.alert) return null
+  return <ModalForm.Alert />
+}
+
+function FilterCollectionFooter() {
+  const { clearAndClose } = useFilterCollectionCtx()
+  const { state, actions } = useModalForm()
+
+  return (
+    <DialogFooter className="justify-between gap-2 sm:justify-between">
+      <Button type="button" variant="ghost" onClick={clearAndClose} disabled={state.isSubmitting}>
+        Clear Filters
+      </Button>
+      <div className="flex items-center gap-2">
+        <ModalForm.CancelButton />
+        <Button type="button" onClick={actions.submit} disabled={state.isSubmitting}>
+          {state.isSubmitting ? null : <Search className="h-4 w-4" />}
+          Apply
+        </Button>
+      </div>
+    </DialogFooter>
+  )
 }

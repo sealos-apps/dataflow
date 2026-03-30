@@ -451,8 +451,10 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         const p = activeModal.params;
         return (
           <CreateCollectionModal
-            isOpen
-            onClose={closeModal}
+            open
+            onOpenChange={(open) => {
+              if (!open) closeModal();
+            }}
             connectionId={p.connectionId}
             databaseName={p.databaseName}
             onSuccess={() => {

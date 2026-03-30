@@ -4,12 +4,14 @@ import {
   useGetStorageUnitsLazyQuery,
   useGetStorageUnitRowsLazyQuery,
   useAddStorageUnitMutation,
-  useAddRowMutation,
   useDeleteRowMutation,
+  useUpdateStorageUnitMutation,
+  type RecordInput,
 } from '@graphql'
 import { resolveSchemaParam } from '@/utils/database-features'
 import type { RedisKey, RedisViewContextValue } from './types'
 import type { AlertState } from '@/components/database/shared/types'
+import type { RedisKeyDraft } from '@/components/database/redis/redis-key.types'
 
 const RedisViewCtx = createContext<RedisViewContextValue | null>(null)
 
@@ -21,96 +23,59 @@ export function useRedisView(): RedisViewContextValue {
 }
 
 /** Build fields for AddStorageUnit (create). Redis plugin reads type from fields[0].Extra["type"]. */
-function buildRedisFields(keyData: any): Array<{ Key: string; Value: string; Extra?: Array<{ Key: string; Value: string }> }> {
-  const fields: Array<{ Key: string; Value: string; Extra?: Array<{ Key: string; Value: string }> }> = []
-  switch (keyData.type) {
+function buildRedisFields(draft: RedisKeyDraft): RecordInput[] {
+  const fields: RecordInput[] = []
+  switch (draft.type) {
     case 'string':
-      fields.push({ Key: 'value', Value: String(keyData.value ?? '') })
+      fields.push({ Key: 'value', Value: draft.stringValue })
       break
     case 'hash':
-      if (Array.isArray(keyData.value)) {
-        for (const item of keyData.value) {
-          fields.push({ Key: String(item.field ?? ''), Value: String(item.value ?? '') })
-        }
+      for (const item of draft.hashPairs) {
+        if (!item.field) continue
+        fields.push({ Key: item.field, Value: item.value })
       }
       break
-    case 'list': case 'set':
-      if (Array.isArray(keyData.value)) {
-        for (const item of keyData.value) {
-          fields.push({ Key: 'value', Value: String(item.value ?? item) })
-        }
+    case 'list':
+      for (const item of draft.listItems) {
+        if (!item.value) continue
+        fields.push({ Key: 'value', Value: item.value })
+      }
+      break
+    case 'set':
+      for (const item of draft.setItems) {
+        if (!item.value) continue
+        fields.push({ Key: 'value', Value: item.value })
       }
       break
     case 'zset':
-      if (Array.isArray(keyData.value)) {
-        for (const item of keyData.value) {
-          fields.push({ Key: String(item.score ?? '0'), Value: String(item.member ?? item.value ?? '') })
-        }
+      for (const item of draft.zsetItems) {
+        if (!item.member) continue
+        fields.push({ Key: item.score, Value: item.member })
       }
       break
   }
   // Signal key type to Redis plugin via Extra on first field
   if (fields.length > 0) {
-    fields[0] = { ...fields[0], Extra: [{ Key: 'type', Value: keyData.type }] }
+    fields[0] = { ...fields[0], Extra: [{ Key: 'type', Value: draft.type }] }
   }
   return fields
 }
 
-/** Build values for AddRow (update). No Extra needed -- key already has its type. */
-function buildRedisValues(keyData: any): Array<{ Key: string; Value: string }> {
-  const fields: Array<{ Key: string; Value: string }> = []
-  switch (keyData.type) {
-    case 'string':
-      fields.push({ Key: 'value', Value: String(keyData.value ?? '') })
-      break
-    case 'hash':
-      if (Array.isArray(keyData.value)) {
-        for (const item of keyData.value) {
-          fields.push({ Key: String(item.field ?? ''), Value: String(item.value ?? '') })
-        }
-      }
-      break
-    case 'list': case 'set':
-      if (Array.isArray(keyData.value)) {
-        for (const item of keyData.value) {
-          fields.push({ Key: 'value', Value: String(item.value ?? item) })
-        }
-      }
-      break
-    case 'zset':
-      if (Array.isArray(keyData.value)) {
-        for (const item of keyData.value) {
-          fields.push({ Key: String(item.score ?? '0'), Value: String(item.member ?? item.value ?? '') })
-        }
-      }
-      break
-  }
-  return fields
-}
-
-/** Transform GraphQL RowsResult into RedisKeyModal-compatible data. */
-function transformRedisRowsToKeyData(keyName: string, keyType: string, rowResult: any): any {
+/** Transform GraphQL rows for a Redis string key into the normalized edit draft state. */
+function transformRedisRowsToStringKeyData(keyName: string, rowResult: any): RedisKeyDraft {
   const columns = rowResult.Columns.map((c: any) => c.Name)
+  const valueIndex = columns.indexOf('value')
   const rows = rowResult.Rows
-  switch (keyType) {
-    case 'string':
-      return { key: keyName, type: 'string', value: rows[0]?.[0] ?? '', ttl: -1 }
-    case 'hash':
-      return { key: keyName, type: 'hash', value: rows.map((row: string[]) => ({
-        field: row[columns.indexOf('field')] ?? row[0],
-        value: row[columns.indexOf('value')] ?? row[1],
-      })), ttl: -1 }
-    case 'list': case 'set':
-      return { key: keyName, type: keyType, value: rows.map((row: string[]) => ({
-        value: row[columns.indexOf('value')] ?? row[1] ?? row[0],
-      })), ttl: -1 }
-    case 'zset':
-      return { key: keyName, type: 'zset', value: rows.map((row: string[]) => ({
-        member: row[columns.indexOf('member')] ?? row[1],
-        score: row[columns.indexOf('score')] ?? row[2],
-      })), ttl: -1 }
-    default:
-      return { key: keyName, type: keyType, value: rows[0]?.[0] ?? '', ttl: -1 }
+
+  return {
+    mode: 'edit',
+    key: keyName,
+    type: 'string',
+    stringValue: rows[0]?.[valueIndex >= 0 ? valueIndex : 0] ?? '',
+    hashPairs: [{ field: '', value: '' }],
+    listItems: [{ value: '' }],
+    setItems: [{ value: '' }],
+    zsetItems: [{ member: '', score: '0' }],
   }
 }
 
@@ -128,8 +93,8 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
   const [getStorageUnits] = useGetStorageUnitsLazyQuery({ fetchPolicy: 'no-cache' })
   const [getRows] = useGetStorageUnitRowsLazyQuery({ fetchPolicy: 'no-cache' })
   const [addStorageUnitMutation] = useAddStorageUnitMutation()
-  const [addRowMutation] = useAddRowMutation()
   const [deleteRowMutation] = useDeleteRowMutation()
+  const [updateStorageUnitMutation] = useUpdateStorageUnitMutation()
 
   // ---- Core state ----
   const [keys, setKeys] = useState<RedisKey[]>([])
@@ -147,7 +112,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
   // ---- Modal state ----
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [editingKey, setEditingKey] = useState<{ key: string; type: string; value: any; ttl?: number } | undefined>(undefined)
+  const [editingKey, setEditingKey] = useState<RedisKeyDraft | undefined>(undefined)
   const [deletingKey, setDeletingKey] = useState<RedisKey | undefined>(undefined)
   const [showExportModal, setShowExportModal] = useState(false)
 
@@ -239,6 +204,11 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
   }, [])
 
   const handleEditKey = useCallback(async (key: RedisKey) => {
+    if (key.type !== 'string') {
+      showAlert('Unsupported edit mode', 'Editing is currently supported only for string keys.', 'info')
+      return
+    }
+
     const conn = connections.find(c => c.id === connectionId)
     if (!conn) return
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
@@ -255,7 +225,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
       })
       if (error) throw new Error(error.message)
       if (data?.Row) {
-        const keyData = transformRedisRowsToKeyData(key.key, key.type, data.Row)
+        const keyData = transformRedisRowsToStringKeyData(key.key, data.Row)
         setEditingKey(keyData)
         setIsAddModalOpen(true)
       }
@@ -266,40 +236,49 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
     }
   }, [connections, connectionId, databaseName, getRows, showAlert])
 
-  const handleSaveKey = useCallback(async (keyData: any) => {
+  const handleSaveKey = useCallback(async (draft: RedisKeyDraft) => {
     const conn = connections.find(c => c.id === connectionId)
-    if (!conn) return
+    if (!conn) throw new Error('Connection not found')
 
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
 
     try {
-      if (editingKey) {
-        // Update existing key
-        const values = buildRedisValues(keyData)
-        const { errors } = await addRowMutation({
-          variables: { schema: graphqlSchema, storageUnit: keyData.key, values },
+      if (draft.mode === 'edit') {
+        if (draft.type !== 'string') {
+          throw new Error('Editing is currently supported only for string keys')
+        }
+
+        const values: RecordInput[] = [{ Key: 'value', Value: draft.stringValue }]
+        const { errors, data } = await updateStorageUnitMutation({
+          variables: {
+            schema: graphqlSchema,
+            storageUnit: draft.key,
+            values,
+            updatedColumns: ['value'],
+          },
           context: { database: databaseName },
         })
         if (errors?.length) throw new Error(errors[0].message)
+        if (!data?.UpdateStorageUnit.Status) throw new Error('Failed to save key')
       } else {
-        // Create new key
-        const fields = buildRedisFields(keyData)
-        const { errors } = await addStorageUnitMutation({
-          variables: { schema: graphqlSchema, storageUnit: keyData.key, fields },
+        const fields = buildRedisFields(draft)
+        const { errors, data } = await addStorageUnitMutation({
+          variables: { schema: graphqlSchema, storageUnit: draft.key, fields },
           context: { database: databaseName },
         })
         if (errors?.length) throw new Error(errors[0].message)
+        if (!data?.AddStorageUnit.Status) throw new Error('Failed to create key')
       }
 
-      showAlert('Success', `Key "${keyData.key}" ${editingKey ? 'updated' : 'created'} successfully!`, 'success')
+      showAlert('Success', `Key "${draft.key}" ${draft.mode === 'edit' ? 'updated' : 'created'} successfully!`, 'success')
 
       setEditingKey(undefined)
       setIsAddModalOpen(false)
-      fetchKeys()
-    } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to save key', 'error')
+      await fetchKeys()
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to save key')
     }
-  }, [connections, connectionId, databaseName, editingKey, addRowMutation, addStorageUnitMutation, fetchKeys, showAlert])
+  }, [connections, connectionId, databaseName, addStorageUnitMutation, fetchKeys, showAlert, updateStorageUnitMutation])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingKey) return

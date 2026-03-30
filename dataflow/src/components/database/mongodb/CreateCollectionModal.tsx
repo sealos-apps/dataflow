@@ -1,127 +1,79 @@
-import React, { useState } from "react";
-import { AlertModal } from "@/components/ui/AlertModal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { X, Database, Save, Loader2 } from "lucide-react";
-import { useConnectionStore } from "@/stores/useConnectionStore";
-import { resolveSchemaParam } from "@/utils/database-features";
+import { useCallback } from 'react'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/Input'
+import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { CreateCollectionProvider, useCreateCollectionCtx } from './CreateCollectionProvider'
 
 interface CreateCollectionModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    connectionId: string;
-    databaseName: string;
-    onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  connectionId: string
+  databaseName: string
+  onSuccess?: () => void
 }
 
-export function CreateCollectionModal({ isOpen, onClose, connectionId, databaseName, onSuccess }: CreateCollectionModalProps) {
-    const { createTable, connections } = useConnectionStore();
-    const [collectionName, setCollectionName] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
+/** Modal for creating a MongoDB collection using the composition pattern. */
+export function CreateCollectionModal({
+  open,
+  onOpenChange,
+  connectionId,
+  databaseName,
+  onSuccess,
+}: CreateCollectionModalProps) {
+  const handleSuccess = useCallback(() => {
+    onSuccess?.()
+    onOpenChange(false)
+  }, [onSuccess, onOpenChange])
 
-    const [alert, setAlert] = useState<{
-        isOpen: boolean;
-        type: 'success' | 'error';
-        title: string;
-        message: string;
-    }>({
-        isOpen: false,
-        type: 'success',
-        title: '',
-        message: ''
-    });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <CreateCollectionProvider
+          connectionId={connectionId}
+          databaseName={databaseName}
+          onSuccess={handleSuccess}
+        >
+          <ModalForm.Header />
+          <CreateCollectionFields />
+          <ModalForm.Alert />
+          <ModalForm.Footer>
+            <ModalForm.CancelButton />
+            <CreateCollectionSubmitButton />
+          </ModalForm.Footer>
+        </CreateCollectionProvider>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
-    if (!isOpen) return null;
+/** Input field for the new collection name. */
+function CreateCollectionFields() {
+  const { collectionName, setCollectionName } = useCreateCollectionCtx()
+  const { state, actions } = useModalForm()
 
-    const handleSave = async () => {
-        if (!collectionName) return;
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Collection Name
+      </label>
+      <Input
+        value={collectionName}
+        onChange={(e) => setCollectionName(e.target.value)}
+        placeholder="e.g., users"
+        disabled={state.isSubmitting}
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && collectionName && !state.isSubmitting) {
+            actions.submit()
+          }
+        }}
+      />
+    </div>
+  )
+}
 
-        setIsSaving(true);
-        try {
-            const conn = connections.find(c => c.id === connectionId);
-            const schemaParam = resolveSchemaParam(conn?.type, databaseName);
-
-            const result = await createTable(databaseName, schemaParam, collectionName, []);
-
-            if (result.success) {
-                setAlert({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Collection Created',
-                    message: result.message ?? `Collection "${collectionName}" has been successfully created.`,
-                });
-            } else {
-                setAlert({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Creation Failed',
-                    message: result.message ?? 'Failed to create collection.',
-                });
-            }
-        } catch (error) {
-            setAlert({
-                isOpen: true,
-                type: 'error',
-                title: 'Creation Failed',
-                message: error instanceof Error ? error.message : "An unknown error occurred while creating the collection."
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleAlertClose = () => {
-        setAlert(prev => ({ ...prev, isOpen: false }));
-        if (alert.type === 'success') {
-            if (onSuccess) onSuccess();
-            onClose();
-        }
-    };
-
-    return (
-        <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <div className="w-full max-w-md rounded-xl bg-background shadow-2xl border animate-in fade-in zoom-in duration-200 flex flex-col">
-                    <div className="flex items-center justify-between border-b px-6 py-4">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Database className="h-5 w-5 text-green-500" />
-                            Create Collection
-                        </h2>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-8 w-8">
-                            <X className="h-5 w-5" />
-                        </Button>
-                    </div>
-
-                    <div className="p-6">
-                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground uppercase">
-                            Collection Name
-                        </label>
-                        <Input
-                            value={collectionName}
-                            onChange={(e) => setCollectionName(e.target.value)}
-                            placeholder="e.g., users"
-                            onKeyDown={(e) => { if (e.key === "Enter" && collectionName) handleSave(); }}
-                            autoFocus
-                        />
-                    </div>
-
-                    <div className="flex items-center justify-end gap-3 border-t bg-muted/5 px-6 py-4">
-                        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={!collectionName || isSaving} className="gap-2">
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Create Collection
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            <AlertModal
-                isOpen={alert.isOpen}
-                onClose={handleAlertClose}
-                title={alert.title}
-                message={alert.message}
-                type={alert.type}
-            />
-        </>
-    );
+/** Submit button disabled when collection name is empty. */
+function CreateCollectionSubmitButton() {
+  const { collectionName } = useCreateCollectionCtx()
+  return <ModalForm.SubmitButton label="Create Collection" disabled={!collectionName} />
 }

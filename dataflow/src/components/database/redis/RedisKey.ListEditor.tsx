@@ -1,0 +1,54 @@
+import { Plus, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { useModalForm } from '@/components/database/modals/ModalForm'
+import { useRedisKeyCtx } from './RedisKeyProvider'
+
+/** Create-only editor for Redis list values. */
+export function RedisKeyListEditor() {
+  const { draft, setListItems } = useRedisKeyCtx()
+  const { state } = useModalForm()
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-muted-foreground">Value</label>
+      <div className="space-y-2">
+        {draft.listItems.map((item, index) => (
+          <div key={index} className="flex gap-2">
+            <Input
+              placeholder="Item value"
+              value={item.value}
+              onChange={(event) => {
+                const next = [...draft.listItems]
+                next[index] = { value: event.target.value }
+                setListItems(next)
+              }}
+              className="flex-1 font-mono"
+              disabled={state.isSubmitting}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setListItems(draft.listItems.filter((_, itemIndex) => itemIndex !== index))}
+              disabled={state.isSubmitting || draft.listItems.length === 1}
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setListItems([...draft.listItems, { value: '' }])}
+          disabled={state.isSubmitting}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4" />
+          Add Item
+        </Button>
+      </div>
+    </div>
+  )
+}
