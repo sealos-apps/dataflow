@@ -13,10 +13,6 @@ export function DashboardEditor() {
     const {
         dashboards,
         activeDashboardId,
-
-        isEditorMode,
-        toggleEditorMode,
-        addComponent,
         selectComponent,
         isChartModalOpen,
         toggleChartModal,
