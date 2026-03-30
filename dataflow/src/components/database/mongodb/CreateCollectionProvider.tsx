@@ -47,6 +47,7 @@ export function CreateCollectionProvider({
   const submit = useCallback(async () => {
     if (!collectionName) return
     baseActions.setSubmitting(true)
+    let didSucceed = false
 
     try {
       const conn = connections.find(c => c.id === connectionId)
@@ -54,7 +55,7 @@ export function CreateCollectionProvider({
       const result = await createTable(databaseName, schemaParam, collectionName, [])
 
       if (result.success) {
-        onSuccess?.()
+        didSucceed = true
       } else {
         baseActions.setAlert({
           type: 'error',
@@ -70,6 +71,10 @@ export function CreateCollectionProvider({
       })
     } finally {
       baseActions.setSubmitting(false)
+    }
+
+    if (didSucceed) {
+      onSuccess?.()
     }
   }, [collectionName, connections, connectionId, databaseName, createTable, onSuccess, baseActions])
 

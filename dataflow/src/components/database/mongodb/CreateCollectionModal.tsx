@@ -49,7 +49,7 @@ export function CreateCollectionModal({
 /** Input field for the new collection name. */
 function CreateCollectionFields() {
   const { collectionName, setCollectionName } = useCreateCollectionCtx()
-  const { state } = useModalForm()
+  const { state, actions } = useModalForm()
 
   return (
     <div className="space-y-1.5">
@@ -62,6 +62,11 @@ function CreateCollectionFields() {
         placeholder="e.g., users"
         disabled={state.isSubmitting}
         autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && collectionName && !state.isSubmitting) {
+            actions.submit()
+          }
+        }}
       />
     </div>
   )
