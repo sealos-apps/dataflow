@@ -7,6 +7,7 @@ import { EditorCanvas } from "./EditorCanvas";
 import { ChartCreateModal } from "./ChartCreateModal";
 import { MaximizeChartModal } from "./MaximizeChartModal";
 import { ComponentSettingsModal } from "./ComponentSettingsModal";
+import { DeleteComponentModal } from "./DeleteComponentModal";
 
 export function DashboardEditor() {
     const {
@@ -19,7 +20,6 @@ export function DashboardEditor() {
         selectComponent,
         isChartModalOpen,
         toggleChartModal,
-        removeComponent
     } = useAnalysisStore();
 
     const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
@@ -33,11 +33,6 @@ export function DashboardEditor() {
     const handleEditComponent = (id: string) => {
         selectComponent(id);
         setIsSettingsModalOpen(true);
-    };
-
-    const handleDeleteComponent = (id: string) => {
-        removeComponent(id);
-        setDeleteComponentId(null);
     };
 
     return (
@@ -58,7 +53,7 @@ export function DashboardEditor() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                     >
                         <Plus className="w-4 h-4" />
-                        添加图表
+                        Add Chart
                     </button>
                 </div>
             </div>
@@ -85,17 +80,17 @@ export function DashboardEditor() {
                                     <Layout className="w-8 h-8 text-muted-foreground/50" />
                                 </div>
                                 <h3 className="text-lg font-medium text-foreground mb-2">
-                                    仪表板为空
+                                    Dashboard is Empty
                                 </h3>
                                 <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                                    此仪表板没有任何组件。添加图表开始构建您的数据可视化视图。
+                                    This dashboard has no components. Add a chart to start building your data visualization.
                                 </p>
                                 <button
                                     onClick={() => toggleChartModal(true)}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    添加图表
+                                    Add Chart
                                 </button>
                             </div>
                         )}
@@ -120,31 +115,12 @@ export function DashboardEditor() {
                 componentId={maximizedComponentId}
             />
 
-            {/* Delete Confirmation Modal */}
-            {deleteComponentId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-                    <div className="w-full max-w-sm bg-card border rounded-lg shadow-lg p-4 animate-in fade-in zoom-in-95">
-                        <h3 className="font-medium mb-2">删除组件</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            确定要删除此组件吗？此操作无法撤销。
-                        </p>
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setDeleteComponentId(null)}
-                                className="px-3 py-1.5 text-xs font-medium hover:bg-muted rounded-md"
-                            >
-                                取消
-                            </button>
-                            <button
-                                onClick={() => handleDeleteComponent(deleteComponentId)}
-                                className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
-                            >
-                                删除
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteComponentModal
+                open={!!deleteComponentId}
+                onOpenChange={(open) => { if (!open) setDeleteComponentId(null) }}
+                componentId={deleteComponentId ?? ''}
+                onSuccess={() => setDeleteComponentId(null)}
+            />
         </div>
     );
 }
