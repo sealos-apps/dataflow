@@ -177,11 +177,16 @@ function parseInitialFilter(initialFilter: FlatMongoFilter | undefined): ParsedF
         continue
       }
 
+      if (!isPrimitive(regexValue)) {
+        hasUnsupported = true
+        continue
+      }
+
       parsed.push({
         id: Math.random().toString(36).slice(2, 11),
         field,
         operator: '$regex',
-        value: String(regexValue ?? ''),
+        value: draftValueFromPrimitive(regexValue),
       })
       continue
     }
