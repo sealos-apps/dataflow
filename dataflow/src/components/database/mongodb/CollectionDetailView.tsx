@@ -655,8 +655,8 @@ export function CollectionDetailView({ connectionId, databaseName, collectionNam
             )}
 
             <ExportCollectionModal
-                isOpen={showExportModal}
-                onClose={() => setShowExportModal(false)}
+                open={showExportModal}
+                onOpenChange={(open) => { if (!open) setShowExportModal(false); }}
                 connectionId={connectionId}
                 databaseName={databaseName}
                 collectionName={collectionName}

@@ -538,9 +538,8 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         const p = activeModal.params;
         return (
           <ExportDataModal
-            isOpen
-            onClose={closeModal}
-            connectionId={p.connectionId}
+            open
+            onOpenChange={(open) => { if (!open) closeModal(); }}
             databaseName={p.databaseName}
             schema={p.schema}
             tableName={p.tableName}
@@ -553,9 +552,8 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         const p = activeModal.params;
         return (
           <ExportDatabaseModal
-            isOpen
-            onClose={closeModal}
-            connectionId={p.connectionId}
+            open
+            onOpenChange={(open) => { if (!open) closeModal(); }}
             databaseName={p.databaseName}
             schema={p.schema}
           />
@@ -619,8 +617,8 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
         const p = activeModal.params;
         return (
           <ExportCollectionModal
-            isOpen
-            onClose={closeModal}
+            open
+            onOpenChange={(open) => { if (!open) closeModal(); }}
             connectionId={p.connectionId}
             databaseName={p.databaseName}
             collectionName={p.collectionName}

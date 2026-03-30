@@ -1047,9 +1047,8 @@ export function TableDetailView({ connectionId, databaseName, tableName, schema 
             {
                 showExportModal && (
                     <ExportDataModal
-                        isOpen={showExportModal}
-                        onClose={() => setShowExportModal(false)}
-                        connectionId={connectionId}
+                        open={showExportModal}
+                        onOpenChange={(open) => { if (!open) setShowExportModal(false); }}
                         databaseName={databaseName}
                         schema={schema}
                         tableName={tableName}
