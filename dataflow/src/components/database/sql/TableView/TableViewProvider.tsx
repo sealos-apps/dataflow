@@ -1,6 +1,7 @@
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useInlineEditing } from './useInlineEditing'
 import { useDataQuery } from './useDataQuery'
+import { useColumnResize } from './useColumnResize'
 import type { TableViewContextValue, TableViewState, TableViewActions, FilterCondition } from './types'
 import type { Alert } from '@/components/database/shared/types'
 
@@ -39,10 +40,6 @@ export function TableViewProvider({ connectionId, databaseName, tableName, schem
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
-
-  // ---- Column resizing state ----
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
-  const resizingRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null)
 
   // ---- Sorting state ----
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -84,42 +81,8 @@ export function TableViewProvider({ connectionId, databaseName, tableName, schem
     onInitVisibleColumns,
   })
 
-  // ---- Initialize column widths ----
-  useEffect(() => {
-    if (queryState.data?.columns && Object.keys(columnWidths).length === 0) {
-      const initialWidths: Record<string, number> = {}
-      queryState.data.columns.forEach((col: string) => {
-        initialWidths[col] = Math.max(120, col.length * 10 + 60)
-      })
-      setColumnWidths(initialWidths)
-    }
-  }, [queryState.data?.columns])
-
-  // ---- Column resize mouse event listeners ----
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (resizingRef.current) {
-        const { column, startX, startWidth } = resizingRef.current
-        const diff = e.clientX - startX
-        const newWidth = Math.max(60, startWidth + diff)
-        setColumnWidths(prev => ({ ...prev, [column]: newWidth }))
-      }
-    }
-
-    const handleMouseUp = () => {
-      if (resizingRef.current) {
-        resizingRef.current = null
-        document.body.style.cursor = 'default'
-      }
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [])
+  // ---- Column resizing ----
+  const { columnWidths, handleResizeStart } = useColumnResize(queryState.data?.columns)
 
   // ---- Alert helpers ----
   const showAlert = useCallback((title: string, message: string, type: Alert['type'] = 'info') => {
@@ -173,18 +136,6 @@ export function TableViewProvider({ connectionId, databaseName, tableName, schem
     setSortDirection(null)
     setActiveColumnMenu(null)
   }, [])
-
-  // ---- Column resize start ----
-  const handleResizeStart = useCallback((e: React.MouseEvent, column: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    resizingRef.current = {
-      column,
-      startX: e.clientX,
-      startWidth: columnWidths[column] || 120,
-    }
-    document.body.style.cursor = 'col-resize'
-  }, [columnWidths])
 
   // ---- Page change ----
   const handlePageChange = useCallback((page: number) => {
