@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { RedisFilterProvider, useRedisFilterCtx } from './RedisFilterProvider'
 
 interface RedisFilterModalProps {

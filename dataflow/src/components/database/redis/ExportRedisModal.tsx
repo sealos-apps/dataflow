@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { FormatSelector } from '@/components/database/modals/FormatSelector'
-import { ExportFooter, ExportProgress } from '@/components/database/modals/ExportProgress'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { FormatSelector } from '@/components/database/shared/FormatSelector'
+import { ExportFooter, ExportProgress } from '@/components/database/shared/ExportProgress'
 import { ExportRedisProvider, useExportRedisCtx } from './ExportRedisProvider'
 
 interface ExportRedisModalProps {

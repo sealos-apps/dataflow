@@ -2,7 +2,7 @@ import { useCallback, type ReactNode } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useAnalysisStore } from '@/stores/useAnalysisStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { ModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm } from '@/components/ui/ModalForm'
 
 // ---------------------------------------------------------------------------
 // Provider

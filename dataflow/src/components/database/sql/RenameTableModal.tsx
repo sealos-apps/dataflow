@@ -3,7 +3,7 @@ import { Table } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 
 // ---------------------------------------------------------------------------
 // Context

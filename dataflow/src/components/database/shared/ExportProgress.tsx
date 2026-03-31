@@ -1,7 +1,7 @@
 import { CheckCircle, Download, Loader2 } from 'lucide-react'
 import { DialogClose, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/Button'
-import { useModalForm } from './ModalForm'
+import { useModalForm } from '@/components/ui/ModalForm'
 
 // ---------------------------------------------------------------------------
 // ExportProgress — spinner / success status display

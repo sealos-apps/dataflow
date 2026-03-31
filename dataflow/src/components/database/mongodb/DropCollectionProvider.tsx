@@ -1,7 +1,7 @@
 import { createContext, use, useCallback, useState, type ReactNode, type JSX } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
-import { ModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm } from '@/components/ui/ModalForm'
 
 // ---------------------------------------------------------------------------
 // Context

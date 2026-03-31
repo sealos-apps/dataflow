@@ -4,9 +4,9 @@ import { useRawExecuteLazyQuery } from '@/generated/graphql'
 import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from '@/utils/export-utils'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import { FormatSelector, type FormatOption } from '@/components/database/modals/FormatSelector'
-import { ExportProgress, ExportFooter } from '@/components/database/modals/ExportProgress'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
+import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
 
 // ---------------------------------------------------------------------------
 // Constants

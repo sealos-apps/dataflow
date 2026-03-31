@@ -4,8 +4,8 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { addAuthHeader } from '@/config/auth-headers'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { downloadBlob } from '@/utils/export-utils'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import type { FormatOption } from '@/components/database/modals/FormatSelector'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import type { FormatOption } from '@/components/database/shared/FormatSelector'
 
 type RedisExportFormat = 'json' | 'csv'
 

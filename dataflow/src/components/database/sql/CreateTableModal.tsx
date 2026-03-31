@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { resolveSchemaParam } from '@/utils/database-features'
 import type { RecordInput } from '@graphql'
 

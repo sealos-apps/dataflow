@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useModalForm } from '@/components/database/modals/ModalForm'
+import { useModalForm } from '@/components/ui/ModalForm'
 import { useRedisKeyCtx } from './RedisKeyProvider'
 
 /** Create-only editor for Redis hash field/value pairs. */

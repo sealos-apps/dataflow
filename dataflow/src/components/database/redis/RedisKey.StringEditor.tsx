@@ -1,5 +1,5 @@
 import { useRedisKeyCtx } from './RedisKeyProvider'
-import { useModalForm } from '@/components/database/modals/ModalForm'
+import { useModalForm } from '@/components/ui/ModalForm'
 
 /** Editor for Redis string values in create mode and supported string-only edit mode. */
 export function RedisKeyStringEditor() {

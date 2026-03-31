@@ -3,7 +3,7 @@ import { Eraser } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 
 // ---------------------------------------------------------------------------
 // Context

@@ -25,8 +25,8 @@ import {
   addForeignKeySQL,
   dropForeignKeySQL,
 } from '@/utils/ddl-sql'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import type { ModalMeta } from '@/components/database/modals/types'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import type { ModalMeta } from '@/components/ui/types'
 import type {
   ColumnDefinition,
   IndexDefinition,

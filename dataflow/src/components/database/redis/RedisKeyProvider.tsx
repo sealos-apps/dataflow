@@ -1,6 +1,6 @@
 import { createContext, use, useCallback, useEffect, useState, type JSX, type ReactNode } from 'react'
 import { List } from 'lucide-react'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import type {
   RedisHashPairDraft,
   RedisKeyDraft,

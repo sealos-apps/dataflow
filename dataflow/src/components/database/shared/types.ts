@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import type { Alert } from '@/components/database/modals/types'
+import type { Alert } from '@/components/ui/types'
 
 export type { Alert }
 

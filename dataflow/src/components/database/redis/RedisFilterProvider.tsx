@@ -1,6 +1,6 @@
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Filter } from 'lucide-react'
-import { ModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm } from '@/components/ui/ModalForm'
 
 const REDIS_FILTER_TYPES = ['string', 'hash', 'list', 'set', 'zset', 'stream'] as const
 

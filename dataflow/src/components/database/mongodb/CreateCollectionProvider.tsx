@@ -1,7 +1,7 @@
 import { createContext, use, useCallback, useState, type ReactNode, type JSX } from 'react'
 import { Database } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
-import { ModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm } from '@/components/ui/ModalForm'
 import { resolveSchemaParam } from '@/utils/database-features'
 
 // ---------------------------------------------------------------------------

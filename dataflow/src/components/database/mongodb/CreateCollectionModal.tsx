@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { CreateCollectionProvider, useCreateCollectionCtx } from './CreateCollectionProvider'
 
 interface CreateCollectionModalProps {

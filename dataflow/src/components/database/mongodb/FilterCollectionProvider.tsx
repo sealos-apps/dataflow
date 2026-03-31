@@ -1,7 +1,7 @@
 import { createContext, use, useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
 import { Filter } from 'lucide-react'
-import { ModalForm, useModalForm } from '@/components/database/modals/ModalForm'
-import type { ModalAlert } from '@/components/database/modals/types'
+import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import type { ModalAlert } from '@/components/ui/types'
 import type {
   FilterConditionDraft,
   FlatMongoFilter,
