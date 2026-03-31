@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import {
   FilterCollectionProvider,
   useFilterCollectionCtx,
@@ -27,16 +28,20 @@ interface FilterCollectionModalProps {
   initialFilter?: FlatMongoFilter
 }
 
-const OPERATOR_OPTIONS: Array<{ value: MongoFilterOperator; label: string }> = [
-  { value: '$eq', label: 'Equals (=)' },
-  { value: '$ne', label: 'Not Equals (!=)' },
-  { value: '$regex', label: 'Contains' },
-  { value: '$gt', label: 'Greater Than (>)' },
-  { value: '$lt', label: 'Less Than (<)' },
-  { value: '$gte', label: 'Greater/Equal (>=)' },
-  { value: '$lte', label: 'Less/Equal (<=)' },
-  { value: '$in', label: 'In (comma separated)' },
-]
+function getOperatorOptions(
+  t: ReturnType<typeof useI18n>['t'],
+): Array<{ value: MongoFilterOperator; label: string }> {
+  return [
+    { value: '$eq', label: t('mongodb.filter.operator.eq') },
+    { value: '$ne', label: t('mongodb.filter.operator.ne') },
+    { value: '$regex', label: t('mongodb.filter.operator.regex') },
+    { value: '$gt', label: t('mongodb.filter.operator.gt') },
+    { value: '$lt', label: t('mongodb.filter.operator.lt') },
+    { value: '$gte', label: t('mongodb.filter.operator.gte') },
+    { value: '$lte', label: t('mongodb.filter.operator.lte') },
+    { value: '$in', label: t('mongodb.filter.operator.in') },
+  ]
+}
 
 /** Modal for building flat MongoDB collection filters. */
 export function FilterCollectionModal({
@@ -67,15 +72,17 @@ export function FilterCollectionModal({
 }
 
 function FilterConditionList() {
+  const { t } = useI18n()
   const { conditions, fields, addCondition, removeCondition, updateCondition } = useFilterCollectionCtx()
   const { state } = useModalForm()
+  const operatorOptions = getOperatorOptions(t)
   const usedFields = new Set(conditions.map((condition) => condition.field.trim()).filter(Boolean))
   const canAddCondition = fields.some((field) => !usedFields.has(field))
 
   if (conditions.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center">
-        <p className="text-sm text-muted-foreground">No filters applied</p>
+        <p className="text-sm text-muted-foreground">{t('mongodb.filter.noFilters')}</p>
         <Button
           type="button"
           variant="outline"
@@ -85,7 +92,7 @@ function FilterConditionList() {
           className="mt-4"
         >
           <Plus className="h-4 w-4" />
-          Add Condition
+          {t('mongodb.filter.addCondition')}
         </Button>
       </div>
     )
@@ -102,14 +109,14 @@ function FilterConditionList() {
           <div key={condition.id} className="rounded-lg border p-4">
             <div className="grid grid-cols-12 gap-3">
               <div className="col-span-4 space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Field</label>
+                <label className="text-xs font-medium text-muted-foreground">{t('mongodb.filter.field')}</label>
                 <Select
                   value={condition.field}
                   onValueChange={(value) => updateCondition(condition.id, { field: value })}
                   disabled={state.isSubmitting}
                 >
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Select field" />
+                    <SelectValue placeholder={t('mongodb.filter.selectField')} />
                   </SelectTrigger>
                   <SelectContent>
                     {fieldOptions.map((field) => (
@@ -122,7 +129,7 @@ function FilterConditionList() {
               </div>
 
               <div className="col-span-3 space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Operator</label>
+                <label className="text-xs font-medium text-muted-foreground">{t('mongodb.filter.operator')}</label>
                 <Select
                   value={condition.operator}
                   onValueChange={(value) =>
@@ -134,7 +141,7 @@ function FilterConditionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {OPERATOR_OPTIONS.map((operator) => (
+                    {operatorOptions.map((operator) => (
                       <SelectItem key={operator.value} value={operator.value}>
                         {operator.label}
                       </SelectItem>
@@ -144,11 +151,15 @@ function FilterConditionList() {
               </div>
 
               <div className="col-span-4 space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Value</label>
+                <label className="text-xs font-medium text-muted-foreground">{t('mongodb.filter.value')}</label>
                 <Input
                   value={condition.value}
                   onChange={(event) => updateCondition(condition.id, { value: event.target.value })}
-                  placeholder={condition.operator === '$in' ? 'e.g. foo, bar' : 'Value'}
+                  placeholder={
+                    condition.operator === '$in'
+                      ? t('mongodb.filter.valueInPlaceholder')
+                      : t('mongodb.filter.valuePlaceholder')
+                  }
                   className="h-9"
                   disabled={state.isSubmitting}
                 />
@@ -162,7 +173,7 @@ function FilterConditionList() {
                   onClick={() => removeCondition(condition.id)}
                   disabled={state.isSubmitting}
                   className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                  title="Remove condition"
+                  title={t('mongodb.filter.removeCondition')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -181,7 +192,7 @@ function FilterConditionList() {
         className="w-full border-dashed"
       >
         <Plus className="h-4 w-4" />
-        Add Another Condition
+        {t('mongodb.filter.addAnotherCondition')}
       </Button>
     </div>
   )
@@ -194,19 +205,20 @@ function FilterModalAlert() {
 }
 
 function FilterCollectionFooter() {
+  const { t } = useI18n()
   const { clearAndClose } = useFilterCollectionCtx()
   const { state, actions } = useModalForm()
 
   return (
     <DialogFooter className="justify-between gap-2 sm:justify-between">
       <Button type="button" variant="ghost" onClick={clearAndClose} disabled={state.isSubmitting}>
-        Clear Filters
+        {t('mongodb.filter.clear')}
       </Button>
       <div className="flex items-center gap-2">
         <ModalForm.CancelButton />
         <Button type="button" onClick={actions.submit} disabled={state.isSubmitting}>
           {state.isSubmitting ? null : <Search className="h-4 w-4" />}
-          Apply
+          {t('mongodb.filter.apply')}
         </Button>
       </div>
     </DialogFooter>

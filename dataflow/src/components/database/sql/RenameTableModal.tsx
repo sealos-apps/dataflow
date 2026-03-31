@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -42,6 +43,7 @@ function RenameTableProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { renameTable } = useConnectionStore()
   const [newName, setNewName] = useState(tableName)
 
@@ -51,15 +53,15 @@ function RenameTableProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('sql.common.unknownError'))
     }
-  }, [newName, tableName, databaseName, schema, renameTable, onSuccess])
+  }, [newName, tableName, databaseName, schema, renameTable, onSuccess, t])
 
   return (
     <RenameTableCtx value={{ newName, setNewName, tableName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Rename Table', icon: Table }}
+        meta={{ title: t('sql.renameTable.title'), icon: Table }}
       >
         {children}
       </ModalForm.Provider>
@@ -73,6 +75,7 @@ function RenameTableProvider({
 
 /** Shows current table name (disabled) and new name input. */
 function RenameTableFields() {
+  const { t } = useI18n()
   const { newName, setNewName, tableName } = useRenameTableCtx()
   const { state } = useModalForm()
 
@@ -80,18 +83,18 @@ function RenameTableFields() {
     <div className="space-y-4">
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Current Name
+          {t('sql.renameTable.currentName')}
         </label>
         <Input value={tableName} disabled />
       </div>
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          New Name
+          {t('sql.renameTable.newName')}
         </label>
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Enter new table name"
+          placeholder={t('sql.renameTable.newNamePlaceholder')}
           disabled={state.isSubmitting}
           autoFocus
         />
@@ -102,8 +105,9 @@ function RenameTableFields() {
 
 /** Submit button disabled when name is empty or unchanged. */
 function RenameTableSubmitButton() {
+  const { t } = useI18n()
   const { newName, tableName } = useRenameTableCtx()
-  return <ModalForm.SubmitButton label="Rename" disabled={!newName.trim() || newName === tableName} />
+  return <ModalForm.SubmitButton label={t('sql.renameTable.submit')} disabled={!newName.trim() || newName === tableName} />
 }
 
 // ---------------------------------------------------------------------------

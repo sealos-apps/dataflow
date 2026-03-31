@@ -1,9 +1,11 @@
 import { Loader2 } from 'lucide-react'
+import { useI18n } from '@/i18n/useI18n'
 import { useRedisView } from './RedisViewProvider'
 import { RedisViewKeyRow } from './RedisView.KeyRow'
 
 /** Table listing Redis keys with type badges and action buttons. */
 export function RedisViewKeyList() {
+  const { t } = useI18n()
   const { state } = useRedisView()
 
   return (
@@ -18,11 +20,11 @@ export function RedisViewKeyList() {
             <table className="min-w-full divide-y divide-border/50 border-collapse">
               <thead className="bg-background border-b border-border/50">
                 <tr>
-                  <th className="px-6 py-3 text-left font-medium text-xs text-muted-foreground uppercase tracking-wider border-r border-border/50 w-[300px] sticky top-0 bg-background z-40">Key</th>
-                  <th className="px-6 py-3 text-left font-medium text-xs text-muted-foreground uppercase tracking-wider border-r border-border/50 w-[100px] sticky top-0 bg-background z-40">Type</th>
-                  <th className="px-6 py-3 text-left font-medium text-xs text-muted-foreground uppercase tracking-wider border-r border-border/50 w-[150px] sticky top-0 bg-background z-40">Size</th>
+                  <th className="px-6 py-3 text-left font-medium text-xs text-muted-foreground uppercase tracking-wider border-r border-border/50 w-[300px] sticky top-0 bg-background z-40">{t('redis.table.key')}</th>
+                  <th className="px-6 py-3 text-left font-medium text-xs text-muted-foreground uppercase tracking-wider border-r border-border/50 w-[100px] sticky top-0 bg-background z-40">{t('redis.table.type')}</th>
+                  <th className="px-6 py-3 text-left font-medium text-xs text-muted-foreground uppercase tracking-wider border-r border-border/50 w-[150px] sticky top-0 bg-background z-40">{t('redis.table.size')}</th>
                   <th className="px-6 py-3 text-right font-medium text-xs text-muted-foreground uppercase tracking-wider sticky top-0 right-0 bg-background z-50 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] w-[100px]">
-                    Actions
+                    {t('redis.table.actions')}
                   </th>
                 </tr>
               </thead>
@@ -33,7 +35,7 @@ export function RedisViewKeyList() {
                 {state.keys.length === 0 && !state.loading && (
                   <tr>
                     <td colSpan={4} className="py-12 text-center text-muted-foreground">
-                      No keys found matching your criteria.
+                      {t('redis.table.emptyState')}
                     </td>
                   </tr>
                 )}

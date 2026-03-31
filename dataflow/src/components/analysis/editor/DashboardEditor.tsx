@@ -9,8 +9,10 @@ import { ChartCreateModal } from "../chart-create/ChartCreateModal";
 import { MaximizeChartModal } from "./MaximizeChartModal";
 import { ComponentSettingsModal } from "./ComponentSettingsModal";
 import { DeleteComponentModal } from "./DeleteComponentModal";
+import { useI18n } from '@/i18n/useI18n'
 
 export function DashboardEditor() {
+    const { t } = useI18n()
     const {
         dashboards,
         activeDashboardId,
@@ -49,7 +51,7 @@ export function DashboardEditor() {
                         onClick={() => toggleChartModal(true)}
                     >
                         <Plus className="w-4 h-4" />
-                        Add Chart
+                        {t('analysis.chart.add')}
                     </Button>
                 </div>
             </div>
@@ -76,16 +78,16 @@ export function DashboardEditor() {
                                     <Layout className="w-8 h-8 text-muted-foreground/50" />
                                 </div>
                                 <h3 className="text-lg font-medium text-foreground mb-2">
-                                    Dashboard is Empty
+                                    {t('analysis.editor.emptyTitle')}
                                 </h3>
                                 <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                                    This dashboard has no components. Add a chart to start building your data visualization.
+                                    {t('analysis.editor.emptyDescription')}
                                 </p>
                                 <Button
                                     onClick={() => toggleChartModal(true)}
                                 >
                                     <Plus className="w-4 h-4" />
-                                    Add Chart
+                                    {t('analysis.chart.add')}
                                 </Button>
                             </div>
                         )}

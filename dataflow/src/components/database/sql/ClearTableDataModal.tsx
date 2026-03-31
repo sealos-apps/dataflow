@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -42,6 +43,7 @@ function ClearTableDataProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { clearTableData } = useConnectionStore()
   const [mode, setMode] = useState<'truncate' | 'delete'>('truncate')
 
@@ -50,15 +52,15 @@ function ClearTableDataProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('sql.common.unknownError'))
     }
-  }, [databaseName, schema, tableName, mode, clearTableData, onSuccess])
+  }, [databaseName, schema, tableName, mode, clearTableData, onSuccess, t])
 
   return (
     <ClearTableDataCtx value={{ mode, setMode, tableName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Clear Table Data', icon: Eraser, isDestructive: true }}
+        meta={{ title: t('sql.clearTable.title'), icon: Eraser, isDestructive: true }}
       >
         {children}
       </ModalForm.Provider>
@@ -72,13 +74,13 @@ function ClearTableDataProvider({
 
 /** Warning banner about data loss. */
 function ClearTableDataWarning() {
+  const { t } = useI18n()
   const { tableName } = useClearTableDataCtx()
 
   return (
     <div className="rounded-lg bg-destructive/5 p-3 text-sm border border-destructive/10">
       <p className="text-muted-foreground">
-        This will remove <strong className="text-foreground">all data</strong> from{' '}
-        <strong className="text-foreground">{tableName}</strong>. This action cannot be undone.
+        {t('sql.clearTable.warning', { tableName })}
       </p>
     </div>
   )
@@ -86,13 +88,14 @@ function ClearTableDataWarning() {
 
 /** Radio selector for TRUNCATE vs DELETE mode. */
 function ClearTableDataModeSelector() {
+  const { t } = useI18n()
   const { mode, setMode } = useClearTableDataCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-2">
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Mode
+        {t('sql.clearTable.mode')}
       </label>
       <div className="space-y-2">
         <label
@@ -110,9 +113,9 @@ function ClearTableDataModeSelector() {
             className="mt-0.5"
           />
           <div>
-            <div className="text-sm font-medium">Fast (TRUNCATE)</div>
+            <div className="text-sm font-medium">{t('sql.clearTable.fastTruncate')}</div>
             <div className="text-xs text-muted-foreground">
-              Resets auto-increment counters. Skips row-level triggers. Fastest for large tables.
+              {t('sql.clearTable.fastTruncateDescription')}
             </div>
           </div>
         </label>
@@ -131,9 +134,9 @@ function ClearTableDataModeSelector() {
             className="mt-0.5"
           />
           <div>
-            <div className="text-sm font-medium">Safe (DELETE)</div>
+            <div className="text-sm font-medium">{t('sql.clearTable.safeDelete')}</div>
             <div className="text-xs text-muted-foreground">
-              Preserves auto-increment state. Fires row-level triggers. Slower on large tables.
+              {t('sql.clearTable.safeDeleteDescription')}
             </div>
           </div>
         </label>
@@ -164,6 +167,7 @@ export function ClearTableDataModal({
   tableName,
   onSuccess,
 }: ClearTableDataModalProps) {
+  const { t } = useI18n()
   const handleSuccess = useCallback(() => {
     onSuccess?.()
     onOpenChange(false)
@@ -184,7 +188,7 @@ export function ClearTableDataModal({
           <ModalForm.Alert />
           <ModalForm.Footer>
             <ModalForm.CancelButton />
-            <ModalForm.SubmitButton label="Clear Data" />
+            <ModalForm.SubmitButton label={t('sql.clearTable.submit')} />
           </ModalForm.Footer>
         </ClearTableDataProvider>
       </DialogContent>

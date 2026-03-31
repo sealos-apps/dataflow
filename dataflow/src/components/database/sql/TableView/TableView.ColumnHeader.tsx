@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { useTableView, simplifyColumnType } from './TableViewProvider'
 
@@ -24,6 +25,7 @@ interface ColumnHeaderProps {
 
 /** Renders a single column header `<th>` with type badge, sort indicator, menu dropdown, and resize handle. */
 export function TableViewColumnHeader({ column, index }: ColumnHeaderProps) {
+  const { t } = useI18n()
   const { state, actions } = useTableView()
   const width = state.columnWidths[column] || 120
 
@@ -69,7 +71,7 @@ export function TableViewColumnHeader({ column, index }: ColumnHeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align={index === 0 ? 'start' : 'end'} className="w-40">
             <DropdownMenuLabel className="text-[10px] text-muted-foreground">
-              排序操作
+              {t('sql.table.sortActions')}
             </DropdownMenuLabel>
             <DropdownMenuItem
               onSelect={() => actions.handleSort(column, 'asc')}
@@ -78,7 +80,7 @@ export function TableViewColumnHeader({ column, index }: ColumnHeaderProps) {
               )}
             >
               <ArrowUpAZ className="h-3.5 w-3.5" />
-              升序 (ASC)
+              {t('sql.table.sortAsc')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => actions.handleSort(column, 'desc')}
@@ -87,14 +89,14 @@ export function TableViewColumnHeader({ column, index }: ColumnHeaderProps) {
               )}
             >
               <ArrowDownAZ className="h-3.5 w-3.5" />
-              降序 (DESC)
+              {t('sql.table.sortDesc')}
             </DropdownMenuItem>
             {state.sortColumn === column && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => actions.clearSort()}>
                   <X className="h-3.5 w-3.5" />
-                  取消排序
+                  {t('sql.table.clearSort')}
                 </DropdownMenuItem>
               </>
             )}

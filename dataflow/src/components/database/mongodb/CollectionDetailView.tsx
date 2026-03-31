@@ -11,6 +11,7 @@ import { FilterCollectionModal } from './FilterCollectionModal'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/useI18n'
 
 interface CollectionDetailViewProps {
   connectionId: string
@@ -29,6 +30,7 @@ export function CollectionDetailView(props: CollectionDetailViewProps) {
 
 /** Inner content rendered within the CollectionViewProvider context. */
 function CollectionDetailViewContent({ databaseName, collectionName, connectionId }: CollectionDetailViewProps) {
+  const { t } = useI18n()
   const { state, actions } = useCollectionView()
 
   if (state.loading && !state.documents.length && !state.showAddModal) {
@@ -46,7 +48,7 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
         iconClassName="bg-primary/10"
         iconColor="text-primary"
         title={`${databaseName}.${collectionName}`}
-        subtitle="COLLECTION VIEW"
+        subtitle={t('mongodb.collection.subtitle')}
       />
 
       {/* Action bar */}
@@ -58,7 +60,7 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
         <div className="flex items-center gap-2">
           <ActionButton onClick={actions.handleAddClick}>
             <Plus className="h-3.5 w-3.5" />
-            Add Data
+            {t('mongodb.collection.addData')}
           </ActionButton>
           <div className="h-4 w-px bg-border mx-1" />
           <DataView.FilterButton
@@ -67,13 +69,13 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
           />
           <ActionButton variant="outline" onClick={() => actions.setShowExportModal(true)}>
             <Download className="h-3.5 w-3.5" />
-            Export
+            {t('mongodb.collection.export')}
           </ActionButton>
           <ActionButton variant="outline" onClick={actions.refresh} disabled={state.loading}>
             <div className={cn('flex items-center justify-center', state.loading && 'animate-spin')}>
               <RefreshCw className="h-3.5 w-3.5" />
             </div>
-            Refresh
+            {t('mongodb.collection.refresh')}
           </ActionButton>
         </div>
       </div>
@@ -89,7 +91,7 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
           pageSize={state.pageSize}
           total={state.total}
           loading={state.loading}
-          itemLabel="documents"
+          itemLabel={t('mongodb.collection.documents')}
           onPageChange={actions.handlePageChange}
           onPageSizeChange={actions.handlePageSizeChange}
         />
@@ -135,9 +137,9 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
         isOpen={state.showDeleteModal}
         onClose={() => actions.setShowDeleteModal(false)}
         onConfirm={actions.handleConfirmDelete}
-        title="Delete Document"
-        message="Are you sure you want to delete this document? This action cannot be undone."
-        confirmText="Delete"
+        title={t('mongodb.collection.deleteDocumentTitle')}
+        message={t('mongodb.collection.deleteDocumentMessage')}
+        confirmText={t('mongodb.document.delete')}
         isDestructive
       />
 

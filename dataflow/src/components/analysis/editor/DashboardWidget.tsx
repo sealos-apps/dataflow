@@ -1,11 +1,12 @@
 import React, { useState, useRef } from "react";
-import { DashboardComponent, useAnalysisStore } from "@/stores/useAnalysisStore";
+import { DashboardComponent } from "@/stores/useAnalysisStore";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal, Trash2, Maximize2, Settings, ImageDown } from "lucide-react";
 import { SafeECharts, NativeEChartsHandle } from "@/components/ui/SafeECharts";
 import { buildWidgetChartOption } from "../chart-utils";
 import { downloadBlob } from "@/utils/export-utils";
 import { ContextMenu } from "../../ui/ContextMenu";
+import { useI18n } from '@/i18n/useI18n'
 
 interface DashboardWidgetProps {
     component: DashboardComponent;
@@ -26,6 +27,7 @@ export function DashboardWidget({
     onDelete,
     onSelect
 }: DashboardWidgetProps) {
+    const { t } = useI18n()
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const chartRef = useRef<NativeEChartsHandle>(null);
 
@@ -39,27 +41,27 @@ export function DashboardWidget({
         setContextMenu(null);
         const blob = await chartRef.current?.exportPNG(2);
         if (!blob) return;
-        downloadBlob(blob, `${component.title || 'chart'}.png`);
+        downloadBlob(blob, `${component.title || t('analysis.defaultTitle.chart')}.png`);
     };
 
     const menuItems = [
         {
-            label: "Maximize",
+            label: t('analysis.widget.maximize'),
             icon: <Maximize2 className="w-4 h-4" />,
             onClick: () => onMaximize?.(component.id)
         },
         ...(component.type === 'chart' ? [{
-            label: "Export PNG",
+            label: t('analysis.chart.exportPng'),
             icon: <ImageDown className="w-4 h-4" />,
             onClick: handleExportPNG
         }] : []),
         {
-            label: "Edit",
+            label: t('analysis.widget.settings'),
             icon: <Settings className="w-4 h-4" />,
             onClick: () => onEdit?.(component.id)
         },
         {
-            label: "Delete",
+            label: t('analysis.widget.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             danger: true,
             onClick: () => onDelete?.(component.id)
@@ -123,10 +125,11 @@ export function DashboardWidget({
 }
 
 function WidgetContent({ component, chartRef }: { component: DashboardComponent; chartRef: React.RefObject<NativeEChartsHandle | null> }) {
+    const { t } = useI18n()
     switch (component.type) {
         case 'chart': {
             const option = buildWidgetChartOption(component.config);
-            if (!option) return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No chart data</div>;
+            if (!option) return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">{t('analysis.chart.noData')}</div>;
             return (
                 <SafeECharts
                     ref={chartRef}
@@ -137,7 +140,7 @@ function WidgetContent({ component, chartRef }: { component: DashboardComponent;
         }
 
         case 'table':
-            if (!component.data?.rows) return <div>No data</div>;
+            if (!component.data?.rows) return <div>{t('analysis.widget.noData')}</div>;
             return (
                 <div className="overflow-auto absolute inset-0 bg-white scrollbar-thin"> {/* Full fill with absolute inset */}
                     <table className="w-full text-sm text-left border-collapse">
@@ -179,7 +182,7 @@ function WidgetContent({ component, chartRef }: { component: DashboardComponent;
                         "text-xs font-medium mt-1",
                         component.data?.trend?.startsWith('+') ? "text-green-600" : "text-red-600"
                     )}>
-                        {component.data?.trend || '0%'} vs last month
+                        {t('analysis.widget.statsComparison', { trend: component.data?.trend || '0%' })}
                     </div>
                 </div>
             );
@@ -187,7 +190,7 @@ function WidgetContent({ component, chartRef }: { component: DashboardComponent;
         default:
             return (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                    {component.type} widget
+                    {t('analysis.widget.unknownType', { type: component.type })}
                 </div>
             );
     }

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import { RedisFilterProvider, useRedisFilterCtx } from './RedisFilterProvider'
 
 interface RedisFilterModalProps {
@@ -39,32 +40,35 @@ export function RedisFilterModal({
 }
 
 function RedisFilterFields() {
+  const { t } = useI18n()
   const { pattern, setPattern, selectedTypes, availableTypes, toggleType } = useRedisFilterCtx()
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Key Pattern</label>
+        <label className="text-sm font-medium text-foreground">{t('redis.filter.pattern')}</label>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={pattern}
             onChange={(event) => setPattern(event.target.value)}
-            placeholder="e.g. user:*, *cache*"
+            placeholder={t('redis.filter.patternPlaceholder')}
             className="pl-9"
             autoFocus
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          Supports glob patterns: <code>*</code> matches any sequence and <code>?</code> matches a single character.
+          {t('redis.filter.patternHint')}
         </p>
       </div>
 
       <div className="space-y-3">
         <label className="flex items-center justify-between text-sm font-medium text-foreground">
-          Data Types
+          {t('redis.filter.types')}
           <span className="text-xs font-normal text-muted-foreground">
-            {selectedTypes.length === 0 ? 'All types' : `${selectedTypes.length} selected`}
+            {selectedTypes.length === 0
+              ? t('redis.filter.allTypes')
+              : t('redis.filter.selectedCount', { count: selectedTypes.length })}
           </span>
         </label>
         <div className="grid grid-cols-3 gap-3">
@@ -90,13 +94,14 @@ function RedisFilterFields() {
 }
 
 function RedisFilterFooter({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+  const { t } = useI18n()
   const { reset } = useRedisFilterCtx()
   const { actions } = useModalForm()
 
   return (
     <DialogFooter className="justify-between gap-2 sm:justify-between">
       <Button type="button" variant="outline" onClick={reset}>
-        Reset
+        {t('redis.filter.reset')}
       </Button>
       <div className="flex items-center gap-3">
         <ModalForm.CancelButton />
@@ -109,7 +114,7 @@ function RedisFilterFooter({ onOpenChange }: { onOpenChange: (open: boolean) => 
           className="gap-2"
         >
           <Search className="h-4 w-4" />
-          Apply Filter
+          {t('redis.filter.apply')}
         </Button>
       </div>
     </DialogFooter>

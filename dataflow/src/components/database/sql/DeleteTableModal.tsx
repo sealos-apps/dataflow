@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -43,6 +44,7 @@ function DeleteTableProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { deleteTable } = useConnectionStore()
   const [confirmName, setConfirmName] = useState('')
   const canDelete = confirmName === tableName
@@ -53,15 +55,15 @@ function DeleteTableProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('sql.common.unknownError'))
     }
-  }, [canDelete, databaseName, schema, tableName, deleteTable, onSuccess])
+  }, [canDelete, databaseName, schema, tableName, deleteTable, onSuccess, t])
 
   return (
     <DeleteTableCtx value={{ confirmName, setConfirmName, tableName, canDelete }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Delete Table', icon: AlertTriangle, isDestructive: true }}
+        meta={{ title: t('sql.deleteTable.title'), icon: AlertTriangle, isDestructive: true }}
       >
         {children}
       </ModalForm.Provider>
@@ -75,14 +77,14 @@ function DeleteTableProvider({
 
 /** Warning banner explaining the destructive action. */
 function DeleteTableWarning() {
+  const { t } = useI18n()
   const { tableName } = useDeleteTableCtx()
 
   return (
     <div className="rounded-lg bg-destructive/5 p-4 text-sm border border-destructive/10">
-      <p className="font-medium text-destructive">Warning: This action cannot be undone.</p>
+      <p className="font-medium text-destructive">{t('sql.deleteTable.warningTitle')}</p>
       <p className="mt-1 text-muted-foreground">
-        This will permanently delete the table{' '}
-        <strong className="text-foreground">{tableName}</strong> and all its data.
+        {t('sql.deleteTable.warningMessage', { tableName })}
       </p>
     </div>
   )
@@ -90,13 +92,14 @@ function DeleteTableWarning() {
 
 /** Confirmation input — user must type the table name to enable deletion. */
 function DeleteTableConfirmation() {
+  const { t } = useI18n()
   const { confirmName, setConfirmName, tableName } = useDeleteTableCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Type table name to confirm
+        {t('sql.deleteTable.confirmName')}
       </label>
       <Input
         value={confirmName}
@@ -110,8 +113,9 @@ function DeleteTableConfirmation() {
 
 /** Submit button disabled until confirmation name matches. */
 function DeleteTableSubmitButton() {
+  const { t } = useI18n()
   const { canDelete } = useDeleteTableCtx()
-  return <ModalForm.SubmitButton label="Delete Table" disabled={!canDelete} />
+  return <ModalForm.SubmitButton label={t('sql.deleteTable.submit')} disabled={!canDelete} />
 }
 
 // ---------------------------------------------------------------------------

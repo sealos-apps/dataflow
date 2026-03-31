@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -39,6 +40,7 @@ function EditDatabaseProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { renameDatabase } = useConnectionStore()
   const [newName, setNewName] = useState(databaseName)
 
@@ -48,15 +50,15 @@ function EditDatabaseProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('common.unknownError'))
     }
-  }, [newName, databaseName, renameDatabase, onSuccess])
+  }, [newName, databaseName, renameDatabase, onSuccess, t])
 
   return (
     <EditDatabaseCtx value={{ newName, setNewName, databaseName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Rename Database', icon: Database }}
+        meta={{ title: t('database.rename.title'), icon: Database }}
       >
         {children}
       </ModalForm.Provider>
@@ -70,18 +72,19 @@ function EditDatabaseProvider({
 
 /** Input field for the new database name. */
 function EditDatabaseFields() {
+  const { t } = useI18n()
   const { newName, setNewName } = useEditDatabaseCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Database Name
+        {t('database.name')}
       </label>
       <Input
         value={newName}
         onChange={(e) => setNewName(e.target.value)}
-        placeholder="Enter database name"
+        placeholder={t('database.namePlaceholder')}
         disabled={state.isSubmitting}
       />
     </div>
@@ -90,8 +93,9 @@ function EditDatabaseFields() {
 
 /** Submit button disabled when name is empty or unchanged. */
 function EditSubmitButton() {
+  const { t } = useI18n()
   const { newName, databaseName } = useEditDatabaseCtx()
-  return <ModalForm.SubmitButton label="Save Changes" disabled={!newName || newName === databaseName} />
+  return <ModalForm.SubmitButton label={t('database.rename.submit')} disabled={!newName || newName === databaseName} />
 }
 
 // ---------------------------------------------------------------------------

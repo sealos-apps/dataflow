@@ -2,9 +2,11 @@ import { useEffect } from "react";
 import { DashboardSidebar } from "./sidebar";
 import { DashboardEditor } from "./editor";
 import { useAnalysisStore } from "@/stores/useAnalysisStore";
+import { useI18n } from '@/i18n/useI18n'
 
 export function AnalysisView() {
     const { activeDashboardId, isInitialized, initializeFromAPI } = useAnalysisStore();
+    const { t } = useI18n()
 
     // Initialize dashboards from API on mount
     useEffect(() => {
@@ -21,7 +23,7 @@ export function AnalysisView() {
                     <DashboardEditor />
                 ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
-                        Select a dashboard to view details
+                        {t('analysis.dashboard.selectToView')}
                     </div>
                 )}
             </div>

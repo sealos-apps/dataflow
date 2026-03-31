@@ -17,6 +17,7 @@ import {
   getViewMenuItems,
 } from "./contextMenuItems";
 import { SidebarModals } from "./SidebarModals";
+import { useI18n } from "@/i18n/useI18n";
 
 // ── Modal reducer (inlined from former useSidebarModals) ────────────
 
@@ -51,6 +52,7 @@ function modalReducer(_state: ModalState | null, action: Action): ModalState | n
 function SidebarInner() {
   const { connections, selectedItem, selectItem, systemSchemas, showSystemObjectsFor, toggleSystemObjects, triggerCollectionRefresh } = useConnectionStore();
   const { openTab } = useTabStore();
+  const { t } = useI18n();
 
   const {
     expandedItems, treeData, isLoading,
@@ -93,8 +95,8 @@ function SidebarInner() {
         } catch (error: any) {
           if (node.type === "connection") {
             showAlert(
-              "Connection Failed",
-              error.message || "Failed to connect to database. Please check your connection settings.",
+              t("sidebar.alert.connectionFailedTitle"),
+              error.message || t("sidebar.alert.connectionFailedMessage"),
               "error",
             );
           }
@@ -120,15 +122,16 @@ function SidebarInner() {
         });
         triggerCollectionRefresh();
       } else if (node.type === "redis_keys_list") {
+        const redisDatabase = node.metadata.database ?? node.name;
         openTab({
           type: "redis_keys_list",
-          title: `${node.metadata.database} Keys`,
+          title: t("sidebar.tab.redisKeys", { database: redisDatabase }),
           connectionId: node.connectionId,
-          databaseName: node.metadata.database,
+          databaseName: redisDatabase,
         });
       }
     },
-    [selectItem, toggleItem, showAlert, openTab, triggerCollectionRefresh],
+    [selectItem, toggleItem, showAlert, openTab, triggerCollectionRefresh, t],
   );
 
   const handleContextMenu = useCallback(
@@ -152,8 +155,11 @@ function SidebarInner() {
             node.metadata?.database || (node.type === "database" ? node.name : undefined);
           const querySchemaName = node.metadata?.schema;
           const queryTitle = queryDatabaseName
-            ? `Query - ${queryDatabaseName}`
-            : `Query - ${connections.find((c) => c.id === queryConnectionId)?.name || "Untitled"}`;
+            ? t("sidebar.tab.queryWithDatabase", { database: queryDatabaseName })
+            : t("sidebar.tab.queryWithConnection", {
+                connection:
+                  connections.find((c) => c.id === queryConnectionId)?.name || t("common.untitled"),
+              });
           openTab({
             type: "query",
             title: queryTitle,
@@ -314,7 +320,7 @@ function SidebarInner() {
     [
       contextMenu, connections, openTab, openModal,
       expandedItems, fetchNodeChildren, toggleItem,
-      toggleSystemObjects,
+      toggleSystemObjects, t,
     ],
   );
 
@@ -324,6 +330,7 @@ function SidebarInner() {
     const { node } = contextMenu;
     const callbacks = {
       onAction: handleContextMenuAction,
+      t,
     };
 
     const nodeId = node.type === "connection" ? node.id : node.id;
@@ -359,7 +366,7 @@ function SidebarInner() {
     <div className="flex h-full w-64 flex-col border-r bg-background">
       {/* Header */}
       <div className="flex items-center p-4 border-b h-14 shrink-0">
-        <h2 className="font-semibold text-sm">{"\u6570\u636e\u5e93\u8fde\u63a5"}</h2>
+        <h2 className="font-semibold text-sm">{t("layout.activity.connections")}</h2>
       </div>
 
       {/* Tree */}

@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog'
+import { useI18n } from '@/i18n/useI18n'
 import type { FilterCondition } from './TableView/types'
 
 // ---------------------------------------------------------------------------
@@ -112,16 +113,17 @@ function FilterTableProvider({ columns, initialSelectedColumns, initialCondition
 // ---------------------------------------------------------------------------
 
 function ColumnSelector() {
+  const { t } = useI18n()
   const { columns, selectedColumns, toggleColumn, toggleAllColumns } = useFilterTable()
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Visible Columns
+          {t('sql.filter.visibleColumns')}
         </h3>
         <Button variant="ghost" size="sm" onClick={toggleAllColumns} className="h-6 text-xs">
-          {selectedColumns.size === columns.length ? 'Deselect All' : 'Select All'}
+          {selectedColumns.size === columns.length ? t('sql.filter.deselectAll') : t('sql.filter.selectAll')}
         </Button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -141,23 +143,24 @@ function ColumnSelector() {
 }
 
 function ConditionList() {
+  const { t } = useI18n()
   const { columns, conditions, addCondition, removeCondition, updateCondition } = useFilterTable()
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Filter Conditions
+          {t('sql.filter.conditions')}
         </h3>
         <Button onClick={addCondition} size="sm" variant="outline" className="h-7 text-xs gap-1">
           <Plus className="h-3 w-3" />
-          Add Condition
+          {t('sql.filter.addCondition')}
         </Button>
       </div>
 
       {conditions.length === 0 ? (
         <div className="text-center py-8 border border-dashed rounded-lg text-muted-foreground text-sm">
-          No filters applied. Add a condition to filter data.
+          {t('sql.filter.emptyState')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -193,7 +196,7 @@ function ConditionList() {
 
               <Input
                 className="flex-1 h-9"
-                placeholder="Value"
+                placeholder={t('sql.filter.valuePlaceholder')}
                 value={condition.value}
                 onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
                 disabled={['IS NULL', 'IS NOT NULL'].includes(condition.operator)}
@@ -216,6 +219,7 @@ function ConditionList() {
 }
 
 function ApplyButton({ onApply, onClose }: { onApply: (cols: string[], conditions: FilterCondition[]) => void; onClose: () => void }) {
+  const { t } = useI18n()
   const { selectedColumns, conditions } = useFilterTable()
 
   const handleApply = () => {
@@ -225,7 +229,7 @@ function ApplyButton({ onApply, onClose }: { onApply: (cols: string[], condition
 
   return (
     <Button onClick={handleApply} className="bg-primary text-primary-foreground hover:bg-primary/90">
-      Apply Filters
+      {t('sql.filter.apply')}
     </Button>
   )
 }
@@ -251,6 +255,8 @@ export function FilterTableModal({
   initialSelectedColumns,
   initialConditions,
 }: FilterTableModalProps) {
+  const { t } = useI18n()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col" showCloseButton={false}>
@@ -262,7 +268,7 @@ export function FilterTableModal({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-primary" />
-              Filter & Columns
+              {t('sql.filter.title')}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-6">
@@ -272,7 +278,7 @@ export function FilterTableModal({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">Cancel</Button>
+              <Button variant="ghost">{t('common.actions.cancel')}</Button>
             </DialogClose>
             <ApplyButton onApply={onApply} onClose={() => onOpenChange(false)} />
           </DialogFooter>

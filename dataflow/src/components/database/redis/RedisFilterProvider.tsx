@@ -1,6 +1,7 @@
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Filter } from 'lucide-react'
 import { ModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 const REDIS_FILTER_TYPES = ['string', 'hash', 'list', 'set', 'zset', 'stream'] as const
 
@@ -40,6 +41,7 @@ export function RedisFilterProvider({
   initialTypes,
   children,
 }: RedisFilterProviderProps) {
+  const { t } = useI18n()
   const [pattern, setPattern] = useState(initialPattern)
   const [selectedTypes, setSelectedTypes] = useState<RedisFilterType[]>(
     initialTypes.filter((value): value is RedisFilterType =>
@@ -86,7 +88,7 @@ export function RedisFilterProvider({
       <ModalForm.Provider
         onSubmit={handleSubmit}
         meta={{
-          title: 'Filter Keys',
+          title: t('redis.filter.title'),
           icon: Filter,
         }}
       >

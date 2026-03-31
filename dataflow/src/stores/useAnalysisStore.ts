@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
+import { createTranslator } from '@/i18n/messages';
+import type { MessageKey } from '@/i18n/messages';
+import { resolveLocaleFromSearch } from '@/i18n/locale';
 
 export type ComponentType = 'chart' | 'text' | 'image' | 'stats' | 'filter' | 'table';
 
@@ -34,6 +37,20 @@ export interface Dashboard {
     createdAt: number;
     updatedAt: number;
     components: DashboardComponent[];
+}
+
+const DEFAULT_TITLE_KEYS: Record<ComponentType, MessageKey> = {
+    chart: 'analysis.defaultTitle.chart',
+    table: 'analysis.defaultTitle.table',
+    text: 'analysis.defaultTitle.text',
+    image: 'analysis.defaultTitle.image',
+    stats: 'analysis.defaultTitle.stats',
+    filter: 'analysis.defaultTitle.filter',
+};
+
+function createAnalysisTranslator() {
+    const locale = typeof window === 'undefined' ? 'zh' : resolveLocaleFromSearch(window.location.search);
+    return createTranslator(locale);
 }
 
 interface AnalysisState {
@@ -152,10 +169,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
             }
         }
 
+        const t = createAnalysisTranslator();
         const newComponent: DashboardComponent = {
             id: uuidv4(),
             type,
-            title: config.title || `New ${type}`,
+            title: config.title || t(DEFAULT_TITLE_KEYS[type]),
             ...config,
             layout: { i: uuidv4(), x, y, w, h },
         };

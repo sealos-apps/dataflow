@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -44,6 +45,7 @@ function CopyTableProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { copyTable } = useConnectionStore()
   const [newTableName, setNewTableName] = useState(`${tableName}_copy`)
   const [copyOption, setCopyOption] = useState<'structure' | 'structure_data'>('structure_data')
@@ -55,15 +57,15 @@ function CopyTableProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('sql.common.unknownError'))
     }
-  }, [newTableName, copyOption, databaseName, schema, tableName, copyTable, onSuccess])
+  }, [newTableName, copyOption, databaseName, schema, tableName, copyTable, onSuccess, t])
 
   return (
     <CopyTableCtx value={{ newTableName, setNewTableName, copyOption, setCopyOption, tableName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Copy Table', icon: Copy }}
+        meta={{ title: t('sql.copyTable.title'), icon: Copy }}
       >
         {children}
       </ModalForm.Provider>
@@ -77,6 +79,7 @@ function CopyTableProvider({
 
 /** Source table (disabled), new table name input, and copy option radios. */
 function CopyTableFields() {
+  const { t } = useI18n()
   const { newTableName, setNewTableName, copyOption, setCopyOption, tableName } = useCopyTableCtx()
   const { state } = useModalForm()
 
@@ -84,24 +87,24 @@ function CopyTableFields() {
     <div className="space-y-4">
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Source Table
+          {t('sql.copyTable.sourceTable')}
         </label>
         <Input value={tableName} disabled />
       </div>
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          New Table Name
+          {t('sql.copyTable.newTableName')}
         </label>
         <Input
           value={newTableName}
           onChange={(e) => setNewTableName(e.target.value)}
-          placeholder="Enter new table name"
+          placeholder={t('sql.copyTable.newTableNamePlaceholder')}
           disabled={state.isSubmitting}
         />
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Copy Options
+          {t('sql.copyTable.options')}
         </label>
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 cursor-pointer">
@@ -113,7 +116,7 @@ function CopyTableFields() {
               disabled={state.isSubmitting}
               className="h-4 w-4"
             />
-            <span className="text-sm">Structure Only</span>
+            <span className="text-sm">{t('sql.copyTable.structureOnly')}</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -124,7 +127,7 @@ function CopyTableFields() {
               disabled={state.isSubmitting}
               className="h-4 w-4"
             />
-            <span className="text-sm">Structure and Data</span>
+            <span className="text-sm">{t('sql.copyTable.structureAndData')}</span>
           </label>
         </div>
       </div>
@@ -134,8 +137,9 @@ function CopyTableFields() {
 
 /** Submit button disabled when new table name is empty. */
 function CopyTableSubmitButton() {
+  const { t } = useI18n()
   const { newTableName } = useCopyTableCtx()
-  return <ModalForm.SubmitButton label="Copy Table" disabled={!newTableName.trim()} />
+  return <ModalForm.SubmitButton label={t('sql.copyTable.submit')} disabled={!newTableName.trim()} />
 }
 
 // ---------------------------------------------------------------------------

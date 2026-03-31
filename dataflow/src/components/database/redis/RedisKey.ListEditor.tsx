@@ -2,21 +2,23 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import { useRedisKeyCtx } from './RedisKeyProvider'
 
 /** Create-only editor for Redis list values. */
 export function RedisKeyListEditor() {
+  const { t } = useI18n()
   const { draft, setListItems } = useRedisKeyCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Value</label>
+      <label className="text-sm font-medium text-muted-foreground">{t('redis.key.value')}</label>
       <div className="space-y-2">
         {draft.listItems.map((item, index) => (
           <div key={index} className="flex gap-2">
             <Input
-              placeholder="Item value"
+              placeholder={t('redis.key.listItemPlaceholder')}
               value={item.value}
               onChange={(event) => {
                 const next = [...draft.listItems]
@@ -46,7 +48,7 @@ export function RedisKeyListEditor() {
           className="w-full"
         >
           <Plus className="h-4 w-4" />
-          Add Item
+          {t('redis.key.addItem')}
         </Button>
       </div>
     </div>

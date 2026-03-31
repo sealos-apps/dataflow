@@ -8,6 +8,7 @@ import { FilterTableModal } from './FilterTableModal'
 import { ExportDataModal } from './ExportDataModal'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { AlertModal } from '@/components/ui/AlertModal'
+import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import type { FilterChip } from '@/components/database/shared/types'
 
@@ -27,6 +28,7 @@ export function TableDetailView(props: TableDetailViewProps) {
 }
 
 function TableDetailViewContent({ databaseName, tableName, schema }: TableDetailViewProps) {
+  const { t } = useI18n()
   const { state, actions } = useTableView()
 
   if (state.error) {
@@ -48,7 +50,7 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
       <DataView.Header
         icon={TableIcon}
         title={`${databaseName}${schema ? `.${schema}` : ''}.${tableName}`}
-        subtitle="TABLE VIEW"
+        subtitle={t('sql.table.subtitle')}
       />
 
       <DataView.FilterBar
@@ -70,7 +72,7 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
                 <>
                   <ActionButton onClick={actions.handleAddClick}>
                     <Plus className="h-3.5 w-3.5" />
-                    Add Data
+                    {t('sql.actions.addData')}
                   </ActionButton>
                   <div className="h-4 w-px bg-border mx-1" />
                 </>
@@ -81,13 +83,13 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
               />
               <ActionButton variant="outline" onClick={() => actions.setShowExportModal(true)}>
                 <Download className="h-3.5 w-3.5" />
-                Export
+                {t('sql.actions.export')}
               </ActionButton>
               <ActionButton variant="outline" onClick={actions.refresh} disabled={state.loading}>
                 <div className={cn("flex items-center justify-center", state.loading && "animate-spin")}>
                   <RefreshCw className="h-3.5 w-3.5" />
                 </div>
-                Refresh
+                {t('sql.actions.refresh')}
               </ActionButton>
             </div>
           </div>
@@ -131,12 +133,16 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
         isOpen={state.showDeleteModal}
         onClose={() => actions.setShowDeleteModal(false)}
         onConfirm={actions.handleConfirmDelete}
-        title="Delete Row"
-        message="Warning: This action cannot be undone. This will permanently delete the selected row."
-        confirmText="Delete Row"
+        title={t('sql.deleteRow.title')}
+        message={t('sql.deleteRow.message')}
+        confirmText={t('sql.deleteRow.confirmText')}
         isDestructive={true}
-        verificationText={state.deletingRowIndex !== null && state.data?.rows?.[state.deletingRowIndex] && state.primaryKey ? String(state.data.rows[state.deletingRowIndex][state.primaryKey]) : 'DELETE'}
-        verificationLabel={state.deletingRowIndex !== null && state.data?.rows?.[state.deletingRowIndex] && state.primaryKey ? `Type "${String(state.data.rows[state.deletingRowIndex][state.primaryKey])}" to confirm` : 'Type confirmation'}
+        verificationText={state.deletingRowIndex !== null && state.data?.rows?.[state.deletingRowIndex] && state.primaryKey
+          ? String(state.data.rows[state.deletingRowIndex][state.primaryKey])
+          : t('common.actions.delete')}
+        verificationLabel={state.deletingRowIndex !== null && state.data?.rows?.[state.deletingRowIndex] && state.primaryKey
+          ? t('sql.deleteRow.typeToConfirm', { value: String(state.data.rows[state.deletingRowIndex][state.primaryKey]) })
+          : t('sql.deleteRow.typeConfirmation')}
       />
 
       {state.alert && (

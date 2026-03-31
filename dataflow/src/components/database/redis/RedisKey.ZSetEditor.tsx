@@ -2,22 +2,24 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import { useRedisKeyCtx } from './RedisKeyProvider'
 
 /** Create-only editor for Redis sorted-set member/score pairs. */
 export function RedisKeyZSetEditor() {
+  const { t } = useI18n()
   const { draft, setZsetItems } = useRedisKeyCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Value</label>
+      <label className="text-sm font-medium text-muted-foreground">{t('redis.key.value')}</label>
       <div className="space-y-2">
         {draft.zsetItems.map((item, index) => (
           <div key={index} className="flex gap-2">
             <Input
               type="number"
-              placeholder="Score"
+              placeholder={t('redis.key.zsetScorePlaceholder')}
               value={item.score}
               onChange={(event) => {
                 const next = [...draft.zsetItems]
@@ -28,7 +30,7 @@ export function RedisKeyZSetEditor() {
               disabled={state.isSubmitting}
             />
             <Input
-              placeholder="Member value"
+              placeholder={t('redis.key.zsetMemberPlaceholder')}
               value={item.member}
               onChange={(event) => {
                 const next = [...draft.zsetItems]
@@ -58,7 +60,7 @@ export function RedisKeyZSetEditor() {
           className="w-full"
         >
           <Plus className="h-4 w-4" />
-          Add Member
+          {t('redis.key.addMember')}
         </Button>
       </div>
     </div>

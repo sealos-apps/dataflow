@@ -7,12 +7,14 @@ import {
   EyeOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { useTableView } from './TableViewProvider'
 import { TableViewColumnHeader } from './TableView.ColumnHeader'
 
 /** Renders the data grid including `<table>`, column headers, add-row form, data rows with inline editing, and action buttons. */
 export function TableViewDataGrid() {
+  const { t } = useI18n()
   const { state, actions } = useTableView()
 
   const hiddenColumnCount = state.data?.columns
@@ -41,11 +43,14 @@ export function TableViewDataGrid() {
             ))}
             {state.canEdit && (
               <th className="px-6 py-2 text-right font-semibold text-xs text-muted-foreground uppercase tracking-wider border-b border-r border-border/50 w-[120px] sticky top-0 right-0 bg-background z-50 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)]">
-                Actions
+                {t('sql.table.actions')}
               </th>
             )}
             {hiddenColumnCount > 0 && (
-              <th className="px-4 py-2 text-center font-medium text-xs text-muted-foreground border-b border-border/50 sticky top-0 bg-background z-40" title={`${hiddenColumnCount} hidden column${hiddenColumnCount > 1 ? 's' : ''}`}>
+              <th
+                className="px-4 py-2 text-center font-medium text-xs text-muted-foreground border-b border-border/50 sticky top-0 bg-background z-40"
+                title={t('sql.table.hiddenColumnsTitle', { count: hiddenColumnCount })}
+              >
                 <div className="flex items-center gap-1 justify-center">
                   <EyeOff className="h-3.5 w-3.5" />
                   <span>{hiddenColumnCount}</span>
@@ -67,7 +72,7 @@ export function TableViewDataGrid() {
                       type="text"
                       autoFocus={idx === 0}
                       className="w-full h-full min-h-[36px] bg-transparent border-none rounded-none px-6 py-2 text-sm focus:outline-none focus:bg-background focus:ring-2 focus:ring-inset focus:ring-primary transition-colors"
-                      placeholder={`Enter ${col}`}
+                      placeholder={t('sql.table.enterValue', { column: col })}
                       value={state.newRowData[col] || ''}
                       onChange={(e) => actions.handleNewRowInputChange(col, e.target.value)}
                     />
@@ -81,7 +86,7 @@ export function TableViewDataGrid() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-primary"
-                    title="Save New Row"
+                    title={t('sql.table.saveNewRow')}
                   >
                     <Save className="h-3.5 w-3.5" />
                   </Button>
@@ -90,7 +95,7 @@ export function TableViewDataGrid() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    title="Cancel"
+                    title={t('common.actions.cancel')}
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -155,7 +160,7 @@ export function TableViewDataGrid() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-primary"
-                            title="Save"
+                            title={t('common.actions.submit')}
                           >
                             <Save className="h-3.5 w-3.5" />
                           </Button>
@@ -164,7 +169,7 @@ export function TableViewDataGrid() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            title="Cancel"
+                            title={t('common.actions.cancel')}
                           >
                             <X className="h-3.5 w-3.5" />
                           </Button>
@@ -176,7 +181,7 @@ export function TableViewDataGrid() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-primary"
-                            title="Edit Row"
+                            title={t('sql.table.editRow')}
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
@@ -185,7 +190,7 @@ export function TableViewDataGrid() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            title="Delete Row"
+                            title={t('sql.table.deleteRowAction')}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>

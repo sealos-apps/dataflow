@@ -1,6 +1,7 @@
 import { CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/useI18n';
 import {
     Dialog,
     DialogContent,
@@ -24,8 +25,11 @@ export function AlertModal({
     title,
     message,
     type = 'info',
-    buttonText = "OK"
+    buttonText
 }: AlertModalProps) {
+    const { t } = useI18n();
+    const resolvedButtonText = buttonText ?? t('common.actions.ok');
+
     const getIcon = () => {
         switch (type) {
             case 'success':
@@ -75,7 +79,7 @@ export function AlertModal({
                         onClick={onClose}
                         className="min-w-[80px]"
                     >
-                        {buttonText}
+                        {resolvedButtonText}
                     </Button>
                 </DialogFooter>
             </DialogContent>

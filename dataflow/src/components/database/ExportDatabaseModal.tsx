@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -63,9 +64,10 @@ function ExportDatabaseProvider({
   schema: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <ModalForm.Provider
-      meta={{ title: 'Export Database', description: databaseName, icon: Database }}
+      meta={{ title: t('database.export.title'), description: databaseName, icon: Database }}
     >
       <ExportDatabaseBridge databaseName={databaseName} schema={schema}>
         {children}
@@ -88,6 +90,7 @@ function ExportDatabaseBridge({
   schema: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const [format, setFormat] = useState<ExportFormat>('sql')
   const [isSuccess, setIsSuccess] = useState(false)
   const [statusText, setStatusText] = useState('')
@@ -99,7 +102,7 @@ function ExportDatabaseBridge({
     actions.setSubmitting(true)
     actions.closeAlert()
     setIsSuccess(false)
-    setStatusText('Fetching table list...')
+    setStatusText(t('database.export.fetchingTableList'))
 
     try {
       const { data: tablesData, error: tablesError } = await fetchTables({
@@ -109,7 +112,7 @@ function ExportDatabaseBridge({
 
       if (tablesError) throw new Error(tablesError.message)
       const tables = tablesData?.StorageUnit ?? []
-      if (tables.length === 0) throw new Error('No tables found in database')
+      if (tables.length === 0) throw new Error(t('database.export.noTablesFound'))
 
       const zip = new JSZip()
       const failedTables: string[] = []
@@ -117,7 +120,7 @@ function ExportDatabaseBridge({
       for (let i = 0; i < tables.length; i++) {
         const table = tables[i]
         const tableName = table.Name
-        setStatusText(`Exporting table ${i + 1} of ${tables.length}... (${tableName})`)
+        setStatusText(t('database.export.exportingTable', { current: i + 1, total: tables.length, tableName }))
 
         try {
           const qualifiedName = schema ? `${schema}.${tableName}` : tableName
@@ -147,7 +150,7 @@ function ExportDatabaseBridge({
         }
       }
 
-      setStatusText('Generating zip file...')
+      setStatusText(t('database.export.generatingZip'))
 
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       downloadBlob(zipBlob, `export_${databaseName}.zip`)
@@ -157,20 +160,24 @@ function ExportDatabaseBridge({
       if (failedTables.length > 0) {
         actions.setAlert({
           type: 'info',
-          title: 'Partial export',
-          message: `Exported ${tables.length - failedTables.length} of ${tables.length} tables. Failed: ${failedTables.join(', ')}`,
+          title: t('database.export.partialExportTitle'),
+          message: t('database.export.partialExportMessage', {
+            successful: tables.length - failedTables.length,
+            total: tables.length,
+            failedTables: failedTables.join(', '),
+          }),
         })
       }
     } catch (err: any) {
       actions.setAlert({
         type: 'error',
-        title: 'Export failed',
-        message: err.message || 'Unknown error',
+        title: t('database.export.failed'),
+        message: err.message || t('common.unknownError'),
       })
     } finally {
       actions.setSubmitting(false)
     }
-  }, [actions, databaseName, executeQuery, fetchTables, format, schema])
+  }, [actions, databaseName, executeQuery, fetchTables, format, schema, t])
 
   return (
     <ExportDatabaseCtx value={{ format, setFormat, isSuccess, statusText, handleExport }}>

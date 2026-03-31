@@ -11,17 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import type { ChartType, SortTarget, SortOrder } from '../chart-utils';
 import { useChartCreateCtx } from './ChartCreateProvider';
+import { useI18n } from '@/i18n/useI18n'
 
 /** Right-column configuration panel for chart creation: type, axes, options, and sort settings. */
 export function ChartConfigPanel() {
+    const { t } = useI18n()
     const { chartConfig: config, queryData, handleConfigChange: onConfigChange, setActiveView } = useChartCreateCtx()
     const columns = queryData?.columns ?? []
 
     const chartTypeLabels: Record<ChartType, string> = {
-        bar: 'Bar Chart',
-        line: 'Line Chart',
-        pie: 'Pie Chart',
-        area: 'Area Chart',
+        bar: t('analysis.chart.type.bar'),
+        line: t('analysis.chart.type.line'),
+        pie: t('analysis.chart.type.pie'),
+        area: t('analysis.chart.type.area'),
     };
 
     const yAxisAvailableColumns = columns.filter(col => col !== config.xAxisColumn);
@@ -42,12 +44,12 @@ export function ChartConfigPanel() {
                 onClick={() => setActiveView('data-config')}
                 className="w-full"
             >
-                Data Configuration
+                {t('analysis.chart.dataConfiguration')}
             </Button>
 
             {/* 2. Chart Type selector */}
             <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Chart Type</label>
+                <label className="text-sm font-medium">{t('analysis.chart.type')}</label>
                 <Select
                     value={config.chartType}
                     onValueChange={(value) => onConfigChange({ chartType: value as ChartType })}
@@ -67,13 +69,13 @@ export function ChartConfigPanel() {
 
             {/* 3. X-Axis selector */}
             <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">X-Axis</label>
+                <label className="text-sm font-medium">{t('analysis.chart.xAxis')}</label>
                 <Select
                     value={config.xAxisColumn || undefined}
                     onValueChange={(value) => onConfigChange({ xAxisColumn: value })}
                 >
                     <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select X-Axis" />
+                        <SelectValue placeholder={t('analysis.chart.selectXAxis')} />
                     </SelectTrigger>
                     <SelectContent>
                         {columns.map((col) => (
@@ -87,12 +89,12 @@ export function ChartConfigPanel() {
 
             {/* 4. Y-Axis multi-select */}
             <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Y-Axis</label>
+                <label className="text-sm font-medium">{t('analysis.chart.yAxis')}</label>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between font-normal">
                             <span className={cn(!config.yAxisColumns.length && 'text-muted-foreground')}>
-                                {config.yAxisColumns.length ? config.yAxisColumns.join(', ') : 'Select Y-Axis'}
+                                {config.yAxisColumns.length ? config.yAxisColumns.join(', ') : t('analysis.chart.selectYAxis')}
                             </span>
                             <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         </Button>
@@ -113,12 +115,12 @@ export function ChartConfigPanel() {
 
             {/* 5. Chart Options */}
             <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">Chart Options</label>
+                <label className="text-sm font-medium">{t('analysis.chart.options')}</label>
                 {(
                     [
-                        { key: 'showLegend', label: 'Legend' },
-                        { key: 'showGridLines', label: 'Grid Lines' },
-                        { key: 'showDataLabels', label: 'Data Labels' },
+                        { key: 'showLegend', label: t('analysis.chart.options.legend') },
+                        { key: 'showGridLines', label: t('analysis.chart.options.gridLines') },
+                        { key: 'showDataLabels', label: t('analysis.chart.options.dataLabels') },
                     ] as const
                 ).map(({ key, label }) => (
                     <button
@@ -143,12 +145,12 @@ export function ChartConfigPanel() {
 
             {/* 6. Sort By */}
             <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">Sort By</label>
+                <label className="text-sm font-medium">{t('analysis.chart.sortBy')}</label>
                 {(
                     [
-                        { value: 'data', label: 'Data Order' },
-                        { value: 'xAxis', label: 'X-Axis Value' },
-                        { value: 'yAxis', label: 'Y-Axis Value' },
+                        { value: 'data', label: t('analysis.chart.sort.dataOrder') },
+                        { value: 'xAxis', label: t('analysis.chart.sort.xAxisValue') },
+                        { value: 'yAxis', label: t('analysis.chart.sort.yAxisValue') },
                     ] as { value: SortTarget; label: string }[]
                 ).map(({ value, label }) => (
                     <div key={value}>
@@ -174,8 +176,8 @@ export function ChartConfigPanel() {
                             <div className="ml-6 mt-1.5 flex gap-3">
                                 {(
                                     [
-                                        { value: 'asc', label: 'Ascending' },
-                                        { value: 'desc', label: 'Descending' },
+                                        { value: 'asc', label: t('analysis.chart.sort.ascending') },
+                                        { value: 'desc', label: t('analysis.chart.sort.descending') },
                                     ] as { value: SortOrder; label: string }[]
                                 ).map(order => (
                                     <button

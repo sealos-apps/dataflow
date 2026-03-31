@@ -9,11 +9,26 @@ import {
   type RecordInput,
 } from '@graphql'
 import { resolveSchemaParam } from '@/utils/database-features'
+import { useI18n } from '@/i18n/useI18n'
 import type { RedisKey, RedisViewContextValue } from './types'
 import type { Alert } from '@/components/database/shared/types'
 import type { RedisKeyDraft } from '@/components/database/redis/redis-key.types'
 
 const RedisViewCtx = createContext<RedisViewContextValue | null>(null)
+
+function getErrorMessage(error: unknown): string | undefined {
+  if (error instanceof Error) {
+    const message = error.message.trim()
+    return message.length > 0 ? message : undefined
+  }
+
+  if (typeof error === 'string') {
+    const message = error.trim()
+    return message.length > 0 ? message : undefined
+  }
+
+  return undefined
+}
 
 /** Hook to access RedisView context. Throws if used outside RedisViewProvider. */
 export function useRedisView(): RedisViewContextValue {
@@ -87,6 +102,7 @@ interface RedisViewProviderProps {
 
 /** Provider that owns all RedisDetailView state, GraphQL operations, and handlers. */
 export function RedisViewProvider({ connectionId, databaseName, children }: RedisViewProviderProps) {
+  const { t } = useI18n()
   const { connections } = useConnectionStore()
 
   // ---- GraphQL hooks ----
@@ -173,12 +189,19 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
       const start = (currentPage - 1) * pageSize
       const paged = redisKeys.slice(start, start + pageSize)
       setKeys(paged)
-    } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to fetch Redis keys', 'error')
+    } catch (error) {
+      const rawError = getErrorMessage(error)
+      showAlert(
+        t('common.alert.error'),
+        rawError
+          ? t('redis.alert.fetchKeysFailedWithError', { error: rawError })
+          : t('redis.alert.fetchKeysFailed'),
+        'error',
+      )
     } finally {
       setLoading(false)
     }
-  }, [connections, connectionId, databaseName, currentPage, pageSize, pattern, filterTypes, getStorageUnits, showAlert])
+  }, [connections, connectionId, databaseName, currentPage, pageSize, pattern, filterTypes, getStorageUnits, showAlert, t])
 
   useEffect(() => {
     refresh()
@@ -198,7 +221,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
 
   const handleEditKey = useCallback(async (key: RedisKey) => {
     if (key.type !== 'string') {
-      showAlert('Unsupported edit mode', 'Editing is currently supported only for string keys.', 'info')
+      showAlert(t('common.alert.info'), t('redis.alert.unsupportedEditMode'), 'info')
       return
     }
 
@@ -222,23 +245,30 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
         setEditingKey(keyData)
         setIsAddModalOpen(true)
       }
-    } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to fetch key details', 'error')
+    } catch (error) {
+      const rawError = getErrorMessage(error)
+      showAlert(
+        t('common.alert.error'),
+        rawError
+          ? t('redis.alert.fetchKeyDetailsFailedWithError', { error: rawError })
+          : t('redis.alert.fetchKeyDetailsFailed'),
+        'error',
+      )
     } finally {
       setLoading(false)
     }
-  }, [connections, connectionId, databaseName, getRows, showAlert])
+  }, [connections, connectionId, databaseName, getRows, showAlert, t])
 
   const handleSaveKey = useCallback(async (draft: RedisKeyDraft) => {
     const conn = connections.find(c => c.id === connectionId)
-    if (!conn) throw new Error('Connection not found')
+    if (!conn) throw new Error(t('redis.error.connectionNotFound'))
 
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
 
     try {
       if (draft.mode === 'edit') {
         if (draft.type !== 'string') {
-          throw new Error('Editing is currently supported only for string keys')
+          throw new Error(t('redis.alert.unsupportedEditMode'))
         }
 
         const values: RecordInput[] = [{ Key: 'value', Value: draft.stringValue }]
@@ -252,7 +282,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
           context: { database: databaseName },
         })
         if (errors?.length) throw new Error(errors[0].message)
-        if (!data?.UpdateStorageUnit.Status) throw new Error('Failed to save key')
+        if (!data?.UpdateStorageUnit.Status) throw new Error(t('redis.alert.saveFailed'))
       } else {
         const fields = buildRedisFields(draft)
         const { errors, data } = await addStorageUnitMutation({
@@ -260,18 +290,28 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
           context: { database: databaseName },
         })
         if (errors?.length) throw new Error(errors[0].message)
-        if (!data?.AddStorageUnit.Status) throw new Error('Failed to create key')
+        if (!data?.AddStorageUnit.Status) throw new Error(t('redis.alert.saveFailed'))
       }
 
-      showAlert('Success', `Key "${draft.key}" ${draft.mode === 'edit' ? 'updated' : 'created'} successfully!`, 'success')
+      showAlert(
+        t('common.alert.success'),
+        draft.mode === 'edit'
+          ? t('redis.alert.updateSuccess', { key: draft.key })
+          : t('redis.alert.createSuccess', { key: draft.key }),
+        'success',
+      )
 
       setEditingKey(undefined)
       setIsAddModalOpen(false)
       await refresh()
     } catch (error) {
-      throw error instanceof Error ? error : new Error('Failed to save key')
+      const rawError = getErrorMessage(error)
+      if (!rawError || rawError === t('redis.alert.saveFailed')) {
+        throw new Error(t('redis.alert.saveFailed'))
+      }
+      throw new Error(t('redis.alert.saveFailedWithError', { error: rawError }))
     }
-  }, [connections, connectionId, databaseName, addStorageUnitMutation, refresh, showAlert, updateStorageUnitMutation])
+  }, [connections, connectionId, databaseName, addStorageUnitMutation, refresh, showAlert, t, updateStorageUnitMutation])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingKey) return
@@ -285,13 +325,20 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
         context: { database: databaseName },
       })
       if (errors?.length) throw new Error(errors[0].message)
-      showAlert('Success', `Key "${deletingKey.key}" deleted successfully!`, 'success')
+      showAlert(t('common.alert.success'), t('redis.alert.deleteSuccess', { key: deletingKey.key }), 'success')
       setDeletingKey(undefined)
       refresh()
-    } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to delete key', 'error')
+    } catch (error) {
+      const rawError = getErrorMessage(error)
+      showAlert(
+        t('common.alert.error'),
+        rawError
+          ? t('redis.alert.deleteFailedWithError', { error: rawError })
+          : t('redis.alert.deleteFailed'),
+        'error',
+      )
     }
-  }, [deletingKey, connections, connectionId, databaseName, deleteRowMutation, refresh, showAlert])
+  }, [deletingKey, connections, connectionId, databaseName, deleteRowMutation, refresh, showAlert, t])
 
   const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(newPage)

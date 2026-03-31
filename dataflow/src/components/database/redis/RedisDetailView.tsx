@@ -10,6 +10,7 @@ import { ExportRedisModal } from './ExportRedisModal'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { RedisFilterModal } from './RedisFilterModal'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/useI18n'
 
 interface RedisDetailViewProps {
   connectionId: string
@@ -27,6 +28,7 @@ export function RedisDetailView(props: RedisDetailViewProps) {
 
 /** Inner content rendered within the RedisViewProvider context. */
 function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewProps) {
+  const { t } = useI18n()
   const { state, actions } = useRedisView()
 
   return (
@@ -36,22 +38,22 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
         iconClassName="bg-primary/10"
         iconColor="text-primary"
         title={databaseName}
-        subtitle="REDIS KEY VIEW"
+        subtitle={t('redis.subtitle')}
         count={state.total}
       >
         <ActionButton onClick={actions.openAddModal}>
           <Plus className="h-3.5 w-3.5" />
-          Add Key
+          {t('redis.actions.addKey')}
         </ActionButton>
         <div className="h-4 w-px bg-border mx-1" />
         <DataView.FilterButton onClick={() => actions.setIsFilterModalOpen(true)} />
         <ActionButton variant="outline" onClick={() => actions.setShowExportModal(true)}>
           <Download className="h-3.5 w-3.5" />
-          Export
+          {t('redis.actions.export')}
         </ActionButton>
         <ActionButton variant="outline" onClick={() => actions.refresh()} disabled={state.loading}>
           <RefreshCw className={cn("h-3.5 w-3.5", state.loading && "animate-spin")} />
-          Refresh
+          {t('redis.actions.refresh')}
         </ActionButton>
       </DataView.Header>
 
@@ -65,7 +67,7 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
           pageSize={state.pageSize}
           total={state.total}
           loading={state.loading}
-          itemLabel="keys"
+          itemLabel={t('redis.pagination.keys')}
           onPageChange={actions.handlePageChange}
           onPageSizeChange={actions.handlePageSizeChange}
         />
@@ -87,9 +89,9 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
         isOpen={!!state.deletingKey}
         onClose={() => actions.setDeletingKey(undefined)}
         onConfirm={actions.handleConfirmDelete}
-        title="Delete Key"
-        message={`Are you sure you want to delete key "${state.deletingKey?.key ?? ''}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={t('redis.delete.title')}
+        message={t('redis.delete.message', { key: state.deletingKey?.key ?? '' })}
+        confirmText={t('redis.delete.confirmText')}
         isDestructive
       />
 

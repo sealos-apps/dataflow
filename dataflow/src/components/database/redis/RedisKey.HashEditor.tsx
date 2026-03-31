@@ -2,21 +2,23 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import { useRedisKeyCtx } from './RedisKeyProvider'
 
 /** Create-only editor for Redis hash field/value pairs. */
 export function RedisKeyHashEditor() {
+  const { t } = useI18n()
   const { draft, setHashPairs } = useRedisKeyCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Value</label>
+      <label className="text-sm font-medium text-muted-foreground">{t('redis.key.value')}</label>
       <div className="space-y-2">
         {draft.hashPairs.map((pair, index) => (
           <div key={index} className="flex gap-2">
             <Input
-              placeholder="Field"
+              placeholder={t('redis.key.hashFieldPlaceholder')}
               value={pair.field}
               onChange={(event) => {
                 const next = [...draft.hashPairs]
@@ -27,7 +29,7 @@ export function RedisKeyHashEditor() {
               disabled={state.isSubmitting}
             />
             <Input
-              placeholder="Value"
+              placeholder={t('redis.key.hashValuePlaceholder')}
               value={pair.value}
               onChange={(event) => {
                 const next = [...draft.hashPairs]
@@ -57,7 +59,7 @@ export function RedisKeyHashEditor() {
           className="w-full"
         >
           <Plus className="h-4 w-4" />
-          Add Field
+          {t('redis.key.addField')}
         </Button>
       </div>
     </div>

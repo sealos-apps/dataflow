@@ -6,6 +6,7 @@ import {
   useUpdateStorageUnitMutation,
 } from '@graphql'
 import { resolveSchemaParam } from '@/utils/database-features'
+import { useI18n } from '@/i18n/useI18n'
 import type { Alert } from '@/components/database/shared/types'
 
 interface UseDocumentEditingParams {
@@ -53,6 +54,7 @@ export function useDocumentEditing({
   refresh,
   showAlert,
 }: UseDocumentEditingParams): { state: DocumentEditingState; actions: DocumentEditingActions } {
+  const { t } = useI18n()
   const { connections } = useConnectionStore()
 
   // ---- GraphQL mutations ----
@@ -99,7 +101,7 @@ export function useDocumentEditing({
       }))
 
       if (values.length === 0) {
-        showAlert('Error', 'Document must have at least one field', 'error')
+        showAlert(t('common.alert.error'), t('mongodb.error.emptyDocument'), 'error')
         return
       }
 
@@ -113,21 +115,25 @@ export function useDocumentEditing({
       })
 
       if (errors?.length) {
-        showAlert('Error', `Failed to add document: ${errors[0].message}`, 'error')
+        showAlert(
+          t('common.alert.error'),
+          t('mongodb.alert.addFailedWithError', { error: errors[0].message }),
+          'error',
+        )
         return
       }
 
       if (result?.AddRow.Status) {
-        showAlert('Success', 'Document added successfully!', 'success')
+        showAlert(t('common.alert.success'), t('mongodb.alert.addSuccess'), 'success')
         setShowAddModal(false)
         refresh()
       } else {
-        showAlert('Error', 'Failed to add document', 'error')
+        showAlert(t('common.alert.error'), t('mongodb.alert.addFailed'), 'error')
       }
     } catch (e: any) {
-      showAlert('Error', `Invalid JSON or add error: ${e.message}`, 'error')
+      showAlert(t('common.alert.error'), t('mongodb.alert.invalidJsonAdd', { error: e.message }), 'error')
     }
-  }, [addContent, connections, connectionId, databaseName, collectionName, addRowMutation, showAlert, refresh])
+  }, [addContent, connections, connectionId, databaseName, collectionName, addRowMutation, showAlert, refresh, t])
 
   // ---- Edit handlers ----
   const handleEditClick = useCallback((doc: any) => {
@@ -160,21 +166,25 @@ export function useDocumentEditing({
       })
 
       if (errors?.length) {
-        showAlert('Error', `Failed to update document: ${errors[0].message}`, 'error')
+        showAlert(
+          t('common.alert.error'),
+          t('mongodb.alert.updateFailedWithError', { error: errors[0].message }),
+          'error',
+        )
         return
       }
 
       if (result?.UpdateStorageUnit.Status) {
-        showAlert('Success', 'Document updated successfully!', 'success')
+        showAlert(t('common.alert.success'), t('mongodb.alert.updateSuccess'), 'success')
         setEditingDoc(null)
         refresh()
       } else {
-        showAlert('Error', 'Failed to update document', 'error')
+        showAlert(t('common.alert.error'), t('mongodb.alert.updateFailed'), 'error')
       }
     } catch (e: any) {
-      showAlert('Error', `Invalid JSON or update error: ${e.message}`, 'error')
+      showAlert(t('common.alert.error'), t('mongodb.alert.invalidJsonUpdate', { error: e.message }), 'error')
     }
-  }, [editingDoc, editContent, connections, connectionId, databaseName, collectionName, updateStorageUnitMutation, showAlert, refresh])
+  }, [editingDoc, editContent, connections, connectionId, databaseName, collectionName, updateStorageUnitMutation, showAlert, refresh, t])
 
   // ---- Delete handlers ----
   const handleDeleteClick = useCallback((docId: string) => {
@@ -202,23 +212,27 @@ export function useDocumentEditing({
       })
 
       if (errors?.length) {
-        showAlert('Error', `Failed to delete document: ${errors[0].message}`, 'error')
+        showAlert(
+          t('common.alert.error'),
+          t('mongodb.alert.deleteFailedWithError', { error: errors[0].message }),
+          'error',
+        )
         return
       }
 
       if (result?.DeleteRow.Status) {
-        showAlert('Success', 'Document deleted successfully!', 'success')
+        showAlert(t('common.alert.success'), t('mongodb.alert.deleteSuccess'), 'success')
         refresh()
       } else {
-        showAlert('Error', 'Failed to delete document', 'error')
+        showAlert(t('common.alert.error'), t('mongodb.alert.deleteFailed'), 'error')
       }
     } catch (e: any) {
-      showAlert('Error', `Delete error: ${e.message}`, 'error')
+      showAlert(t('common.alert.error'), t('mongodb.alert.deleteError', { error: e.message }), 'error')
     } finally {
       setDeletingDocId(null)
       setShowDeleteModal(false)
     }
-  }, [deletingDocId, connections, connectionId, databaseName, collectionName, deleteRowMutation, showAlert, refresh])
+  }, [deletingDocId, connections, connectionId, databaseName, collectionName, deleteRowMutation, showAlert, refresh, t])
 
   const state: DocumentEditingState = {
     editingDoc,

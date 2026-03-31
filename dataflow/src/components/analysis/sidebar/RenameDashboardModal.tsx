@@ -4,6 +4,7 @@ import { useAnalysisStore } from '@/stores/useAnalysisStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -39,23 +40,24 @@ function RenameDashboardProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { updateDashboard, isDashboardNameExists } = useAnalysisStore()
   const [name, setName] = useState(currentName)
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim() || name === currentName) return
     if (isDashboardNameExists(name, dashboardId)) {
-      throw new Error('Dashboard name already exists, please use a different name')
+      throw new Error(t('analysis.dashboard.nameExists'))
     }
     updateDashboard(dashboardId, { name })
     onSuccess?.()
-  }, [name, currentName, isDashboardNameExists, dashboardId, updateDashboard, onSuccess])
+  }, [name, currentName, isDashboardNameExists, dashboardId, updateDashboard, onSuccess, t])
 
   return (
     <RenameDashboardCtx value={{ name, setName, originalName: currentName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Rename Dashboard', icon: LayoutDashboard }}
+        meta={{ title: t('analysis.dashboard.rename'), icon: LayoutDashboard }}
       >
         {children}
       </ModalForm.Provider>
@@ -85,8 +87,14 @@ function RenameDashboardFields() {
 
 /** Submit button disabled when name is empty or unchanged. */
 function RenameSubmitButton() {
+  const { t } = useI18n()
   const { name, originalName } = useRenameDashboardCtx()
-  return <ModalForm.SubmitButton label="Confirm" disabled={!name.trim() || name === originalName} />
+  return (
+    <ModalForm.SubmitButton
+      label={t('analysis.dashboard.renameAction')}
+      disabled={!name.trim() || name === originalName}
+    />
+  )
 }
 
 // ---------------------------------------------------------------------------

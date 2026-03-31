@@ -2,6 +2,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector } from '@/components/database/shared/FormatSelector'
 import { ExportFooter, ExportProgress } from '@/components/database/shared/ExportProgress'
+import { useI18n } from '@/i18n/useI18n'
 import { ExportRedisProvider, useExportRedisCtx } from './ExportRedisProvider'
 
 interface ExportRedisModalProps {
@@ -42,6 +43,7 @@ export function ExportRedisModal({
 }
 
 function ExportRedisFields() {
+  const { t } = useI18n()
   const { format, setFormat, formatOptions, patternSummary, typesSummary, isSuccess, statusText } =
     useExportRedisCtx()
   const { state } = useModalForm()
@@ -52,17 +54,17 @@ function ExportRedisFields() {
       <FormatSelector options={formatOptions} value={format} onChange={setFormat} disabled={disabled} />
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">Current Key Pattern</label>
+        <label className="text-sm font-medium">{t('redis.export.patternLabel')}</label>
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {patternSummary}
         </div>
         <p className="text-xs text-muted-foreground">
-          Redis export currently shows the active filter for reference only. The backend still exports all keys.
+          {t('redis.filter.exportHint')}
         </p>
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">Current Type Filter</label>
+        <label className="text-sm font-medium">{t('redis.export.typesLabel')}</label>
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {typesSummary}
         </div>

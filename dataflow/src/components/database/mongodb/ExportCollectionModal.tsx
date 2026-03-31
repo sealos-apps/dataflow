@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,9 +62,11 @@ function ExportCollectionProvider({
   collectionName: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
+
   return (
     <ModalForm.Provider
-      meta={{ title: 'Export Collection', description: collectionName, icon: Download }}
+      meta={{ title: t('mongodb.export.title'), description: collectionName, icon: Download }}
     >
       <ExportCollectionBridge
         connectionId={connectionId}
@@ -92,6 +95,7 @@ function ExportCollectionBridge({
   collectionName: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { connections } = useConnectionStore()
   const [format, setFormat] = useState<CollectionExportFormat>('json')
   const [filter, setFilter] = useState('')
@@ -106,7 +110,7 @@ function ExportCollectionBridge({
 
     try {
       const connection = connections.find((c) => c.id === connectionId)
-      if (!connection) throw new Error('Connection not found')
+      if (!connection) throw new Error(t('mongodb.error.connectionNotFound'))
 
       const graphqlSchema = resolveSchemaParam(connection.type, databaseName)
       const backendFormat = format === 'json' ? 'ndjson' : 'csv'
@@ -126,7 +130,7 @@ function ExportCollectionBridge({
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || `Export failed with status ${response.status}`)
+        throw new Error(text || t('mongodb.export.failedWithStatus', { status: response.status }))
       }
 
       const disposition = response.headers.get('Content-Disposition')
@@ -141,13 +145,13 @@ function ExportCollectionBridge({
     } catch (e: any) {
       actions.setAlert({
         type: 'error',
-        title: 'Export failed',
-        message: e.message || 'An error occurred',
+        title: t('mongodb.export.failed'),
+        message: e.message || t('mongodb.export.errorOccurred'),
       })
     } finally {
       actions.setSubmitting(false)
     }
-  }, [actions, collectionName, connectionId, connections, databaseName, format])
+  }, [actions, collectionName, connectionId, connections, databaseName, format, t])
 
   return (
     <ExportCollectionCtx
@@ -164,6 +168,7 @@ function ExportCollectionBridge({
 
 /** Format selector, filter query, row limit, and progress display. */
 function ExportCollectionFields() {
+  const { t } = useI18n()
   const { format, setFormat, filter, setFilter, limit, setLimit, isSuccess } =
     useExportCollectionCtx()
   const { state } = useModalForm()
@@ -174,26 +179,26 @@ function ExportCollectionFields() {
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Filter Query (Optional)</label>
+        <label className="text-sm font-medium">{t('mongodb.export.filterQuery')}</label>
         <Input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder='{ "status": "active" }'
+          placeholder={t('mongodb.export.filterPlaceholder')}
           className="font-mono text-sm"
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          Enter a MongoDB query document to filter results.
+          {t('mongodb.export.filterHint')}
         </p>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Limit Rows (Optional)</label>
+        <label className="text-sm font-medium">{t('mongodb.export.limitRows')}</label>
         <Input
           type="number"
           value={limit}
           onChange={(e) => setLimit(e.target.value ? parseInt(e.target.value) : '')}
-          placeholder="No limit"
+          placeholder={t('mongodb.export.limitPlaceholder')}
           className="font-mono text-sm"
           min={1}
           disabled={disabled}

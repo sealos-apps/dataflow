@@ -7,6 +7,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/Button'
+import { useI18n } from '@/i18n/useI18n'
 
 export interface DocumentEditorDialogProps {
   open: boolean
@@ -32,6 +33,8 @@ export function DocumentEditorDialog({
   onContentChange,
   onSave,
 }: DocumentEditorDialogProps) {
+  const { t } = useI18n()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
@@ -51,7 +54,7 @@ export function DocumentEditorDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="ghost">Cancel</Button>
+            <Button variant="ghost">{t('common.actions.cancel')}</Button>
           </DialogClose>
           <Button onClick={onSave}>{submitLabel}</Button>
         </DialogFooter>

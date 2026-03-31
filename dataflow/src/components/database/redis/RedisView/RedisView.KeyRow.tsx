@@ -2,6 +2,7 @@ import { Edit2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useI18n } from '@/i18n/useI18n'
 import { useRedisView } from './RedisViewProvider'
 import type { RedisKey } from './types'
 
@@ -17,6 +18,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 /** A single row in the Redis key list table. */
 export function RedisViewKeyRow({ redisKey }: { redisKey: RedisKey }) {
+  const { t } = useI18n()
   const { actions } = useRedisView()
   const canEdit = redisKey.type === 'string'
 
@@ -58,7 +60,7 @@ export function RedisViewKeyRow({ redisKey }: { redisKey: RedisKey }) {
               </TooltipTrigger>
               {!canEdit && (
                 <TooltipContent side="top">
-                  Editing is currently supported only for string keys
+                  {t('redis.key.editOnlyString')}
                 </TooltipContent>
               )}
             </Tooltip>

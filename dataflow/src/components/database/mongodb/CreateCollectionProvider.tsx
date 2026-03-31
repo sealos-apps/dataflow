@@ -2,6 +2,7 @@ import { createContext, use, useCallback, useState, type ReactNode, type JSX } f
 import { Database } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { ModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import { resolveSchemaParam } from '@/utils/database-features'
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export function CreateCollectionProvider({
   onSuccess?: () => void
   children: ReactNode
 }): JSX.Element {
+  const { t } = useI18n()
   const { createTable, connections } = useConnectionStore()
   const [collectionName, setCollectionName] = useState('')
 
@@ -51,15 +53,15 @@ export function CreateCollectionProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('mongodb.error.unknown'))
     }
-  }, [collectionName, connections, connectionId, databaseName, createTable, onSuccess])
+  }, [collectionName, connections, connectionId, databaseName, createTable, onSuccess, t])
 
   return (
     <CreateCollectionCtx value={{ collectionName, setCollectionName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Create Collection', icon: Database }}
+        meta={{ title: t('mongodb.collection.create'), icon: Database }}
       >
         {children}
       </ModalForm.Provider>

@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -36,6 +37,7 @@ function CreateDatabaseProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { createDatabase } = useConnectionStore()
   const [dbName, setDbName] = useState('')
 
@@ -45,15 +47,15 @@ function CreateDatabaseProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? 'Unknown error')
+      throw new Error(result.message ?? t('common.unknownError'))
     }
-  }, [dbName, createDatabase, onSuccess])
+  }, [dbName, createDatabase, onSuccess, t])
 
   return (
     <CreateDatabaseCtx value={{ dbName, setDbName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'Create Database', icon: Database }}
+        meta={{ title: t('database.create.title'), icon: Database }}
       >
         {children}
       </ModalForm.Provider>
@@ -67,18 +69,19 @@ function CreateDatabaseProvider({
 
 /** Input field for the new database name. */
 function CreateDatabaseFields() {
+  const { t } = useI18n()
   const { dbName, setDbName } = useCreateDatabaseCtx()
   const { state } = useModalForm()
 
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Database Name
+        {t('database.name')}
       </label>
       <Input
         value={dbName}
         onChange={(e) => setDbName(e.target.value)}
-        placeholder="Enter database name"
+        placeholder={t('database.namePlaceholder')}
         disabled={state.isSubmitting}
       />
     </div>
@@ -87,8 +90,9 @@ function CreateDatabaseFields() {
 
 /** Submit button disabled when database name is empty. */
 function CreateSubmitButton() {
+  const { t } = useI18n()
   const { dbName } = useCreateDatabaseCtx()
-  return <ModalForm.SubmitButton label="Save" disabled={!dbName} />
+  return <ModalForm.SubmitButton label={t('database.create.submit')} disabled={!dbName} />
 }
 
 // ---------------------------------------------------------------------------

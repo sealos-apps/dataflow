@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { SafeECharts } from '@/components/ui/SafeECharts'
 import { buildWidgetChartOption } from '../chart-utils'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/useI18n'
 
 interface MaximizeChartModalProps {
   open: boolean
@@ -40,6 +41,7 @@ export function MaximizeChartModal({ open, onOpenChange, componentId }: Maximize
 }
 
 function MaximizedContent({ component }: { component: { type: string; title: string; config?: any; data?: any } }) {
+  const { t } = useI18n()
   switch (component.type) {
     case 'chart': {
       const chartOption = buildWidgetChartOption(component.config)
@@ -85,7 +87,7 @@ function MaximizedContent({ component }: { component: { type: string; title: str
             "text-xl font-medium mt-4",
             component.data?.trend?.startsWith('+') ? "text-success" : "text-destructive"
           )}>
-            {component.data?.trend || '0%'} vs last month
+            {t('analysis.widget.statsComparison', { trend: component.data?.trend || '0%' })}
           </div>
         </div>
       )

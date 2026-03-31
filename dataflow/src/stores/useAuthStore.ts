@@ -18,6 +18,7 @@ import {
   getDefaultDatabase,
   decryptSealosCredential,
 } from '@/config/sealos';
+import { replaceBootstrapUrl } from '@/i18n/url-params';
 
 type AuthStatus = 'loading' | 'authenticated' | 'error';
 
@@ -71,7 +72,7 @@ async function handleSealosLogin(
   const port = params.get('port') ?? '';
   const dbName = params.get('dbName') ?? undefined;
 
-  window.history.replaceState({}, '', window.location.pathname);
+  replaceBootstrapUrl(window.location.search);
 
   const whodbType = mapSealosDbType(dbType);
   if (!whodbType) {

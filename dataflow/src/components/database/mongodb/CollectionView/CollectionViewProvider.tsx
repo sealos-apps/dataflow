@@ -10,6 +10,7 @@ import type { CollectionViewContextValue } from './types'
 import type { Alert } from '@/components/database/shared/types'
 import type { FlatMongoFilter } from '@/components/database/mongodb/filter-collection.types'
 import { useDocumentEditing } from './useDocumentEditing'
+import { useI18n } from '@/i18n/useI18n'
 
 const CollectionViewCtx = createContext<CollectionViewContextValue | null>(null)
 
@@ -29,6 +30,7 @@ interface CollectionViewProviderProps {
 
 /** Provider that owns all CollectionDetailView state, GraphQL operations, and handlers. */
 export function CollectionViewProvider({ connectionId, databaseName, collectionName, children }: CollectionViewProviderProps) {
+  const { t } = useI18n()
   const { connections, collectionRefreshKey } = useConnectionStore()
 
   // ---- GraphQL hooks ----
@@ -105,7 +107,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
 
       const conn = connections.find(c => c.id === connectionId)
       if (!conn) {
-        setError('Connection not found')
+        setError(t('mongodb.error.connectionNotFound'))
         setLoading(false)
         return
       }
@@ -189,14 +191,14 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
           setTotal(result.Row.TotalCount)
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch collection data')
+        setError(err.message || t('mongodb.error.fetchCollectionData'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [connectionId, databaseName, collectionName, connections, collectionRefreshKey, currentPage, pageSize, searchTerm, activeFilter, refreshKey, getRows])
+  }, [connectionId, databaseName, collectionName, connections, collectionRefreshKey, currentPage, pageSize, searchTerm, activeFilter, refreshKey, getRows, t])
 
   // ---- Page change ----
   const handlePageChange = useCallback((page: number) => {

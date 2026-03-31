@@ -27,6 +27,7 @@ import {
 } from '@/utils/ddl-sql'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import type { ModalMeta } from '@/components/ui/types'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   ColumnDefinition,
   IndexDefinition,
@@ -61,7 +62,8 @@ export function EditTableProvider({
   schema,
   children,
 }: EditTableProviderProps) {
-  const meta: ModalMeta = { title: `Edit Table: ${tableName}`, icon: Table }
+  const { t } = useI18n()
+  const meta: ModalMeta = { title: t('sql.editTable.title', { tableName }), icon: Table }
 
   return (
     <ModalForm.Provider meta={meta}>
@@ -97,6 +99,7 @@ function EditTableBridge({
   schema?: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { connections } = useConnectionStore()
   const conn = connections.find(c => c.id === connectionId)
   const { actions: modalActions } = useModalForm()
@@ -208,7 +211,7 @@ function EditTableBridge({
     } catch (error) {
       modalActions.setAlert({
         type: 'error',
-        title: 'Failed to load schema',
+        title: t('sql.editTable.loadSchemaFailed'),
         message: String(error),
       })
       setColumns([])
@@ -243,7 +246,7 @@ function EditTableBridge({
         return { success: false, message: (err as Error).message, executedSql: allSql }
       }
     }
-    return { success: true, message: 'Operation completed', executedSql: allSql }
+    return { success: true, message: t('sql.editTable.operationCompleted'), executedSql: allSql }
   }
 
   // ---------------------------------------------------------------------------
@@ -254,13 +257,13 @@ function EditTableBridge({
     if (result.success) {
       modalActions.setAlert({
         type: 'success',
-        title: 'Operation completed',
+        title: t('sql.editTable.operationCompleted'),
         message: result.executedSql ?? '',
       })
     } else {
       modalActions.setAlert({
         type: 'error',
-        title: 'Operation failed',
+        title: t('sql.editTable.operationFailed'),
         message: result.message + (result.executedSql ? `\n\nSQL: ${result.executedSql}` : ''),
       })
     }
@@ -309,7 +312,7 @@ function EditTableBridge({
 
   const saveColumn = async (col: ColumnDefinition) => {
     if (!col.name.trim()) {
-      showResult({ success: false, message: 'Column name is required' })
+      showResult({ success: false, message: t('sql.editTable.columnNameRequired') })
       return
     }
 
@@ -378,11 +381,11 @@ function EditTableBridge({
 
   const saveIndex = async (idx: IndexDefinition) => {
     if (!idx.name.trim()) {
-      showResult({ success: false, message: 'Index name is required' })
+      showResult({ success: false, message: t('sql.editTable.indexNameRequired') })
       return
     }
     if (idx.columns.length === 0) {
-      showResult({ success: false, message: 'Please select at least one column for the index' })
+      showResult({ success: false, message: t('sql.editTable.indexColumnsRequired') })
       return
     }
 
@@ -460,7 +463,7 @@ function EditTableBridge({
 
   const saveForeignKey = async (fk: ForeignKeyDefinition) => {
     if (!fk.name.trim() || !fk.column.trim() || !fk.referencedTable.trim() || !fk.referencedColumn.trim()) {
-      showResult({ success: false, message: 'All foreign key fields are required' })
+      showResult({ success: false, message: t('sql.editTable.foreignKeyFieldsRequired') })
       return
     }
 

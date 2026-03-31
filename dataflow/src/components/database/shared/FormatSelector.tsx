@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
 /** Describes a single format option for the selector grid. */
@@ -26,9 +27,11 @@ export function FormatSelector<T extends string>({
   onChange,
   disabled,
 }: FormatSelectorProps<T>) {
+  const { t } = useI18n()
+
   return (
     <div className="space-y-3">
-      <label className="text-sm font-medium">Export Format</label>
+      <label className="text-sm font-medium">{t('common.export.format')}</label>
       <div
         className={cn(
           'grid gap-3',

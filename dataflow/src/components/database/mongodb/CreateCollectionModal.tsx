@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import { CreateCollectionProvider, useCreateCollectionCtx } from './CreateCollectionProvider'
 
 interface CreateCollectionModalProps {
@@ -48,18 +49,19 @@ export function CreateCollectionModal({
 
 /** Input field for the new collection name. */
 function CreateCollectionFields() {
+  const { t } = useI18n()
   const { collectionName, setCollectionName } = useCreateCollectionCtx()
   const { state, actions } = useModalForm()
 
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Collection Name
+        {t('mongodb.collection.name')}
       </label>
       <Input
         value={collectionName}
         onChange={(e) => setCollectionName(e.target.value)}
-        placeholder="e.g., users"
+        placeholder={t('mongodb.collection.namePlaceholder')}
         disabled={state.isSubmitting}
         autoFocus
         onKeyDown={(e) => {
@@ -74,6 +76,7 @@ function CreateCollectionFields() {
 
 /** Submit button disabled when collection name is empty. */
 function CreateCollectionSubmitButton() {
+  const { t } = useI18n()
   const { collectionName } = useCreateCollectionCtx()
-  return <ModalForm.SubmitButton label="Create Collection" disabled={!collectionName} />
+  return <ModalForm.SubmitButton label={t('mongodb.collection.createAction')} disabled={!collectionName} />
 }

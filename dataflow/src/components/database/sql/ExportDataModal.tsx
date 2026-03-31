@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,10 +69,12 @@ function ExportDataProvider({
   tableName: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
+
   return (
     <ModalForm.Provider
       meta={{
-        title: 'Export Data',
+        title: t('sql.export.title'),
         description: schema ? `${databaseName}.${schema}.${tableName}` : `${databaseName}.${tableName}`,
         icon: Table2,
       }}
@@ -95,6 +98,7 @@ function ExportDataBridge({
   tableName: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const [format, setFormat] = useState<ExportFormat>('csv')
   const [rowCount, setRowCount] = useState<number | ''>(1000)
   const [filter, setFilter] = useState('')
@@ -119,7 +123,7 @@ function ExportDataBridge({
       })
 
       if (error) throw new Error(error.message)
-      if (!data?.RawExecute) throw new Error('No data returned from query')
+      if (!data?.RawExecute) throw new Error(t('sql.export.noDataReturned'))
 
       const { Columns, Rows } = data.RawExecute
       let blob: Blob
@@ -136,13 +140,13 @@ function ExportDataBridge({
     } catch (err: any) {
       actions.setAlert({
         type: 'error',
-        title: 'Export failed',
-        message: err.message || 'Unknown error',
+        title: t('sql.export.failed'),
+        message: err.message || t('sql.common.unknownError'),
       })
     } finally {
       actions.setSubmitting(false)
     }
-  }, [actions, databaseName, executeQuery, filter, format, rowCount, schema, tableName])
+  }, [actions, databaseName, executeQuery, filter, format, rowCount, schema, t, tableName])
 
   return (
     <ExportDataCtx value={{ format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess, handleExport }}>
@@ -157,6 +161,7 @@ function ExportDataBridge({
 
 /** Format selector, row limit, filter, and progress display. */
 function ExportDataFields() {
+  const { t } = useI18n()
   const { format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess } = useExportDataCtx()
   const { state } = useModalForm()
   const disabled = state.isSubmitting || isSuccess
@@ -166,25 +171,25 @@ function ExportDataFields() {
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">Row Limit</label>
+        <label className="text-sm font-medium">{t('sql.export.rowLimit')}</label>
         <Input
           type="number"
           value={rowCount}
           onChange={(e) => setRowCount(e.target.value === '' ? '' : parseInt(e.target.value))}
-          placeholder="Leave empty for all rows"
+          placeholder={t('sql.export.rowLimitPlaceholder')}
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          Leave empty to export all rows (warning: large tables may take time)
+          {t('sql.export.rowLimitHint')}
         </p>
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">Filter Data (Optional)</label>
+        <label className="text-sm font-medium">{t('sql.export.filterOptional')}</label>
         <textarea
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="Enter SQL WHERE clause (e.g., id > 100 AND status = 'active')"
+          placeholder={t('sql.export.filterPlaceholder')}
           disabled={disabled}
           className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
         />

@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { useI18n } from '@/i18n/useI18n'
 
 /** Props for the toolbar layout shell. */
 export interface DataViewHeaderProps {
@@ -19,6 +20,8 @@ export interface DataViewHeaderProps {
 export function DataViewHeader({
   icon: Icon, iconClassName, iconColor, title, subtitle, count, children,
 }: DataViewHeaderProps) {
+  const { t } = useI18n()
+
   return (
     <div className="border-b border-border/50 px-6 py-4 flex items-center justify-between bg-card">
       <div className="flex items-center gap-3">
@@ -29,7 +32,9 @@ export function DataViewHeader({
           <h2 className="text-base font-semibold flex items-center gap-2 text-foreground">
             {title}
             {count !== undefined && (
-              <span className="text-muted-foreground font-normal text-sm ml-2">({count} items)</span>
+              <span className="text-muted-foreground font-normal text-sm ml-2">
+                ({t('common.dataView.items', { count })})
+              </span>
             )}
           </h2>
           <p className="text-xs text-muted-foreground font-medium">{subtitle}</p>

@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useEditTable } from './EditTableProvider'
+import { useI18n } from '@/i18n/useI18n'
 
 const COLUMN_TYPES = [
   'INT', 'BIGINT', 'SMALLINT', 'TINYINT',
@@ -28,6 +29,7 @@ const COLUMN_TYPES = [
  * Consumes `useEditTable()` for all state and actions.
  */
 export function EditTableColumnsTab() {
+  const { t } = useI18n()
   const { state, actions } = useEditTable()
   const { columns, isExecuting } = state
   const { addColumn, updateColumn, saveColumn, removeColumn } = actions
@@ -42,19 +44,19 @@ export function EditTableColumnsTab() {
           className="gap-1 text-primary"
         >
           <Plus className="h-3 w-3" />
-          Add Field
+          {t('sql.editTable.columns.addField')}
         </Button>
       </div>
       <div className="rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Name</th>
-              <th className="px-3 py-2 text-left font-medium">Type</th>
-              <th className="px-3 py-2 text-center font-medium w-14">PK</th>
-              <th className="px-3 py-2 text-center font-medium w-14">Null</th>
-              <th className="px-3 py-2 text-left font-medium">Comment</th>
-              <th className="px-3 py-2 w-20">Actions</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.columns.name')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.columns.type')}</th>
+              <th className="px-3 py-2 text-center font-medium w-14">{t('sql.editTable.columns.pk')}</th>
+              <th className="px-3 py-2 text-center font-medium w-14">{t('sql.editTable.columns.null')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.columns.comment')}</th>
+              <th className="px-3 py-2 w-20">{t('sql.editTable.columns.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -68,7 +70,7 @@ export function EditTableColumnsTab() {
                     value={col.name}
                     onChange={(e) => updateColumn(col.id, 'name', e.target.value)}
                     className="h-auto border-transparent bg-transparent px-2 py-1 shadow-none focus-visible:border-primary focus-visible:ring-0 focus-visible:bg-background"
-                    placeholder="Column Name"
+                    placeholder={t('sql.editTable.columns.columnNamePlaceholder')}
                     disabled={isExecuting}
                   />
                 </td>
@@ -107,7 +109,7 @@ export function EditTableColumnsTab() {
                     value={col.comment}
                     onChange={(e) => updateColumn(col.id, 'comment', e.target.value)}
                     className="h-auto border-transparent bg-transparent px-2 py-1 shadow-none focus-visible:border-primary focus-visible:ring-0 focus-visible:bg-background text-muted-foreground text-xs"
-                    placeholder="Comment..."
+                    placeholder={t('sql.editTable.columns.commentPlaceholder')}
                     disabled={isExecuting}
                   />
                 </td>
@@ -119,7 +121,7 @@ export function EditTableColumnsTab() {
                       onClick={() => saveColumn(col)}
                       disabled={isExecuting}
                       className="text-primary hover:text-primary/80 hover:bg-primary/5"
-                      title="Save Column"
+                      title={t('sql.editTable.columns.save')}
                     >
                       {isExecuting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -133,7 +135,7 @@ export function EditTableColumnsTab() {
                       onClick={() => removeColumn(col)}
                       disabled={isExecuting}
                       className="text-muted-foreground hover:text-destructive hover:bg-destructive/5"
-                      title="Delete Column"
+                      title={t('sql.editTable.columns.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

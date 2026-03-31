@@ -5,6 +5,7 @@ import { addAuthHeader } from '@/config/auth-headers'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { downloadBlob } from '@/utils/export-utils'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import type { FormatOption } from '@/components/database/shared/FormatSelector'
 
 type RedisExportFormat = 'json' | 'csv'
@@ -26,6 +27,20 @@ interface ExportRedisCtxValue {
 }
 
 const ExportRedisCtx = createContext<ExportRedisCtxValue | null>(null)
+
+function getErrorMessage(error: unknown): string | undefined {
+  if (error instanceof Error) {
+    const message = error.message.trim()
+    return message.length > 0 ? message : undefined
+  }
+
+  if (typeof error === 'string') {
+    const message = error.trim()
+    return message.length > 0 ? message : undefined
+  }
+
+  return undefined
+}
 
 /** Accessor for Redis export modal domain state. Throws outside the provider. */
 export function useExportRedisCtx(): ExportRedisCtxValue {
@@ -52,10 +67,11 @@ export function ExportRedisProvider({
   initialTypes = [],
   children,
 }: ExportRedisProviderProps) {
+  const { t } = useI18n()
   return (
     <ModalForm.Provider
       meta={{
-        title: 'Export Redis Data',
+        title: t('redis.export.title'),
         description: databaseName,
         icon: Download,
       }}
@@ -90,6 +106,7 @@ function ExportRedisBridge({
   children: ReactNode
 }) {
   const { connections } = useConnectionStore()
+  const { t } = useI18n()
   const [format, setFormat] = useState<RedisExportFormat>('json')
   const [isSuccess, setIsSuccess] = useState(false)
   const [statusText, setStatusText] = useState('')
@@ -97,8 +114,8 @@ function ExportRedisBridge({
 
   const patternSummary = useMemo(() => initialPattern || '*', [initialPattern])
   const typesSummary = useMemo(
-    () => (initialTypes.length > 0 ? initialTypes.join(', ') : 'All types'),
-    [initialTypes],
+    () => (initialTypes.length > 0 ? initialTypes.join(', ') : t('redis.export.allTypes')),
+    [initialTypes, t],
   )
 
   useEffect(() => {
@@ -113,11 +130,11 @@ function ExportRedisBridge({
     actions.setSubmitting(true)
     actions.closeAlert()
     setIsSuccess(false)
-    setStatusText('Starting Redis export...')
+    setStatusText(t('redis.export.starting'))
 
     try {
       const connection = connections.find((item) => item.id === connectionId)
-      if (!connection) throw new Error('Connection not found')
+      if (!connection) throw new Error(t('redis.error.connectionNotFound'))
 
       const graphqlSchema = resolveSchemaParam(connection.type, databaseName)
       const backendFormat = format === 'json' ? 'ndjson' : 'csv'
@@ -137,7 +154,10 @@ function ExportRedisBridge({
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || `Export failed with status ${response.status}`)
+        if (text.trim().length > 0) {
+          throw new Error(text)
+        }
+        throw new Error(t('redis.export.failedWithStatus', { status: response.status }))
       }
 
       const disposition = response.headers.get('Content-Disposition')
@@ -148,19 +168,22 @@ function ExportRedisBridge({
 
       const blob = await response.blob()
       downloadBlob(blob, filename)
-      setStatusText('Export complete! File downloaded.')
+      setStatusText(t('common.status.exportComplete'))
       setIsSuccess(true)
     } catch (error) {
+      const rawError = getErrorMessage(error)
       actions.setAlert({
         type: 'error',
-        title: 'Export failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        title: t('redis.export.failed'),
+        message: rawError
+          ? t('redis.export.failedWithError', { error: rawError })
+          : t('redis.error.unknown'),
       })
       setStatusText('')
     } finally {
       actions.setSubmitting(false)
     }
-  }, [actions, connectionId, connections, databaseName, format])
+  }, [actions, connectionId, connections, databaseName, format, t])
 
   return (
     <ExportRedisCtx

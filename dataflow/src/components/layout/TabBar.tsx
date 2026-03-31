@@ -5,6 +5,7 @@ import { useTabStore, type Tab, type TabType } from '@/stores/useTabStore';
 import { cn } from '@/lib/utils';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useI18n } from '@/i18n/useI18n';
 
 function getTabIcon(type: TabType) {
     switch (type) {
@@ -25,9 +26,10 @@ interface TabItemProps {
     onActivate: () => void;
     onClose: (e: React.MouseEvent) => void;
     onContextMenu: (e: React.MouseEvent) => void;
+    closeTitle: string;
 }
 
-function TabItem({ tab, isActive, onActivate, onClose, onContextMenu }: TabItemProps) {
+function TabItem({ tab, isActive, onActivate, onClose, onContextMenu, closeTitle }: TabItemProps) {
     return (
         <div
             onClick={onActivate}
@@ -58,7 +60,7 @@ function TabItem({ tab, isActive, onActivate, onClose, onContextMenu }: TabItemP
                     "opacity-0 group-hover:opacity-100",
                     isActive && "opacity-100"
                 )}
-                title="Close tab"
+                title={closeTitle}
             >
                 <X className="h-3.5 w-3.5" />
             </Button>
@@ -68,6 +70,7 @@ function TabItem({ tab, isActive, onActivate, onClose, onContextMenu }: TabItemP
 
 export function TabBar() {
     const { tabs, activeTabId, setActiveTab, closeTab, closeOtherTabs, closeAllTabs } = useTabStore();
+    const { t } = useI18n();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
     if (tabs.length === 0) {
@@ -112,6 +115,7 @@ export function TabBar() {
                         onActivate={() => setActiveTab(tab.id)}
                         onClose={(e) => handleClose(e, tab.id)}
                         onContextMenu={(e) => handleContextMenu(e, tab.id)}
+                        closeTitle={t('layout.tab.close')}
                     />
                 ))}
             </div>
@@ -123,18 +127,18 @@ export function TabBar() {
                     onClose={() => setContextMenu(null)}
                     items={[
                         {
-                            label: 'Close',
+                            label: t('layout.tab.close'),
                             onClick: () => handleMenuAction('close'),
                             icon: <X className="h-4 w-4" />
                         },
                         {
-                            label: 'Close Others',
+                            label: t('layout.tab.closeOthers'),
                             onClick: () => handleMenuAction('closeOthers'),
                             icon: <SplitSquareHorizontal className="h-4 w-4" />
                         },
                         { separator: true } as const,
                         {
-                            label: 'Close All',
+                            label: t('layout.tab.closeAll'),
                             onClick: () => handleMenuAction('closeAll'),
                             icon: <X className="h-4 w-4" />
                         },

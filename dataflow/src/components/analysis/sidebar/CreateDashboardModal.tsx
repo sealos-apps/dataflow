@@ -4,6 +4,7 @@ import { useAnalysisStore } from '@/stores/useAnalysisStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -34,23 +35,24 @@ function CreateDashboardProvider({
   onSuccess?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const { createDashboard, isDashboardNameExists } = useAnalysisStore()
   const [name, setName] = useState('')
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) return
     if (isDashboardNameExists(name)) {
-      throw new Error('Dashboard name already exists, please use a different name')
+      throw new Error(t('analysis.dashboard.nameExists'))
     }
     createDashboard(name)
     onSuccess?.()
-  }, [name, isDashboardNameExists, createDashboard, onSuccess])
+  }, [name, isDashboardNameExists, createDashboard, onSuccess, t])
 
   return (
     <CreateDashboardCtx value={{ name, setName }}>
       <ModalForm.Provider
         onSubmit={handleSubmit}
-        meta={{ title: 'New Dashboard', icon: LayoutDashboard }}
+        meta={{ title: t('analysis.dashboard.create'), icon: LayoutDashboard }}
       >
         {children}
       </ModalForm.Provider>
@@ -64,6 +66,7 @@ function CreateDashboardProvider({
 
 /** Input for the new dashboard name. */
 function CreateDashboardFields() {
+  const { t } = useI18n()
   const { name, setName } = useCreateDashboardCtx()
   const { state, actions } = useModalForm()
 
@@ -71,7 +74,7 @@ function CreateDashboardFields() {
     <Input
       value={name}
       onChange={(e) => { setName(e.target.value); actions.closeAlert() }}
-      placeholder="Enter dashboard name"
+      placeholder={t('analysis.dashboard.namePlaceholder')}
       maxLength={15}
       disabled={state.isSubmitting}
       autoFocus
@@ -81,8 +84,9 @@ function CreateDashboardFields() {
 
 /** Submit button disabled when name is empty. */
 function CreateSubmitButton() {
+  const { t } = useI18n()
   const { name } = useCreateDashboardCtx()
-  return <ModalForm.SubmitButton label="Create" disabled={!name.trim()} />
+  return <ModalForm.SubmitButton label={t('analysis.dashboard.createAction')} disabled={!name.trim()} />
 }
 
 // ---------------------------------------------------------------------------

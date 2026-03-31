@@ -1,6 +1,7 @@
 import { createContext, use, useCallback, useEffect, useState, type JSX, type ReactNode } from 'react'
 import { List } from 'lucide-react'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   RedisHashPairDraft,
   RedisKeyDraft,
@@ -120,6 +121,7 @@ export function RedisKeyProvider({
   initialData,
   children,
 }: RedisKeyProviderProps): JSX.Element {
+  const { t } = useI18n()
   const [draft, setDraft] = useState<RedisKeyDraft>(() => normalizeDraft(initialData))
 
   useEffect(() => {
@@ -170,10 +172,10 @@ export function RedisKeyProvider({
   const handleSubmit = useCallback(async () => {
     if (!draft.key.trim()) return
     if (draft.mode === 'edit' && draft.type !== 'string') {
-      throw new Error('Editing is currently supported only for string keys.')
+      throw new Error(t('redis.alert.unsupportedEditMode'))
     }
     await onSave(draft)
-  }, [draft, onSave])
+  }, [draft, onSave, t])
 
   const isEditMode = draft.mode === 'edit'
   const isStringEdit = isEditMode && draft.type === 'string'
@@ -200,8 +202,8 @@ export function RedisKeyProvider({
       <ModalForm.Provider
         onSubmit={handleSubmit}
         meta={{
-          title: isEditMode ? 'Edit Key' : 'Add New Key',
-          description: isEditMode ? 'Editing is currently supported only for string keys.' : undefined,
+          title: isEditMode ? t('redis.keyModal.titleEdit') : t('redis.keyModal.titleCreate'),
+          description: isEditMode ? t('redis.keyModal.editDescription') : undefined,
           icon: List,
         }}
       >

@@ -9,8 +9,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CreateDashboardModal } from './CreateDashboardModal'
 import { RenameDashboardModal } from './RenameDashboardModal'
 import { DeleteDashboardModal } from './DeleteDashboardModal'
+import { useI18n } from '@/i18n/useI18n'
 
 export function DashboardSidebar() {
+    const { t } = useI18n()
     const { dashboards, activeDashboardId, openDashboard } = useAnalysisStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOrder, setSortOrder] = useState<'name' | 'date'>('date');
@@ -40,11 +42,11 @@ export function DashboardSidebar() {
         <div className="flex flex-col h-full w-64 border-r bg-background shrink-0 relative">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b h-14">
-                <h2 className="font-semibold text-sm">Dashboards</h2>
+                <h2 className="font-semibold text-sm">{t('analysis.dashboard.listTitle')}</h2>
                 <button
                     onClick={() => setCreateOpen(true)}
                     className="text-muted-foreground hover:text-foreground transition-colors"
-                    title="New Dashboard"
+                    title={t('analysis.dashboard.create')}
                 >
                     <PlusCircle className="w-5 h-5" />
                 </button>
@@ -56,7 +58,7 @@ export function DashboardSidebar() {
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search"
+                        placeholder={t('common.search.placeholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-8 pr-3 py-1.5 rounded-md border bg-muted/20 text-xs focus:outline-none focus:ring-1 focus:ring-primary/20"
@@ -64,7 +66,7 @@ export function DashboardSidebar() {
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon-sm" className="text-muted-foreground" title="Sort">
+                        <Button variant="outline" size="icon-sm" className="text-muted-foreground" title={t('analysis.dashboard.sort')}>
                             <SlidersHorizontal className="w-3.5 h-3.5" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -73,13 +75,13 @@ export function DashboardSidebar() {
                             onSelect={() => setSortOrder('date')}
                             className={cn(sortOrder === 'date' && "bg-accent text-accent-foreground")}
                         >
-                            Sort by Date
+                            {t('analysis.dashboard.sortByDate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => setSortOrder('name')}
                             className={cn(sortOrder === 'name' && "bg-accent text-accent-foreground")}
                         >
-                            Sort by Name
+                            {t('analysis.dashboard.sortByName')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -118,7 +120,7 @@ export function DashboardSidebar() {
                     onClose={() => setContextMenu(null)}
                     items={[
                         {
-                            label: "Add Chart",
+                            label: t('analysis.chart.add'),
                             icon: <Plus className="w-4 h-4" />,
                             onClick: () => {
                                 const dashboard = dashboards.find(d => d.id === contextMenu.id);
@@ -130,7 +132,7 @@ export function DashboardSidebar() {
                         },
                         { separator: true },
                         {
-                            label: "Rename",
+                            label: t('analysis.dashboard.rename'),
                             icon: <Edit2 className="w-4 h-4" />,
                             onClick: () => {
                                 const d = dashboards.find(d => d.id === contextMenu.id);
@@ -140,7 +142,7 @@ export function DashboardSidebar() {
                         },
                         { separator: true },
                         {
-                            label: "Delete",
+                            label: t('analysis.dashboard.delete'),
                             icon: <Trash2 className="w-4 h-4" />,
                             danger: true,
                             onClick: () => {

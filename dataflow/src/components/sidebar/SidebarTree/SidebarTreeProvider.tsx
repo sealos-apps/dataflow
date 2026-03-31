@@ -1,5 +1,6 @@
 import { createContext, use, useState, useEffect, useCallback, useRef } from "react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
+import { useI18n } from "@/i18n/useI18n";
 import type { TreeNodeData, NodeType } from "./types";
 import { connectionToNode } from "./types";
 
@@ -28,6 +29,7 @@ export function useSidebarTree(): SidebarTreeContextValue {
 export function SidebarTreeProvider({ children }: { children: React.ReactNode }) {
   const { connections, fetchDatabases, fetchSchemas, fetchTables, fetchSystemSchemas } =
     useConnectionStore();
+  const { t } = useI18n();
 
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [treeData, setTreeData] = useState<Record<string, TreeNodeData[]>>({});
@@ -96,7 +98,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
           return [
             {
               id: `${node.id}-all-keys`,
-              name: "\u5168\u90e8\u6570\u636e",
+              name: t("sidebar.redis.allData"),
               type: "redis_keys_list" as const,
               parentId: node.id,
               connectionId: node.connectionId,
@@ -141,7 +143,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
 
       return [];
     },
-    [connections, fetchDatabases, fetchSchemas, fetchTables]
+    [connections, fetchDatabases, fetchSchemas, fetchTables, t]
   );
 
   /** Fetch and store children for a node */
