@@ -3,11 +3,11 @@
  * Handles identifier quoting and cross-database syntax differences.
  */
 
-export type SqlDialect = 'MYSQL' | 'POSTGRES' | 'SQLITE3' | 'MARIADB' | 'CLICKHOUSE';
+export type SqlDialect = 'MYSQL' | 'POSTGRES' | 'SQLITE3' | 'CLICKHOUSE';
 
 /** Quote an identifier for the target database dialect. */
 export function quoteId(name: string, dialect: SqlDialect): string {
-  if (dialect === 'MYSQL' || dialect === 'MARIADB' || dialect === 'CLICKHOUSE') {
+  if (dialect === 'MYSQL' || dialect === 'CLICKHOUSE') {
     return `\`${name.replace(/`/g, '``')}\``;
   }
   return `"${name.replace(/"/g, '""')}"`;
@@ -63,7 +63,7 @@ export function deleteAllRowsSQL(dialect: SqlDialect, table: string, schema?: st
 
 export function renameTableSQL(dialect: SqlDialect, oldName: string, newName: string, schema?: string): string {
   const from = qualifiedTable(dialect, oldName, schema);
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `RENAME TABLE ${from} TO ${quoteId(newName, dialect)}`;
   }
   return `ALTER TABLE ${from} RENAME TO ${quoteId(newName, dialect)}`;
@@ -72,7 +72,7 @@ export function renameTableSQL(dialect: SqlDialect, oldName: string, newName: st
 export function copyTableStructureSQL(dialect: SqlDialect, source: string, target: string, schema?: string): string {
   const src = qualifiedTable(dialect, source, schema);
   const tgt = qualifiedTable(dialect, target, schema);
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `CREATE TABLE ${tgt} LIKE ${src}`;
   }
   return `CREATE TABLE ${tgt} AS SELECT * FROM ${src} WHERE false`;
@@ -81,7 +81,7 @@ export function copyTableStructureSQL(dialect: SqlDialect, source: string, targe
 export function copyTableWithDataSQL(dialect: SqlDialect, source: string, target: string, schema?: string): string {
   const src = qualifiedTable(dialect, source, schema);
   const tgt = qualifiedTable(dialect, target, schema);
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `CREATE TABLE ${tgt} LIKE ${src};\nINSERT INTO ${tgt} SELECT * FROM ${src}`;
   }
   return `CREATE TABLE ${tgt} AS SELECT * FROM ${src}`;
@@ -110,7 +110,7 @@ export function modifyColumnSQL(
 ): string {
   const tbl = qualifiedTable(dialect, table, schema);
   const nullClause = nullable ? 'NULL' : 'NOT NULL';
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `ALTER TABLE ${tbl} MODIFY COLUMN ${quoteId(colName, dialect)} ${colType} ${nullClause}`;
   }
   const alterType = `ALTER TABLE ${tbl} ALTER COLUMN ${quoteId(colName, dialect)} TYPE ${colType}`;
@@ -135,7 +135,7 @@ export function createIndexSQL(
 }
 
 export function dropIndexSQL(dialect: SqlDialect, table: string, indexName: string, schema?: string): string {
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `DROP INDEX ${quoteId(indexName, dialect)} ON ${qualifiedTable(dialect, table, schema)}`;
   }
   if (schema && dialect === 'POSTGRES') {
@@ -162,7 +162,7 @@ export function addForeignKeySQL(
 
 export function dropForeignKeySQL(dialect: SqlDialect, table: string, constraintName: string, schema?: string): string {
   const tbl = qualifiedTable(dialect, table, schema);
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `ALTER TABLE ${tbl} DROP FOREIGN KEY ${quoteId(constraintName, dialect)}`;
   }
   return `ALTER TABLE ${tbl} DROP CONSTRAINT ${quoteId(constraintName, dialect)}`;
@@ -178,7 +178,7 @@ function escLit(value: string): string {
 }
 
 export function columnsQuery(dialect: SqlDialect, database: string, table: string, schema?: string): string {
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_COMMENT ` +
       `FROM INFORMATION_SCHEMA.COLUMNS ` +
       `WHERE TABLE_SCHEMA = '${escLit(database)}' AND TABLE_NAME = '${escLit(table)}' ` +
@@ -203,7 +203,7 @@ export function columnsQuery(dialect: SqlDialect, database: string, table: strin
 }
 
 export function indexesQuery(dialect: SqlDialect, database: string, table: string, schema?: string): string {
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `SELECT INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS COLUMNS, ` +
       `NON_UNIQUE, INDEX_TYPE ` +
       `FROM INFORMATION_SCHEMA.STATISTICS ` +
@@ -227,7 +227,7 @@ export function indexesQuery(dialect: SqlDialect, database: string, table: strin
 }
 
 export function foreignKeysQuery(dialect: SqlDialect, database: string, table: string, schema?: string): string {
-  if (dialect === 'MYSQL' || dialect === 'MARIADB') {
+  if (dialect === 'MYSQL') {
     return `SELECT kcu.CONSTRAINT_NAME, kcu.COLUMN_NAME, kcu.REFERENCED_TABLE_NAME, kcu.REFERENCED_COLUMN_NAME, ` +
       `rc.UPDATE_RULE, rc.DELETE_RULE ` +
       `FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu ` +

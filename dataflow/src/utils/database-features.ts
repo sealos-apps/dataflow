@@ -9,7 +9,7 @@
 // Accepts both DataFlow uppercase types ('MYSQL') and WhoDB mixed-case types ('MySQL')
 const TYPES_USING_DATABASE_AS_SCHEMA: ReadonlySet<string> = new Set([
   'MYSQL', 'MONGODB', 'REDIS', 'CLICKHOUSE',
-  'MySQL', 'MariaDb', 'MongoDB', 'Redis', 'ClickHouse',
+  'MySQL', 'MongoDB', 'Redis', 'ClickHouse',
 ]);
 
 const TYPES_WITH_SCHEMA_SUPPORT: ReadonlySet<string> = new Set([
@@ -18,7 +18,7 @@ const TYPES_WITH_SCHEMA_SUPPORT: ReadonlySet<string> = new Set([
 
 const TYPES_WITH_DATABASE_SWITCHING: ReadonlySet<string> = new Set([
   'POSTGRES', 'MYSQL', 'MONGODB', 'REDIS', 'CLICKHOUSE',
-  'Postgres', 'MySQL', 'MariaDb', 'MongoDB', 'Redis', 'ClickHouse',
+  'Postgres', 'MySQL', 'MongoDB', 'Redis', 'ClickHouse',
 ]);
 
 /**

@@ -91,7 +91,7 @@ export interface DDLResult {
 function getDialect(): SqlDialect {
   const dbType = getAuth()?.Type;
   const map: Record<string, SqlDialect> = {
-    Postgres: 'POSTGRES', MySQL: 'MYSQL', MariaDB: 'MARIADB',
+    Postgres: 'POSTGRES', MySQL: 'MYSQL',
     SQLite3: 'SQLITE3', ClickHouse: 'CLICKHOUSE',
   };
   return map[dbType ?? ''] ?? 'POSTGRES';

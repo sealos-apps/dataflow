@@ -104,7 +104,7 @@ function EditTableBridge({
   const dialect: SqlDialect = (() => {
     const dbType = conn?.type
     const map: Record<string, SqlDialect> = {
-      MYSQL: 'MYSQL', POSTGRES: 'POSTGRES', MARIADB: 'MARIADB',
+      MYSQL: 'MYSQL', POSTGRES: 'POSTGRES',
       SQLITE3: 'SQLITE3', CLICKHOUSE: 'CLICKHOUSE',
     }
     return map[dbType ?? ''] ?? 'POSTGRES'
