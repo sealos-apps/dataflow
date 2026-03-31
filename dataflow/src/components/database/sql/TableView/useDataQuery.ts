@@ -10,14 +10,8 @@ import {
 import { transformRowsResult, type TableData } from '@/utils/graphql-transforms'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { parseSearchToWhereCondition, mergeSearchWithWhere } from '@/utils/search-parser'
-import { resolveLocaleFromSearch } from '@/i18n/locale'
-import { createTranslator } from '@/i18n/messages'
+import { useI18n } from '@/i18n/useI18n'
 import type { FilterCondition } from './types'
-
-function getTranslator() {
-  const search = typeof window === 'undefined' ? '' : window.location.search
-  return createTranslator(resolveLocaleFromSearch(search))
-}
 
 interface UseDataQueryParams {
   connectionId: string
@@ -55,7 +49,7 @@ export interface DataQueryActions {
 
 /** Hook that owns data fetching, loading/error state, and race condition prevention for TableView. */
 export function useDataQuery(params: UseDataQueryParams): { state: DataQueryState; actions: DataQueryActions } {
-  const t = getTranslator()
+  const { t } = useI18n()
   const {
     connectionId,
     databaseName,

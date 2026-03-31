@@ -6,15 +6,9 @@ import {
   useUpdateStorageUnitMutation,
 } from '@graphql'
 import { resolveSchemaParam, isNoSQL } from '@/utils/database-features'
-import { resolveLocaleFromSearch } from '@/i18n/locale'
-import { createTranslator } from '@/i18n/messages'
+import { useI18n } from '@/i18n/useI18n'
 import type { TableData } from '@/utils/graphql-transforms'
 import type { Alert } from '@/components/database/shared/types'
-
-function getTranslator() {
-  const search = typeof window === 'undefined' ? '' : window.location.search
-  return createTranslator(resolveLocaleFromSearch(search))
-}
 
 interface UseInlineEditingParams {
   connectionId: string
@@ -67,7 +61,7 @@ export function useInlineEditing({
   refresh,
   showAlert,
 }: UseInlineEditingParams): { state: InlineEditingState; actions: InlineEditingActions } {
-  const t = getTranslator()
+  const { t } = useI18n()
   const { connections } = useConnectionStore()
 
   // ---- GraphQL mutations ----

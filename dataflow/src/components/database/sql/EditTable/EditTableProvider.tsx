@@ -27,8 +27,7 @@ import {
 } from '@/utils/ddl-sql'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import type { ModalMeta } from '@/components/ui/types'
-import { resolveLocaleFromSearch } from '@/i18n/locale'
-import { createTranslator } from '@/i18n/messages'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   ColumnDefinition,
   IndexDefinition,
@@ -37,11 +36,6 @@ import type {
   EditTableActions,
   EditTableContextValue,
 } from './types'
-
-function getTranslator() {
-  const search = typeof window === 'undefined' ? '' : window.location.search
-  return createTranslator(resolveLocaleFromSearch(search))
-}
 
 const EditTableCtx = createContext<EditTableContextValue | null>(null)
 
@@ -68,7 +62,7 @@ export function EditTableProvider({
   schema,
   children,
 }: EditTableProviderProps) {
-  const t = getTranslator()
+  const { t } = useI18n()
   const meta: ModalMeta = { title: t('sql.editTable.title', { tableName }), icon: Table }
 
   return (
@@ -105,7 +99,7 @@ function EditTableBridge({
   schema?: string
   children: ReactNode
 }) {
-  const t = getTranslator()
+  const { t } = useI18n()
   const { connections } = useConnectionStore()
   const conn = connections.find(c => c.id === connectionId)
   const { actions: modalActions } = useModalForm()
