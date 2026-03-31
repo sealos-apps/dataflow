@@ -14,7 +14,7 @@ export interface CollectionViewState {
   error: string | null
   currentPage: number
   pageSize: number
-  totalDocuments: number
+  total: number
   totalPages: number
   searchTerm: string
   activeFilter: FlatMongoFilter
@@ -22,7 +22,7 @@ export interface CollectionViewState {
   selectedDocIndex: number | null
   showAddModal: boolean
   showExportModal: boolean
-  showFilterModal: boolean
+  isFilterModalOpen: boolean
   showDeleteModal: boolean
   editingDoc: any | null
   editContent: string
@@ -48,7 +48,7 @@ export interface CollectionViewActions {
   handleDeleteClick: (docId: string) => void
   handleConfirmDelete: () => Promise<void>
   setShowDeleteModal: (open: boolean) => void
-  setShowFilterModal: (open: boolean) => void
+  setIsFilterModalOpen: (open: boolean) => void
   handleFilterApply: (filter: FlatMongoFilter) => void
   setShowExportModal: (open: boolean) => void
   setSelectedDocIndex: (index: number | null) => void

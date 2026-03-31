@@ -9,7 +9,7 @@ export function RedisViewKeyList() {
   return (
     <div className="flex-1 overflow-hidden bg-muted/5 p-6 flex flex-col">
       <div className="bg-background rounded-xl shadow-sm border border-border/50 overflow-hidden flex-1 flex flex-col">
-        {state.isLoading && state.keys.length === 0 ? (
+        {state.loading && state.keys.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -30,7 +30,7 @@ export function RedisViewKeyList() {
                 {state.keys.map((key) => (
                   <RedisViewKeyRow key={key.key} redisKey={key} />
                 ))}
-                {state.keys.length === 0 && !state.isLoading && (
+                {state.keys.length === 0 && !state.loading && (
                   <tr>
                     <td colSpan={4} className="py-12 text-center text-muted-foreground">
                       No keys found matching your criteria.

@@ -45,7 +45,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
   const [documents, setDocuments] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalDocuments, setTotalDocuments] = useState(0)
+  const [total, setTotal] = useState(0)
   const [pageSize, setPageSize] = useState(50)
   const [searchTerm, setSearchTerm] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -65,7 +65,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
   const [showExportModal, setShowExportModal] = useState(false)
 
   // ---- Filter state ----
-  const [showFilterModal, setShowFilterModal] = useState(false)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<FlatMongoFilter>({})
   const [availableFields, setAvailableFields] = useState<string[]>([])
 
@@ -188,7 +188,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
             }
           })
           setDocuments(parsedDocs)
-          setTotalDocuments(result.Row.TotalCount)
+          setTotal(result.Row.TotalCount)
         }
       } catch (err: any) {
         setError(err.message || 'Failed to fetch collection data')
@@ -370,7 +370,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
   }, [])
 
   // ---- Derived values ----
-  const totalPages = Math.ceil(totalDocuments / pageSize)
+  const totalPages = Math.ceil(total / pageSize)
 
   const state = {
     loading,
@@ -378,7 +378,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     error,
     currentPage,
     pageSize,
-    totalDocuments,
+    total,
     totalPages,
     searchTerm,
     activeFilter,
@@ -386,7 +386,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     selectedDocIndex,
     showAddModal,
     showExportModal,
-    showFilterModal,
+    isFilterModalOpen,
     showDeleteModal,
     editingDoc,
     editContent,
@@ -411,7 +411,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     handleDeleteClick,
     handleConfirmDelete,
     setShowDeleteModal,
-    setShowFilterModal,
+    setIsFilterModalOpen,
     handleFilterApply,
     setShowExportModal,
     setSelectedDocIndex,

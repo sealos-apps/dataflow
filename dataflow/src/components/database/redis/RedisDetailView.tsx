@@ -49,8 +49,8 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
           <Download className="h-3.5 w-3.5" />
           Export
         </ActionButton>
-        <ActionButton variant="outline" onClick={() => actions.fetchKeys()} disabled={state.isLoading}>
-          <RefreshCw className={cn("h-3.5 w-3.5", state.isLoading && "animate-spin")} />
+        <ActionButton variant="outline" onClick={() => actions.refresh()} disabled={state.loading}>
+          <RefreshCw className={cn("h-3.5 w-3.5", state.loading && "animate-spin")} />
           Refresh
         </ActionButton>
       </DataView.Header>
@@ -60,11 +60,11 @@ function RedisDetailViewContent({ connectionId, databaseName }: RedisDetailViewP
 
       {state.total > 0 && (
         <DataView.Pagination
-          currentPage={state.page}
+          currentPage={state.currentPage}
           totalPages={state.totalPages}
           pageSize={state.pageSize}
           total={state.total}
-          loading={state.isLoading}
+          loading={state.loading}
           itemLabel="keys"
           onPageChange={actions.handlePageChange}
           onPageSizeChange={actions.handlePageSizeChange}

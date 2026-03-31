@@ -63,7 +63,7 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
           </ActionButton>
           <div className="h-4 w-px bg-border mx-1" />
           <DataView.FilterButton
-            onClick={() => actions.setShowFilterModal(true)}
+            onClick={() => actions.setIsFilterModalOpen(true)}
             count={Object.keys(state.activeFilter).length}
           />
           <ActionButton variant="outline" onClick={() => actions.setShowExportModal(true)}>
@@ -83,12 +83,12 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
         <CollectionViewDocumentList />
       </div>
 
-      {state.totalDocuments > 0 && (
+      {state.total > 0 && (
         <DataView.Pagination
           currentPage={state.currentPage}
           totalPages={state.totalPages}
           pageSize={state.pageSize}
-          total={state.totalDocuments}
+          total={state.total}
           loading={state.loading}
           itemLabel="documents"
           onPageChange={actions.handlePageChange}
@@ -125,8 +125,8 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
       />
 
       <FilterCollectionModal
-        open={state.showFilterModal}
-        onOpenChange={actions.setShowFilterModal}
+        open={state.isFilterModalOpen}
+        onOpenChange={actions.setIsFilterModalOpen}
         onApply={actions.handleFilterApply}
         fields={state.availableFields}
         initialFilter={state.activeFilter}

@@ -16,7 +16,7 @@ export interface TableViewState {
   foreignKeyColumns: string[]
   currentPage: number
   pageSize: number
-  totalRows: number
+  total: number
   totalPages: number
   searchTerm: string
   visibleColumns: string[]

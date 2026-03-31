@@ -98,7 +98,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
 
   // ---- Core state ----
   const [keys, setKeys] = useState<RedisKey[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
 
   // ---- Filter state ----
@@ -106,7 +106,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
   const [filterTypes, setFilterTypes] = useState<string[]>([])
 
   // ---- Pagination state ----
-  const [page, setPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
 
   // ---- Modal state ----
@@ -127,12 +127,12 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
   const closeAlert = useCallback(() => setAlert(null), [])
 
   // ---- Fetch keys ----
-  const fetchKeys = useCallback(async () => {
+  const refresh = useCallback(async () => {
     const conn = connections.find(c => c.id === connectionId)
     if (!conn) return
 
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
-    setIsLoading(true)
+    setLoading(true)
     try {
       const { data, error } = await getStorageUnits({
         variables: { schema: graphqlSchema },
@@ -170,25 +170,25 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
 
       // Client-side pagination
       setTotal(redisKeys.length)
-      const start = (page - 1) * pageSize
+      const start = (currentPage - 1) * pageSize
       const paged = redisKeys.slice(start, start + pageSize)
       setKeys(paged)
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch Redis keys', 'error')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [connections, connectionId, databaseName, page, pageSize, pattern, filterTypes, getStorageUnits, showAlert])
+  }, [connections, connectionId, databaseName, currentPage, pageSize, pattern, filterTypes, getStorageUnits, showAlert])
 
   useEffect(() => {
-    fetchKeys()
-  }, [fetchKeys])
+    refresh()
+  }, [refresh])
 
   // ---- Handlers ----
   const handleApplyFilter = useCallback((newPattern: string, newTypes: string[]) => {
     setPattern(newPattern)
     setFilterTypes(newTypes)
-    setPage(1)
+    setCurrentPage(1)
   }, [])
 
   const openAddModal = useCallback(() => {
@@ -206,7 +206,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
     if (!conn) return
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
     try {
-      setIsLoading(true)
+      setLoading(true)
       const { data, error } = await getRows({
         variables: {
           schema: graphqlSchema,
@@ -225,7 +225,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch key details', 'error')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [connections, connectionId, databaseName, getRows, showAlert])
 
@@ -267,11 +267,11 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
 
       setEditingKey(undefined)
       setIsAddModalOpen(false)
-      await fetchKeys()
+      await refresh()
     } catch (error) {
       throw error instanceof Error ? error : new Error('Failed to save key')
     }
-  }, [connections, connectionId, databaseName, addStorageUnitMutation, fetchKeys, showAlert, updateStorageUnitMutation])
+  }, [connections, connectionId, databaseName, addStorageUnitMutation, refresh, showAlert, updateStorageUnitMutation])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingKey) return
@@ -287,19 +287,19 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
       if (errors?.length) throw new Error(errors[0].message)
       showAlert('Success', `Key "${deletingKey.key}" deleted successfully!`, 'success')
       setDeletingKey(undefined)
-      fetchKeys()
+      refresh()
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to delete key', 'error')
     }
-  }, [deletingKey, connections, connectionId, databaseName, deleteRowMutation, fetchKeys, showAlert])
+  }, [deletingKey, connections, connectionId, databaseName, deleteRowMutation, refresh, showAlert])
 
   const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage)
+    setCurrentPage(newPage)
   }, [])
 
   const handlePageSizeChange = useCallback((size: number) => {
     setPageSize(size)
-    setPage(1)
+    setCurrentPage(1)
   }, [])
 
   // ---- Derived values ----
@@ -307,9 +307,9 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
 
   const state = {
     keys,
-    isLoading,
+    loading,
     total,
-    page,
+    currentPage,
     pageSize,
     totalPages,
     pattern,
@@ -323,7 +323,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
   }
 
   const actions = {
-    fetchKeys,
+    refresh,
     handlePageChange,
     handlePageSizeChange,
     handleApplyFilter,

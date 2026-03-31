@@ -534,8 +534,8 @@ export function TableViewProvider({ connectionId, databaseName, tableName, schem
 
   // ---- Derived values ----
   const canEdit = data ? !data.disableUpdate : false
-  const totalRows = data?.total || 0
-  const totalPages = Math.ceil(totalRows / pageSize)
+  const total = data?.total || 0
+  const totalPages = Math.ceil(total / pageSize)
 
   const state = {
     loading,
@@ -545,7 +545,7 @@ export function TableViewProvider({ connectionId, databaseName, tableName, schem
     foreignKeyColumns,
     currentPage,
     pageSize,
-    totalRows,
+    total,
     totalPages,
     searchTerm,
     visibleColumns,

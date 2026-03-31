@@ -94,12 +94,12 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
 
           <TableViewDataGrid />
 
-          {state.totalRows > 0 && (
+          {state.total > 0 && (
             <DataView.Pagination
               currentPage={state.currentPage}
               totalPages={state.totalPages}
               pageSize={state.pageSize}
-              total={state.totalRows}
+              total={state.total}
               loading={state.loading}
               onPageChange={actions.handlePageChange}
               onPageSizeChange={actions.handlePageSizeChange}

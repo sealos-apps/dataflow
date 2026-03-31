@@ -17,9 +17,9 @@ export interface RedisViewContextValue {
 /** All state managed by the RedisView provider. */
 export interface RedisViewState {
   keys: RedisKey[]
-  isLoading: boolean
+  loading: boolean
   total: number
-  page: number
+  currentPage: number
   pageSize: number
   totalPages: number
   pattern: string
@@ -34,7 +34,7 @@ export interface RedisViewState {
 
 /** All actions exposed by the RedisView provider. */
 export interface RedisViewActions {
-  fetchKeys: () => Promise<void>
+  refresh: () => Promise<void>
   handlePageChange: (page: number) => void
   handlePageSizeChange: (size: number) => void
   handleApplyFilter: (newPattern: string, newTypes: string[]) => void
