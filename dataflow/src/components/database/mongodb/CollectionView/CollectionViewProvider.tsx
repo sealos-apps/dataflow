@@ -2,9 +2,6 @@ import { createContext, use, useCallback, useEffect, useState, type ReactNode } 
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import {
   useGetStorageUnitRowsLazyQuery,
-  useAddRowMutation,
-  useDeleteRowMutation,
-  useUpdateStorageUnitMutation,
   WhereConditionType,
   type WhereCondition,
 } from '@graphql'
@@ -12,6 +9,7 @@ import { resolveSchemaParam } from '@/utils/database-features'
 import type { CollectionViewContextValue } from './types'
 import type { Alert } from '@/components/database/shared/types'
 import type { FlatMongoFilter } from '@/components/database/mongodb/filter-collection.types'
+import { useDocumentEditing } from './useDocumentEditing'
 
 const CollectionViewCtx = createContext<CollectionViewContextValue | null>(null)
 
@@ -35,9 +33,6 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
 
   // ---- GraphQL hooks ----
   const [getRows] = useGetStorageUnitRowsLazyQuery({ fetchPolicy: 'no-cache' })
-  const [addRowMutation] = useAddRowMutation()
-  const [deleteRowMutation] = useDeleteRowMutation()
-  const [updateStorageUnitMutation] = useUpdateStorageUnitMutation()
 
   // ---- Core state ----
   const [loading, setLoading] = useState(true)
@@ -48,17 +43,6 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
   const [pageSize, setPageSize] = useState(50)
   const [searchTerm, setSearchTerm] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
-
-  // ---- Document editing state ----
-  const [editingDoc, setEditingDoc] = useState<any>(null)
-  const [editContent, setEditContent] = useState('')
-  const [selectedDocIndex, setSelectedDocIndex] = useState<number | null>(null)
-  const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-
-  // ---- Add document state ----
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [addContent, setAddContent] = useState('{\n  \n}')
 
   // ---- Export state ----
   const [showExportModal, setShowExportModal] = useState(false)
@@ -77,6 +61,21 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
   }, [])
 
   const closeAlert = useCallback(() => setAlert(null), [])
+
+  // ---- Refresh ----
+  const refresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1)
+  }, [])
+
+  // ---- Document editing (add / edit / delete) ----
+  const { state: editingState, actions: editingActions } = useDocumentEditing({
+    connectionId,
+    databaseName,
+    collectionName,
+    documents,
+    refresh,
+    showAlert,
+  })
 
   // ---- Extract available fields from documents ----
   useEffect(() => {
@@ -101,8 +100,8 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     const fetchData = async () => {
       setLoading(true)
       setError(null)
-      setEditingDoc(null)
-      setSelectedDocIndex(null)
+      editingActions.setEditingDoc(null)
+      editingActions.setSelectedDocIndex(null)
 
       const conn = connections.find(c => c.id === connectionId)
       if (!conn) {
@@ -199,153 +198,6 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     fetchData()
   }, [connectionId, databaseName, collectionName, connections, collectionRefreshKey, currentPage, pageSize, searchTerm, activeFilter, refreshKey, getRows])
 
-  // ---- Handlers ----
-  const handleAddClick = useCallback(() => {
-    if (documents.length > 0 && typeof documents[0] === 'object' && documents[0] !== null) {
-      const template: Record<string, string> = {}
-      Object.keys(documents[0]).filter(k => k !== '_id').forEach(k => { template[k] = '' })
-      setAddContent(JSON.stringify(template, null, 2))
-    } else {
-      setAddContent('{\n  \n}')
-    }
-    setShowAddModal(true)
-  }, [documents])
-
-  const handleAddSave = useCallback(async () => {
-    try {
-      const newDoc = JSON.parse(addContent)
-
-      const conn = connections.find(c => c.id === connectionId)
-      if (!conn) return
-
-      const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
-      const values = Object.entries(newDoc).map(([key, value]) => ({
-        Key: key,
-        Value: typeof value === 'object' && value !== null
-          ? JSON.stringify(value)
-          : String(value ?? ''),
-      }))
-
-      if (values.length === 0) {
-        showAlert('Error', 'Document must have at least one field', 'error')
-        return
-      }
-
-      const { data: result, errors } = await addRowMutation({
-        variables: {
-          schema: graphqlSchema,
-          storageUnit: collectionName,
-          values,
-        },
-        context: { database: databaseName },
-      })
-
-      if (errors?.length) {
-        showAlert('Error', `Failed to add document: ${errors[0].message}`, 'error')
-        return
-      }
-
-      if (result?.AddRow.Status) {
-        showAlert('Success', 'Document added successfully!', 'success')
-        setShowAddModal(false)
-        setRefreshKey(prev => prev + 1)
-      } else {
-        showAlert('Error', 'Failed to add document', 'error')
-      }
-    } catch (e: any) {
-      showAlert('Error', `Invalid JSON or add error: ${e.message}`, 'error')
-    }
-  }, [addContent, connections, connectionId, databaseName, collectionName, addRowMutation, showAlert])
-
-  const handleEditClick = useCallback((doc: any) => {
-    setEditingDoc(doc)
-    setEditContent(JSON.stringify(doc, null, 2))
-  }, [])
-
-  const handleSave = useCallback(async () => {
-    if (!editingDoc) return
-
-    try {
-      const updatedDoc = JSON.parse(editContent)
-      const docId = editingDoc._id
-
-      const conn = connections.find(c => c.id === connectionId)
-      if (!conn) return
-
-      const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
-      const values = [{ Key: 'document', Value: JSON.stringify({ ...updatedDoc, _id: docId }) }]
-      const updatedColumns = Object.keys(updatedDoc).filter(k => k !== '_id')
-
-      const { data: result, errors } = await updateStorageUnitMutation({
-        variables: {
-          schema: graphqlSchema,
-          storageUnit: collectionName,
-          values,
-          updatedColumns,
-        },
-        context: { database: databaseName },
-      })
-
-      if (errors?.length) {
-        showAlert('Error', `Failed to update document: ${errors[0].message}`, 'error')
-        return
-      }
-
-      if (result?.UpdateStorageUnit.Status) {
-        showAlert('Success', 'Document updated successfully!', 'success')
-        setEditingDoc(null)
-        setRefreshKey(prev => prev + 1)
-      } else {
-        showAlert('Error', 'Failed to update document', 'error')
-      }
-    } catch (e: any) {
-      showAlert('Error', `Invalid JSON or update error: ${e.message}`, 'error')
-    }
-  }, [editingDoc, editContent, connections, connectionId, databaseName, collectionName, updateStorageUnitMutation, showAlert])
-
-  const handleDeleteClick = useCallback((docId: string) => {
-    setDeletingDocId(docId)
-    setShowDeleteModal(true)
-  }, [])
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deletingDocId) return
-
-    const conn = connections.find(c => c.id === connectionId)
-    if (!conn) return
-
-    const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
-    const values = [{ Key: 'document', Value: JSON.stringify({ _id: deletingDocId }) }]
-
-    try {
-      const { data: result, errors } = await deleteRowMutation({
-        variables: {
-          schema: graphqlSchema,
-          storageUnit: collectionName,
-          values,
-        },
-        context: { database: databaseName },
-      })
-
-      if (errors?.length) {
-        showAlert('Error', `Failed to delete document: ${errors[0].message}`, 'error')
-        return
-      }
-
-      if (result?.DeleteRow.Status) {
-        showAlert('Success', 'Document deleted successfully!', 'success')
-        setRefreshKey(prev => prev + 1)
-      } else {
-        showAlert('Error', 'Failed to delete document', 'error')
-      }
-    } catch (e: any) {
-      showAlert('Error', `Delete error: ${e.message}`, 'error')
-    } finally {
-      setDeletingDocId(null)
-      setShowDeleteModal(false)
-    }
-  }, [deletingDocId, connections, connectionId, databaseName, collectionName, deleteRowMutation, showAlert])
-
   // ---- Page change ----
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page)
@@ -363,15 +215,10 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     setCurrentPage(1)
   }, [])
 
-  // ---- Refresh ----
-  const refresh = useCallback(() => {
-    setRefreshKey(prev => prev + 1)
-  }, [])
-
   // ---- Derived values ----
   const totalPages = Math.ceil(total / pageSize)
 
-  const state = {
+  const state: CollectionViewContextValue['state'] = {
     loading,
     documents,
     error,
@@ -382,40 +229,23 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
     searchTerm,
     activeFilter,
     availableFields,
-    selectedDocIndex,
-    showAddModal,
     showExportModal,
     isFilterModalOpen,
-    showDeleteModal,
-    editingDoc,
-    editContent,
-    addContent,
-    deletingDocId,
     alert,
+    ...editingState,
   }
 
-  const actions = {
+  const actions: CollectionViewContextValue['actions'] = {
     refresh,
     handlePageChange,
     handlePageSizeChange,
     setSearchTerm,
-    handleAddClick,
-    setShowAddModal,
-    setAddContent,
-    handleAddSave,
-    handleEditClick,
-    setEditingDoc,
-    setEditContent,
-    handleSave,
-    handleDeleteClick,
-    handleConfirmDelete,
-    setShowDeleteModal,
     setIsFilterModalOpen,
     handleFilterApply,
     setShowExportModal,
-    setSelectedDocIndex,
     showAlert,
     closeAlert,
+    ...editingActions,
   }
 
   return <CollectionViewCtx value={{ state, actions }}>{children}</CollectionViewCtx>
