@@ -14,5 +14,6 @@ export function removeBootstrapParams(search: string): string {
 export function replaceBootstrapUrl(search: string): void {
   const nextSearch = removeBootstrapParams(search)
   const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`
-  window.history.replaceState({}, '', nextUrl)
+  const currentState = window.history.state
+  window.history.replaceState(currentState, '', nextUrl)
 }
