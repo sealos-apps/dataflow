@@ -14,6 +14,12 @@ export default defineConfig({
       '@graphql': path.resolve(__dirname, './src/generated/graphql.tsx'),
     },
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    css: true,
+  },
   server: {
     port: 3000,
     proxy: {

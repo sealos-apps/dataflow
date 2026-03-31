@@ -15,7 +15,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@graphql": ["./src/generated/graphql.tsx"]
-    }
+    },
+    "types": ["vitest/globals"]
   },
   "include": [
     "src/**/*.ts",
