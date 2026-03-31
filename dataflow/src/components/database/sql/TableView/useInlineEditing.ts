@@ -6,8 +6,15 @@ import {
   useUpdateStorageUnitMutation,
 } from '@graphql'
 import { resolveSchemaParam, isNoSQL } from '@/utils/database-features'
+import { resolveLocaleFromSearch } from '@/i18n/locale'
+import { createTranslator } from '@/i18n/messages'
 import type { TableData } from '@/utils/graphql-transforms'
 import type { Alert } from '@/components/database/shared/types'
+
+function getTranslator() {
+  const search = typeof window === 'undefined' ? '' : window.location.search
+  return createTranslator(resolveLocaleFromSearch(search))
+}
 
 interface UseInlineEditingParams {
   connectionId: string
@@ -60,6 +67,7 @@ export function useInlineEditing({
   refresh,
   showAlert,
 }: UseInlineEditingParams): { state: InlineEditingState; actions: InlineEditingActions } {
+  const t = getTranslator()
   const { connections } = useConnectionStore()
 
   // ---- GraphQL mutations ----
@@ -97,7 +105,7 @@ export function useInlineEditing({
 
   const handleSave = useCallback(async () => {
     if (!primaryKey) {
-      showAlert('Error', 'Cannot update row: Primary Key not found for this table.', 'error')
+      showAlert(t('common.alert.error'), t('sql.inline.primaryKeyNotFound'), 'error')
       return
     }
 
@@ -134,21 +142,21 @@ export function useInlineEditing({
       })
 
       if (errors?.length) {
-        showAlert('Error', `Failed to update row: ${errors[0].message}`, 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.failedToUpdateRow', { error: errors[0].message }), 'error')
         return
       }
 
       if (result?.UpdateStorageUnit.Status) {
-        showAlert('Success', 'Row updated successfully!', 'success')
+        showAlert(t('common.alert.success'), t('sql.inline.rowUpdated'), 'success')
         handleCancelEdit()
         refresh()
       } else {
-        showAlert('Error', 'Failed to update row', 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.failedToUpdateRowGeneric'), 'error')
       }
     } catch (error: any) {
-      showAlert('Error', `Error updating row: ${error.message}`, 'error')
+      showAlert(t('common.alert.error'), t('sql.inline.errorUpdatingRow', { error: error.message }), 'error')
     }
-  }, [primaryKey, connections, connectionId, editingRowIndex, data, editValues, databaseName, schema, tableName, updateStorageUnit, showAlert, handleCancelEdit, refresh])
+  }, [primaryKey, connections, connectionId, editingRowIndex, data, editValues, databaseName, schema, tableName, updateStorageUnit, showAlert, handleCancelEdit, refresh, t])
 
   // ---- Delete actions ----
   const handleDeleteClick = useCallback((index: number) => {
@@ -181,22 +189,22 @@ export function useInlineEditing({
       })
 
       if (errors?.length) {
-        showAlert('Error', `Failed to delete row: ${errors[0].message}`, 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.failedToDeleteRow', { error: errors[0].message }), 'error')
         return
       }
 
       if (result?.DeleteRow.Status) {
-        showAlert('Success', 'Row deleted successfully!', 'success')
+        showAlert(t('common.alert.success'), t('sql.inline.rowDeleted'), 'success')
         refresh()
       } else {
-        showAlert('Error', 'Failed to delete row', 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.failedToDeleteRowGeneric'), 'error')
       }
     } catch (error: any) {
-      showAlert('Error', `Error deleting row: ${error.message}`, 'error')
+      showAlert(t('common.alert.error'), t('sql.inline.errorDeletingRow', { error: error.message }), 'error')
     } finally {
       setDeletingRowIndex(null)
     }
-  }, [deletingRowIndex, primaryKey, data, connections, connectionId, databaseName, schema, tableName, deleteRow, showAlert, refresh])
+  }, [deletingRowIndex, primaryKey, data, connections, connectionId, databaseName, schema, tableName, deleteRow, showAlert, refresh, t])
 
   // ---- Add row actions ----
   const handleAddClick = useCallback(() => {
@@ -235,13 +243,13 @@ export function useInlineEditing({
           }
         })
       } catch {
-        showAlert('Error', 'Invalid JSON document', 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.invalidJsonDocument'), 'error')
         return
       }
     } else {
       // Standard relational mode
       if (Object.keys(newRowData).length === 0 || Object.values(newRowData).every((v) => !v)) {
-        showAlert('Error', 'Please enter at least one value', 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.enterAtLeastOneValue'), 'error')
         return
       }
       values = Object.entries(newRowData)
@@ -250,7 +258,7 @@ export function useInlineEditing({
     }
 
     if (values.length === 0) {
-      showAlert('Error', 'Please enter at least one value', 'error')
+      showAlert(t('common.alert.error'), t('sql.inline.enterAtLeastOneValue'), 'error')
       return
     }
 
@@ -265,21 +273,21 @@ export function useInlineEditing({
       })
 
       if (errors?.length) {
-        showAlert('Error', `Failed to add row: ${errors[0].message}`, 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.failedToAddRow', { error: errors[0].message }), 'error')
         return
       }
 
       if (result?.AddRow.Status) {
-        showAlert('Success', 'New row added successfully!', 'success')
+        showAlert(t('common.alert.success'), t('sql.inline.rowAdded'), 'success')
         handleCancelAdd()
         refresh()
       } else {
-        showAlert('Error', 'Failed to add row', 'error')
+        showAlert(t('common.alert.error'), t('sql.inline.failedToAddRowGeneric'), 'error')
       }
     } catch (error: any) {
-      showAlert('Error', `Error adding row: ${error.message}`, 'error')
+      showAlert(t('common.alert.error'), t('sql.inline.errorAddingRow', { error: error.message }), 'error')
     }
-  }, [connections, connectionId, databaseName, schema, data, newRowData, tableName, addRow, showAlert, handleCancelAdd, refresh])
+  }, [connections, connectionId, databaseName, schema, data, newRowData, tableName, addRow, showAlert, handleCancelAdd, refresh, t])
 
   /** Reset editing/adding state (e.g. on table switch). */
   const resetEditing = useCallback(() => {

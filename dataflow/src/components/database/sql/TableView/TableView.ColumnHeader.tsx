@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Separator } from '@/components/ui/separator'
+import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { useTableView, simplifyColumnType } from './TableViewProvider'
 
@@ -17,6 +18,7 @@ interface ColumnHeaderProps {
 
 /** Renders a single column header `<th>` with type badge, sort indicator, menu dropdown, and resize handle. */
 export function TableViewColumnHeader({ column, index, columnMenuRef }: ColumnHeaderProps) {
+  const { t } = useI18n()
   const { state, actions } = useTableView()
   const width = state.columnWidths[column] || 120
 
@@ -72,7 +74,7 @@ export function TableViewColumnHeader({ column, index, columnMenuRef }: ColumnHe
           )}
         >
           <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/30 border-b mb-1">
-            排序操作
+            {t('sql.table.sortActions')}
           </div>
           <button
             onClick={() => actions.handleSort(column, 'asc')}
@@ -80,9 +82,9 @@ export function TableViewColumnHeader({ column, index, columnMenuRef }: ColumnHe
               "w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors",
               state.sortColumn === column && state.sortDirection === 'asc' && "text-primary font-medium bg-primary/5"
             )}
-          >
-            <ArrowUpAZ className="h-3.5 w-3.5" />
-            升序 (ASC)
+            >
+              <ArrowUpAZ className="h-3.5 w-3.5" />
+              {t('sql.table.sortAsc')}
           </button>
           <button
             onClick={() => actions.handleSort(column, 'desc')}
@@ -90,9 +92,9 @@ export function TableViewColumnHeader({ column, index, columnMenuRef }: ColumnHe
               "w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors",
               state.sortColumn === column && state.sortDirection === 'desc' && "text-primary font-medium bg-primary/5"
             )}
-          >
-            <ArrowDownAZ className="h-3.5 w-3.5" />
-            降序 (DESC)
+            >
+              <ArrowDownAZ className="h-3.5 w-3.5" />
+              {t('sql.table.sortDesc')}
           </button>
           {state.sortColumn === column && (
             <>
@@ -102,7 +104,7 @@ export function TableViewColumnHeader({ column, index, columnMenuRef }: ColumnHe
                 className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
-                取消排序
+                {t('sql.table.clearSort')}
               </button>
             </>
           )}

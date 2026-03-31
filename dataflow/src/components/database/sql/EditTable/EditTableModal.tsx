@@ -7,6 +7,7 @@ import { EditTableProvider, useEditTable } from './EditTableProvider'
 import { EditTableColumnsTab } from './EditTable.ColumnsTab'
 import { EditTableIndexesTab } from './EditTable.IndexesTab'
 import { EditTableForeignKeysTab } from './EditTable.ForeignKeysTab'
+import { useI18n } from '@/i18n/useI18n'
 
 // ---------------------------------------------------------------------------
 // Internal composition component
@@ -14,6 +15,7 @@ import { EditTableForeignKeysTab } from './EditTable.ForeignKeysTab'
 
 /** Renders the tabbed content area, consuming EditTable context. */
 function EditTableContent() {
+  const { t } = useI18n()
   const { state, actions } = useEditTable()
 
   return (
@@ -28,15 +30,15 @@ function EditTableContent() {
       >
         <TabsTrigger value="fields">
           <Table />
-          Fields ({state.columns.length})
+          {t('sql.editTable.tabs.fields')} ({state.columns.length})
         </TabsTrigger>
         <TabsTrigger value="indexes">
           <Key />
-          Indexes ({state.indexes.length})
+          {t('sql.editTable.tabs.indexes')} ({state.indexes.length})
         </TabsTrigger>
         <TabsTrigger value="foreignKeys">
           <LinkIcon />
-          Foreign Keys ({state.foreignKeys.length})
+          {t('sql.editTable.tabs.foreignKeys')} ({state.foreignKeys.length})
         </TabsTrigger>
       </TabsList>
 
@@ -90,6 +92,8 @@ export function EditTableModal({
   schema,
   onSuccess,
 }: EditTableModalProps) {
+  const { t } = useI18n()
+
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) onSuccess?.()
     onOpenChange(isOpen)
@@ -113,7 +117,7 @@ export function EditTableModal({
           </div>
           <DialogFooter className="shrink-0 border-t bg-muted/5 px-6 py-4">
             <Button variant="outline" onClick={() => handleClose(false)}>
-              Close
+              {t('sql.editTable.close')}
             </Button>
           </DialogFooter>
         </EditTableProvider>

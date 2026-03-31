@@ -10,6 +10,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { useEditTable } from './EditTableProvider'
+import { useI18n } from '@/i18n/useI18n'
 
 const FK_ACTIONS = ['RESTRICT', 'CASCADE', 'SET NULL', 'NO ACTION', 'SET DEFAULT']
 
@@ -19,6 +20,7 @@ const FK_ACTIONS = ['RESTRICT', 'CASCADE', 'SET NULL', 'NO ACTION', 'SET DEFAULT
  * Consumes `useEditTable()` for all state and actions.
  */
 export function EditTableForeignKeysTab() {
+  const { t } = useI18n()
   const { state, actions } = useEditTable()
   const { foreignKeys, columnNames, isExecuting } = state
   const { addForeignKey, updateForeignKey, saveForeignKey, removeForeignKey } = actions
@@ -33,27 +35,27 @@ export function EditTableForeignKeysTab() {
           className="gap-1 text-primary"
         >
           <Plus className="h-3 w-3" />
-          Add Foreign Key
+          {t('sql.editTable.foreignKeys.add')}
         </Button>
       </div>
       <div className="rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Name</th>
-              <th className="px-3 py-2 text-left font-medium">Column</th>
-              <th className="px-3 py-2 text-left font-medium">Ref Table</th>
-              <th className="px-3 py-2 text-left font-medium">Ref Column</th>
-              <th className="px-3 py-2 text-left font-medium w-24">On Delete</th>
-              <th className="px-3 py-2 text-left font-medium w-24">On Update</th>
-              <th className="px-3 py-2 w-20">Actions</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.foreignKeys.name')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.foreignKeys.column')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.foreignKeys.refTable')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('sql.editTable.foreignKeys.refColumn')}</th>
+              <th className="px-3 py-2 text-left font-medium w-24">{t('sql.editTable.foreignKeys.onDelete')}</th>
+              <th className="px-3 py-2 text-left font-medium w-24">{t('sql.editTable.foreignKeys.onUpdate')}</th>
+              <th className="px-3 py-2 w-20">{t('sql.editTable.foreignKeys.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {foreignKeys.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                  No foreign keys found
+                  {t('sql.editTable.foreignKeys.empty')}
                 </td>
               </tr>
             ) : (
@@ -67,7 +69,7 @@ export function EditTableForeignKeysTab() {
                       value={fk.name}
                       onChange={(e) => updateForeignKey(fk.id, 'name', e.target.value)}
                       className="h-auto border-transparent bg-transparent px-2 py-1 shadow-none focus-visible:border-primary focus-visible:ring-0 focus-visible:bg-background"
-                      placeholder="FK Name"
+                      placeholder={t('sql.editTable.foreignKeys.namePlaceholder')}
                       disabled={isExecuting}
                     />
                   </td>
@@ -78,7 +80,7 @@ export function EditTableForeignKeysTab() {
                       disabled={isExecuting}
                     >
                       <SelectTrigger size="sm" className="w-full border-transparent bg-transparent text-xs">
-                        <SelectValue placeholder="Select Column" />
+                        <SelectValue placeholder={t('sql.editTable.foreignKeys.columnPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {columnNames.map((c) => (
@@ -92,7 +94,7 @@ export function EditTableForeignKeysTab() {
                       value={fk.referencedTable}
                       onChange={(e) => updateForeignKey(fk.id, 'referencedTable', e.target.value)}
                       className="h-auto border-transparent bg-transparent px-2 py-1 shadow-none focus-visible:border-primary focus-visible:ring-0 focus-visible:bg-background"
-                      placeholder="Table name"
+                      placeholder={t('sql.editTable.foreignKeys.refTablePlaceholder')}
                       disabled={isExecuting}
                     />
                   </td>
@@ -101,7 +103,7 @@ export function EditTableForeignKeysTab() {
                       value={fk.referencedColumn}
                       onChange={(e) => updateForeignKey(fk.id, 'referencedColumn', e.target.value)}
                       className="h-auto border-transparent bg-transparent px-2 py-1 shadow-none focus-visible:border-primary focus-visible:ring-0 focus-visible:bg-background"
-                      placeholder="Column name"
+                      placeholder={t('sql.editTable.foreignKeys.refColumnPlaceholder')}
                       disabled={isExecuting}
                     />
                   </td>
@@ -145,7 +147,7 @@ export function EditTableForeignKeysTab() {
                         onClick={() => saveForeignKey(fk)}
                         disabled={isExecuting}
                         className="text-primary hover:text-primary/80 hover:bg-primary/5"
-                        title="Save Foreign Key"
+                        title={t('sql.editTable.foreignKeys.save')}
                       >
                         {isExecuting ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -159,7 +161,7 @@ export function EditTableForeignKeysTab() {
                         onClick={() => removeForeignKey(fk)}
                         disabled={isExecuting}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/5"
-                        title="Delete Foreign Key"
+                        title={t('sql.editTable.foreignKeys.delete')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

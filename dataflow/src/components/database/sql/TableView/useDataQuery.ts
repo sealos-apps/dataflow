@@ -10,7 +10,14 @@ import {
 import { transformRowsResult, type TableData } from '@/utils/graphql-transforms'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { parseSearchToWhereCondition, mergeSearchWithWhere } from '@/utils/search-parser'
+import { resolveLocaleFromSearch } from '@/i18n/locale'
+import { createTranslator } from '@/i18n/messages'
 import type { FilterCondition } from './types'
+
+function getTranslator() {
+  const search = typeof window === 'undefined' ? '' : window.location.search
+  return createTranslator(resolveLocaleFromSearch(search))
+}
 
 interface UseDataQueryParams {
   connectionId: string
@@ -48,6 +55,7 @@ export interface DataQueryActions {
 
 /** Hook that owns data fetching, loading/error state, and race condition prevention for TableView. */
 export function useDataQuery(params: UseDataQueryParams): { state: DataQueryState; actions: DataQueryActions } {
+  const t = getTranslator()
   const {
     connectionId,
     databaseName,
@@ -173,13 +181,13 @@ export function useDataQuery(params: UseDataQueryParams): { state: DataQueryStat
       }
     } catch (err: any) {
       if (thisRequestId !== latestRequestIdRef.current) return
-      setError(err.message || 'Failed to fetch table data')
+      setError(err.message || t('sql.table.errorFetchData'))
     } finally {
       if (thisRequestId === latestRequestIdRef.current) {
         setLoading(false)
       }
     }
-  }, [connections, connectionId, databaseName, schema, tableName, sortColumn, sortDirection, searchTerm, pageSize, currentPage, getRows, visibleColumnsCount, onInitVisibleColumns])
+  }, [connections, connectionId, databaseName, schema, tableName, sortColumn, sortDirection, searchTerm, pageSize, currentPage, getRows, visibleColumnsCount, onInitVisibleColumns, t])
 
   // Fetch on mount and when data-changing params change
   useEffect(() => {
