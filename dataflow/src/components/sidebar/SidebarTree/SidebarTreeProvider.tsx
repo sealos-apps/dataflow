@@ -1,11 +1,31 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { createContext, use, useState, useEffect, useCallback, useRef } from "react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import type { TreeNodeData, NodeType } from "./types";
 import { connectionToNode } from "./types";
 
 const STORAGE_KEY = "sidebar_expanded_items";
 
-export function useSidebarTree() {
+interface SidebarTreeContextValue {
+  expandedItems: Set<string>;
+  treeData: Record<string, TreeNodeData[]>;
+  isLoading: Record<string, boolean>;
+  toggleItem: (node: TreeNodeData) => Promise<void>;
+  fetchNodeChildren: (node: TreeNodeData) => Promise<TreeNodeData[]>;
+  refreshNode: (node: TreeNodeData) => Promise<void>;
+  collapseNode: (nodeId: string) => void;
+}
+
+const SidebarTreeContext = createContext<SidebarTreeContextValue | null>(null);
+
+/** Consume the sidebar tree context. Must be called within a SidebarTreeProvider. */
+export function useSidebarTree(): SidebarTreeContextValue {
+  const ctx = use(SidebarTreeContext);
+  if (!ctx) throw new Error("useSidebarTree must be used within SidebarTreeProvider");
+  return ctx;
+}
+
+/** Provides tree state (expanded items, tree data, loading) and tree operations. */
+export function SidebarTreeProvider({ children }: { children: React.ReactNode }) {
   const { connections, fetchDatabases, fetchSchemas, fetchTables, fetchSystemSchemas } =
     useConnectionStore();
 
@@ -76,7 +96,7 @@ export function useSidebarTree() {
           return [
             {
               id: `${node.id}-all-keys`,
-              name: "全部数据",
+              name: "\u5168\u90e8\u6570\u636e",
               type: "redis_keys_list" as const,
               parentId: node.id,
               connectionId: node.connectionId,
@@ -237,7 +257,7 @@ export function useSidebarTree() {
     restoreState();
   }, [connections.length, buildChildren, fetchSystemSchemas]);
 
-  return {
+  const value: SidebarTreeContextValue = {
     expandedItems,
     treeData,
     isLoading,
@@ -246,4 +266,10 @@ export function useSidebarTree() {
     refreshNode,
     collapseNode,
   };
+
+  return (
+    <SidebarTreeContext value={value}>
+      {children}
+    </SidebarTreeContext>
+  );
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { createContext, use } from "react";
 import {
   ChevronRight, ChevronDown, Loader2,
   Database, LayoutGrid, Table, Files, List, Eye,
@@ -6,7 +6,26 @@ import {
 import { cn } from "@/lib/utils";
 import type { TreeNodeData, NodeType } from "./types";
 import { EXPANDABLE_TYPES, DB_ICONS, NODE_ICON_COLORS } from "./types";
-import { useTreeContext } from "./TreeContext";
+import { useSidebarTree } from "./SidebarTreeProvider";
+
+/** Per-connection context passed by Sidebar to each connection's tree. */
+export interface TreeNodeContextValue {
+  selectedItemId: string | null;
+  connectionDbType: string;
+  onItemClick: (node: TreeNodeData) => void;
+  onToggle: (node: TreeNodeData) => void;
+  onContextMenu: (e: React.MouseEvent, node: TreeNodeData) => void;
+}
+
+const TreeNodeCtx = createContext<TreeNodeContextValue | null>(null);
+
+export const TreeNodeProvider = TreeNodeCtx.Provider;
+
+function useTreeNodeContext(): TreeNodeContextValue {
+  const ctx = use(TreeNodeCtx);
+  if (!ctx) throw new Error("TreeNode must be used within TreeNodeProvider");
+  return ctx;
+}
 
 const NODE_ICONS: Record<NodeType, React.ComponentType<{ className?: string }>> = {
   connection: Database,
@@ -24,11 +43,12 @@ interface TreeNodeProps {
 }
 
 export function TreeNode({ node, depth }: TreeNodeProps) {
+  const { expandedItems, isLoading: loadingItems, treeData } = useSidebarTree();
   const {
-    expandedItems, selectedItemId, loadingItems, treeData,
+    selectedItemId,
     connectionDbType,
     onItemClick, onToggle, onContextMenu,
-  } = useTreeContext();
+  } = useTreeNodeContext();
 
   const isExpandable = EXPANDABLE_TYPES.has(node.type);
   const isRoot = depth === 0;

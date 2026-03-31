@@ -1,13 +1,13 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useReducer } from "react";
 
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useTabStore } from "@/stores/useTabStore";
 import { ContextMenu } from "../ui/ContextMenu";
+import type { Alert } from "@/components/ui/types";
 
-import type { TreeNodeData } from "./sidebar/types";
-import { connectionToNode, EXPANDABLE_TYPES } from "./sidebar/types";
-import { useSidebarTree } from "./sidebar/useSidebarTree";
-import { useSidebarModals } from "./sidebar/useSidebarModals";
+import type { TreeNodeData } from "./SidebarTree/types";
+import { connectionToNode, EXPANDABLE_TYPES } from "./SidebarTree/types";
+import { SidebarTreeProvider, useSidebarTree, TreeNode, TreeNodeProvider } from "./SidebarTree";
 import {
   getConnectionMenuItems,
   getDatabaseMenuItems,
@@ -15,16 +15,44 @@ import {
   getTableMenuItems,
   getCollectionMenuItems,
   getViewMenuItems,
-} from "./sidebar/contextMenuItems";
-import { TreeProvider } from "./sidebar/TreeContext";
-import { TreeNode } from "./sidebar/TreeNode";
-import { SidebarModals } from "./sidebar/SidebarModals";
+} from "./contextMenuItems";
+import { SidebarModals } from "./SidebarModals";
+
+// ── Modal reducer (inlined from former useSidebarModals) ────────────
+
+/** All possible modal types and their parameter shapes */
+export type ModalState =
+  | { type: "create_database"; params: { connectionId: string } }
+  | { type: "create_table"; params: { connectionId: string; databaseName: string; schema?: string } }
+  | { type: "create_collection"; params: { connectionId: string; databaseName: string } }
+  | { type: "edit_database"; params: { connectionId: string; databaseName: string } }
+  | { type: "delete_database"; params: { connectionId: string; databaseName: string } }
+  | { type: "edit_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
+  | { type: "delete_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
+  | { type: "export_data"; params: { connectionId: string; databaseName: string; schema: string | null; tableName: string } }
+  | { type: "export_database"; params: { connectionId: string; databaseName: string; schema: string } }
+  | { type: "clear_table_data"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
+  | { type: "copy_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
+  | { type: "rename_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
+  | { type: "export_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
+  | { type: "drop_collection"; params: { connectionId: string; databaseName: string; collectionName: string } };
+
+type Action =
+  | { action: "open"; modal: ModalState }
+  | { action: "close" };
+
+function modalReducer(_state: ModalState | null, action: Action): ModalState | null {
+  if (action.action === "close") return null;
+  return action.modal;
+}
+
+// ── Sidebar inner (consumes SidebarTreeProvider context) ────────────
 
 interface SidebarProps {
   onRefreshCollection?: () => void;
 }
 
-export function Sidebar({ onRefreshCollection }: SidebarProps) {
+function SidebarInner({ onRefreshCollection }: SidebarProps) {
   const { connections, selectedItem, selectItem, systemSchemas, showSystemObjectsFor, toggleSystemObjects } = useConnectionStore();
   const { openTab } = useTabStore();
 
@@ -33,10 +61,25 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
     toggleItem, fetchNodeChildren, refreshNode,
   } = useSidebarTree();
 
-  const {
-    activeModal, openModal, closeModal,
-    alertState, showAlert, closeAlert,
-  } = useSidebarModals();
+  // Modal state (inlined from former useSidebarModals)
+  const [activeModal, dispatch] = useReducer(modalReducer, null);
+  const [alert, setAlert] = useState<Alert | null>(null);
+
+  const openModal = useCallback(
+    (modal: ModalState) => dispatch({ action: "open", modal }),
+    []
+  );
+  const closeModal = useCallback(
+    () => dispatch({ action: "close" }),
+    []
+  );
+
+  const showAlert = useCallback(
+    (title: string, message: string, type: Alert["type"]) =>
+      setAlert({ title, message, type }),
+    []
+  );
+  const closeAlert = useCallback(() => setAlert(null), []);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -320,19 +363,16 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
     <div className="flex h-full w-64 flex-col border-r bg-background">
       {/* Header */}
       <div className="flex items-center p-4 border-b h-14 shrink-0">
-        <h2 className="font-semibold text-sm">数据库连接</h2>
+        <h2 className="font-semibold text-sm">{"\u6570\u636e\u5e93\u8fde\u63a5"}</h2>
       </div>
 
       {/* Tree */}
       <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
         {connections.map((conn) => (
-          <TreeProvider
+          <TreeNodeProvider
             key={conn.id}
             value={{
-              expandedItems,
               selectedItemId: selectedItem?.id ?? null,
-              loadingItems: isLoading,
-              treeData,
               connectionDbType: conn.type,
               onItemClick: handleItemClick,
               onToggle: toggleItem,
@@ -340,7 +380,7 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
             }}
           >
             <TreeNode node={connectionToNode(conn)} depth={0} />
-          </TreeProvider>
+          </TreeNodeProvider>
         ))}
       </div>
 
@@ -357,10 +397,20 @@ export function Sidebar({ onRefreshCollection }: SidebarProps) {
       <SidebarModals
         activeModal={activeModal}
         closeModal={closeModal}
-        alertState={alertState}
+        alert={alert}
         closeAlert={closeAlert}
         refreshNode={refreshNode}
       />
     </div>
+  );
+}
+
+// ── Public Sidebar (wraps with SidebarTreeProvider) ─────────────────
+
+export function Sidebar({ onRefreshCollection }: SidebarProps) {
+  return (
+    <SidebarTreeProvider>
+      <SidebarInner onRefreshCollection={onRefreshCollection} />
+    </SidebarTreeProvider>
   );
 }

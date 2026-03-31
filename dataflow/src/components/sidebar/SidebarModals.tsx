@@ -1,8 +1,9 @@
 import { useCallback } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
-import { connectionToNode } from './types'
-import type { ModalState, AlertState } from './useSidebarModals'
-import type { TreeNodeData } from './types'
+import { connectionToNode } from './SidebarTree/types'
+import type { ModalState } from './Sidebar'
+import type { Alert } from '@/components/ui/types'
+import type { TreeNodeData } from './SidebarTree/types'
 
 import { CreateDatabaseModal } from '@/components/database/CreateDatabaseModal'
 import { EditDatabaseModal } from '@/components/database/EditDatabaseModal'
@@ -23,7 +24,7 @@ import { AlertModal } from '@/components/ui/AlertModal'
 interface SidebarModalsProps {
   activeModal: ModalState | null
   closeModal: () => void
-  alertState: AlertState
+  alert: Alert | null
   closeAlert: () => void
   refreshNode: (node: TreeNodeData) => void
 }
@@ -32,7 +33,7 @@ interface SidebarModalsProps {
 export function SidebarModals({
   activeModal,
   closeModal,
-  alertState,
+  alert,
   closeAlert,
   refreshNode,
 }: SidebarModalsProps) {
@@ -265,11 +266,11 @@ export function SidebarModals({
 
       {/* Alert Modal */}
       <AlertModal
-        isOpen={alertState.isOpen}
+        isOpen={alert !== null}
         onClose={closeAlert}
-        title={alertState.title}
-        message={alertState.message}
-        type={alertState.type}
+        title={alert?.title ?? ''}
+        message={alert?.message ?? ''}
+        type={alert?.type}
       />
     </>
   )
