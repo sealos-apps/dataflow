@@ -110,7 +110,6 @@ export function DashboardWidget({
                 <div className="absolute inset-0 p-3 z-10">
                     <WidgetContent component={component} chartRef={chartRef} />
                 </div>
-                {!isReadOnly && <div className="absolute inset-0 z-0" />}
             </div>
 
             {/* Maximize Button - Bottom Right */}
@@ -157,20 +156,20 @@ function WidgetContent({ component, chartRef }: { component: DashboardComponent;
         case 'table':
             if (!component.data?.rows) return <div>{t('analysis.widget.noData')}</div>;
             return (
-                <div className="overflow-auto absolute inset-0 bg-white scrollbar-thin"> {/* Full fill with absolute inset */}
+                <div className="overflow-auto absolute inset-0 bg-background scrollbar-thin">
                     <table className="w-full text-sm text-left border-collapse">
-                        <thead className="text-xs text-slate-500 font-semibold bg-slate-50 sticky top-0 z-10">
+                        <thead className="text-xs text-muted-foreground font-semibold bg-muted/50 sticky top-0 z-10">
                             <tr>
                                 {component.data.columns.map((col: string, i: number) => (
-                                    <th key={i} className="px-3 py-2 border-b border-slate-200">{col}</th>
+                                    <th key={i} className="px-3 py-2 border-b border-border">{col}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {component.data.rows.map((row: any, i: number) => (
-                                <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-blue-50/50 transition-colors">
+                                <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                     {component.data.columns.map((col: string, j: number) => (
-                                        <td key={j} className="px-3 py-1.5 whitespace-nowrap text-slate-700">
+                                        <td key={j} className="px-3 py-1.5 whitespace-nowrap text-foreground">
                                             {row[col]}
                                         </td>
                                     ))}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useAnalysisStore } from "@/stores/useAnalysisStore";
 import { Plus, Layout, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -68,9 +68,9 @@ export function DashboardEditor() {
         }
     }, [dashboard, rawExecute, updateComponent]);
 
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
-    const [maximizedComponentId, setMaximizedComponentId] = React.useState<string | null>(null);
-    const [deleteComponentId, setDeleteComponentId] = React.useState<string | null>(null);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [maximizedComponentId, setMaximizedComponentId] = useState<string | null>(null);
+    const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
 
     if (!dashboard) return null;
 

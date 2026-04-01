@@ -1,9 +1,6 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
-import { useAnalysisStore, Dashboard, DashboardComponent } from "@/stores/useAnalysisStore";
-import { cn } from "@/lib/utils";
-import { BarChart, MoreHorizontal, Trash2, Maximize2, Settings } from "lucide-react";
-import ReactECharts from 'echarts-for-react';
+import { useAnalysisStore, Dashboard } from "@/stores/useAnalysisStore";
 import { DashboardWidget } from "./DashboardWidget";
 
 // Import RGL styles
