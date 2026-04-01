@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, AlignLeft, CheckCircle, AlertCircle, FileText, Loader2, XCircle, CheckCircle2, GalleryVerticalEnd, Database, Network } from "lucide-react";
 import { format } from 'sql-formatter';
 import { cn } from "@/lib/utils";
@@ -185,78 +185,64 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
         }
     };
 
-    // Resizing state
-    const [resultsHeight, setResultsHeight] = useState(400); // Default height in pixels
-    const [isResizing, setIsResizing] = useState(false);
+    const [resultsHeight, setResultsHeight] = useState(400);
+    const isResizing = useRef(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const startResizing = useCallback((mouseDownEvent: React.MouseEvent) => {
-        mouseDownEvent.preventDefault();
-        setIsResizing(true);
+    const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        isResizing.current = true;
         document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
     }, []);
-
-    const stopResizing = useCallback(() => {
-        setIsResizing(false);
-        document.body.style.cursor = 'default';
-    }, []);
-
-    const resize = useCallback(
-        (mouseMoveEvent: MouseEvent) => {
-            if (isResizing && containerRef.current) {
-                const containerRect = containerRef.current.getBoundingClientRect();
-                // Calculate new height: Container Bottom - Mouse Y
-                // This gives us the height from the bottom up
-                const newHeight = containerRect.bottom - mouseMoveEvent.clientY;
-
-                // Constraints
-                const minHeight = 40; // Reduced min height to allow collapsing to tabs only
-                const maxHeight = containerRect.height - 100; // Keep at least 100px for editor
-
-                if (newHeight >= minHeight && newHeight <= maxHeight) {
-                    setResultsHeight(newHeight);
-                }
-            }
-        },
-        [isResizing]
-    );
 
     useEffect(() => {
-        if (isResizing) {
-            window.addEventListener('mousemove', resize);
-            window.addEventListener('mouseup', stopResizing);
-        } else {
-            window.removeEventListener('mousemove', resize);
-            window.removeEventListener('mouseup', stopResizing);
-        }
-        return () => {
-            window.removeEventListener('mousemove', resize);
-            window.removeEventListener('mouseup', stopResizing);
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing.current || !containerRef.current) return;
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const newHeight = containerRect.bottom - e.clientY;
+            const minHeight = 40;
+            const maxHeight = containerRect.height - 100;
+            setResultsHeight(Math.min(maxHeight, Math.max(minHeight, newHeight)));
         };
-    }, [isResizing, resize, stopResizing]);
+
+        const handleMouseUp = () => {
+            if (!isResizing.current) return;
+            isResizing.current = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
 
     return (
-        <div className="flex h-full flex-col bg-background" ref={containerRef}>
+        <div className="flex h-full flex-col bg-background overflow-hidden" ref={containerRef}>
             {/* Toolbar */}
-            <div className="flex h-12 items-center justify-between border-b px-4 bg-muted/10 shrink-0">
+            <div className="flex h-12 items-center justify-between border-b pr-2 shrink-0">
                 {/* Left: Action Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                     <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={handleRun}
                         disabled={isExecuting}
-                        className="min-w-[70px]"
                     >
                         {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-                        {t('sql.actions.run')}
                     </Button>
                     {getEditorLanguage(connectionType) === 'sql' && (
                         <Button
                             variant="ghost"
+                            size="icon"
                             onClick={handleFormat}
                             disabled={!query.trim()}
                         >
                             <AlignLeft className="h-4 w-4" />
-                            {t('sql.actions.format')}
                         </Button>
                     )}
                 </div>
@@ -269,7 +255,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                         onValueChange={handleDatabaseChange}
                         disabled={databases.length === 0}
                     >
-                        <SelectTrigger className="w-[180px] gap-1.5 bg-transparent">
+                        <SelectTrigger className="gap-1.5 border-0 bg-transparent shadow-none">
                             <Database className="h-4 w-4 text-muted-foreground" />
                             <SelectValue placeholder={t('sql.editor.selectDatabase')} />
                         </SelectTrigger>
@@ -292,7 +278,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                             onValueChange={handleSchemaChange}
                             disabled={!selectedDatabase || schemas.length === 0}
                         >
-                            <SelectTrigger className="w-[180px] gap-1.5 bg-transparent">
+                            <SelectTrigger className="gap-1.5 border-0 bg-transparent shadow-none">
                                 <Network className="h-4 w-4 text-muted-foreground" />
                                 <SelectValue placeholder={t('sql.editor.selectSchema')} />
                             </SelectTrigger>
@@ -345,11 +331,9 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
 
                 {/* Resize Handle */}
                 <div
-                    className="h-1 bg-border hover:bg-primary/50 cursor-row-resize transition-colors w-full z-10 flex items-center justify-center group"
-                    onMouseDown={startResizing}
-                >
-                    <div className="h-1 w-8 rounded-full bg-border group-hover:bg-primary transition-colors" />
-                </div>
+                    className="w-full h-1 cursor-row-resize hover:bg-primary/30 active:bg-primary/50 z-10"
+                    onMouseDown={handleResizeMouseDown}
+                />
 
                 {/* Results Pane */}
                 <div
@@ -367,7 +351,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                 activeResultTab === 'result' ? "border-primary text-primary bg-background" : "border-transparent text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <FileText className="h-3.5 w-3.5" />
+                            <FileText className="h-4 w-4" />
                             {t('sql.editor.results')}
                         </Button>
                         <Button
@@ -379,7 +363,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                 activeResultTab === 'message' ? "border-primary text-primary bg-background" : "border-transparent text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <CheckCircle className="h-3.5 w-3.5" />
+                            <CheckCircle className="h-4 w-4" />
                             {t('sql.editor.message')}
                         </Button>
                     </div>
