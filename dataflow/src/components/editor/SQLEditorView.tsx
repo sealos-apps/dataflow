@@ -9,6 +9,7 @@ import type { editor } from 'monaco-editor';
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useRawExecuteLazyQuery } from '@graphql';
 import { getEditorLanguage, isReadOperation, supportsSchema } from "@/utils/database-features";
+import { splitSQLStatements } from '@/utils/sql-split';
 import { useTabStore } from "@/stores/useTabStore";
 import { useI18n } from "@/i18n/useI18n";
 
@@ -83,63 +84,81 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
     };
 
     const handleRun = async () => {
-        if (!query.trim()) return;
+        const statements = splitSQLStatements(query);
+        if (statements.length === 0) return;
 
         setIsExecuting(true);
         setErrorMessage(null);
         setQueryResults(null);
         const startTime = Date.now();
+        const results: any[] = [];
 
-        try {
-            const { data, error } = await rawExecute({
-                variables: { query },
-                context: { database: selectedDatabase || context?.databaseName },
-            });
+        for (let idx = 0; idx < statements.length; idx++) {
+            const sql = statements[idx];
 
-            const endTime = Date.now();
-            setExecutionTime((endTime - startTime) / 1000);
+            try {
+                const { data, error } = await rawExecute({
+                    variables: { query: sql },
+                    context: { database: selectedDatabase || context?.databaseName },
+                });
 
-            if (error) {
-                setErrorMessage(error.message);
-                setActiveResultTab('message');
-                return;
-            }
-
-            if (data?.RawExecute) {
-                const raw = data.RawExecute;
-                const columns = raw.Columns.map((c) => c.Name);
-
-                if (isReadOperation(connectionType, query ?? '') || raw.Rows.length > 0) {
-                    // Query result — show table
-                    const rows = raw.Rows.map((row) =>
-                        Object.fromEntries(columns.map((col, i) => [col, row[i]]))
-                    );
-                    setQueryResults([{
-                        columns,
-                        rows,
-                        info: t('sql.editor.rows', { count: raw.TotalCount }),
-                    }]);
-                    setActiveResultTab('result');
-                    onQueryResults?.(columns, rows, {
-                        database: selectedDatabase || context?.databaseName,
-                        schema: selectedSchema || context?.schemaName,
-                    });
-                } else {
-                    // Action (INSERT/UPDATE/DELETE) — show success message
-                    setQueryResults([{
+                if (error) {
+                    results.push({
                         columns: [],
                         rows: [],
-                        info: t('sql.editor.actionExecuted'),
-                    }]);
-                    setActiveResultTab('result');
+                        info: error.message,
+                        isError: true,
+                        sql,
+                    });
+                    break;
                 }
+
+                if (data?.RawExecute) {
+                    const raw = data.RawExecute;
+                    const columns = raw.Columns.map((c) => c.Name);
+
+                    if (isReadOperation(connectionType, sql) || raw.Rows.length > 0) {
+                        const rows = raw.Rows.map((row) =>
+                            Object.fromEntries(columns.map((col, i) => [col, row[i]]))
+                        );
+                        results.push({ columns, rows, info: t('sql.editor.rows', { count: raw.TotalCount }), sql });
+                    } else {
+                        results.push({ columns: [], rows: [], info: t('sql.editor.actionExecuted'), sql });
+                    }
+                }
+            } catch (err: any) {
+                results.push({
+                    columns: [],
+                    rows: [],
+                    info: err.message,
+                    isError: true,
+                    sql,
+                });
+                break;
             }
-        } catch (err: any) {
-            setErrorMessage(err.message);
-            setActiveResultTab('message');
-        } finally {
-            setIsExecuting(false);
         }
+
+        const endTime = Date.now();
+        setExecutionTime((endTime - startTime) / 1000);
+
+        const hasError = results.some((r) => r.isError);
+        if (hasError) {
+            setErrorMessage(results.find((r) => r.isError)?.info ?? null);
+        }
+
+        setQueryResults(results);
+        setActiveResultTab(hasError ? 'message' : 'result');
+
+        // Notify parent of the last successful read result
+        const lastRead = [...results].reverse().find((r) => !r.isError && r.rows.length > 0);
+        if (lastRead) {
+            onQueryResults?.(lastRead.columns, lastRead.rows, {
+                database: selectedDatabase || context?.databaseName,
+                schema: selectedSchema || context?.schemaName,
+            });
+        }
+
+        setIsExecuting(false);
     };
 
     const handleFormat = () => {
@@ -409,7 +428,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                                     </div>
 
                                                     {/* SQL Statement Display */}
-                                                    {result.sql && (
+                                                    {result.sql && queryResults.length > 1 && (
                                                         <div className="px-4 py-2 bg-muted/30 border-t border-b border-border/50">
                                                             <code className={cn(
                                                                 "text-sm font-mono block whitespace-pre-wrap break-all pl-2 border-l-2",
