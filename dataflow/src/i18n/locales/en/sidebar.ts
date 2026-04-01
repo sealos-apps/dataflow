@@ -5,6 +5,7 @@ type MessageShape<T extends Record<string, unknown>> = {
 }
 
 export const enSidebarMessages = {
+  'sidebar.title': 'Database Connections',
   'sidebar.menu.newQuery': 'New Query',
   'sidebar.menu.newDatabase': 'New Database',
   'sidebar.menu.newTable': 'New Table',

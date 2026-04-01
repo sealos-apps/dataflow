@@ -1,7 +1,7 @@
 import React, { createContext, use } from "react";
 import {
   ChevronRight, ChevronDown, Loader2,
-  Database, LayoutGrid, Table, Files, List, Eye, FolderOpen,
+  Database, ListTree, Table, Files, List, Eye, Folder,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TreeNodeData, NodeType } from "./types";
@@ -30,9 +30,9 @@ function useTreeNodeContext(): TreeNodeContextValue {
 const NODE_ICONS: Record<NodeType, React.ComponentType<{ className?: string }>> = {
   connection: Database,
   database: Database,
-  schema: LayoutGrid,
-  table_folder: FolderOpen,
-  view_folder: FolderOpen,
+  schema: ListTree,
+  table_folder: Folder,
+  view_folder: Folder,
   table: Table,
   view: Eye,
   collection: Files,
@@ -72,20 +72,15 @@ export function TreeNode({ node, depth }: TreeNodeProps) {
     <div>
       <div
         className={cn(
-          "group flex items-center gap-2 rounded-md text-sm transition-colors cursor-pointer select-none",
-          isRoot ? "px-2 py-2" : "px-2 py-1.5",
+          "group flex items-center gap-2 rounded-md text-sm transition-colors cursor-pointer select-none px-2 py-2",
           isSelected
-            ? isRoot
-              ? "bg-primary/10 text-primary font-medium"
-              : "bg-background text-foreground font-medium shadow-sm ring-1 ring-border/50"
-            : isRoot
-              ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            ? "bg-input text-accent-foreground font-medium"
+            : "text-muted-foreground hover:bg-input hover:text-foreground"
         )}
         onClick={() => onItemClick(node)}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
-        {isExpandable && (
+        {isExpandable ? (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -97,17 +92,19 @@ export function TreeNode({ node, depth }: TreeNodeProps) {
             )}
           >
             {isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+              <ChevronDown className="h-4 w-4 opacity-70" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 opacity-70" />
+              <ChevronRight className="h-4 w-4 opacity-70" />
             )}
           </button>
+        ) : (
+          <span className="p-0.5"><ChevronRight className="h-4 w-4 opacity-0" /></span>
         )}
 
         {brandIcon ? (
           <img src={brandIcon} alt={connectionDbType} className="h-4 w-4 shrink-0" />
         ) : (
-          <Icon className={cn(isRoot ? "h-4 w-4" : "h-3.5 w-3.5", iconColor)} />
+          <Icon className={cn("h-4 w-4", iconColor)} />
         )}
 
         <span className="truncate flex-1">{node.name}</span>
@@ -118,7 +115,7 @@ export function TreeNode({ node, depth }: TreeNodeProps) {
       </div>
 
       {isExpanded && children && children.length > 0 && (
-        <div className="ml-2 pl-2 border-l border-border/50 mt-1 space-y-0.5">
+        <div className="ml-3 pl-3 border-l border-border/50 mt-1 space-y-0.5">
           {children.map((child) => (
             <TreeNode key={child.id} node={child} depth={depth + 1} />
           ))}

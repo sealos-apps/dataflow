@@ -369,14 +369,14 @@ function SidebarInner() {
   })();
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-background">
+    <div className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Header */}
-      <div className="flex items-center p-4 border-b h-14 shrink-0">
-        <h2 className="font-semibold text-sm">{t("layout.activity.connections")}</h2>
+      <div className="flex items-center px-4 pt-5 pb-2 shrink-0">
+        <span className="text-xl font-medium text-sidebar-foreground">{t("sidebar.title")}</span>
       </div>
 
       {/* Tree */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
+      <div className="flex-1 overflow-y-auto p-2">
         {connections.map((conn) => (
           <TreeNodeProvider
             key={conn.id}

@@ -1,4 +1,5 @@
 export const zhSidebarMessages = {
+  'sidebar.title': '数据库连接',
   'sidebar.menu.newQuery': '新建查询',
   'sidebar.menu.newDatabase': '新建数据库',
   'sidebar.menu.newTable': '新建数据表',
