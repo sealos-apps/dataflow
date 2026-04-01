@@ -35,10 +35,10 @@ function TabItem({ tab, isActive, onActivate, onClose, onContextMenu, closeTitle
             onClick={onActivate}
             onContextMenu={onContextMenu}
             className={cn(
-                "group flex items-center gap-2 p-2 h-9 cursor-pointer border-r border-sidebar-border transition-colors duration-150 select-none",
+                "group flex items-center gap-2 p-2 pl-3 h-9 cursor-pointer border-r border-sidebar-border transition-colors duration-150 select-none",
                 isActive
                     ? "bg-input text-foreground"
-                    : "text-foreground hover:bg-input"
+                    : "text-foreground hover:bg-muted"
             )}
         >
             <span className="flex-shrink-0">
@@ -53,9 +53,10 @@ function TabItem({ tab, isActive, onActivate, onClose, onContextMenu, closeTitle
                 size="icon-xs"
                 onClick={onClose}
                 className={cn(
-                    "flex-shrink-0 hover:bg-destructive/10 hover:text-destructive transition-colors",
-                    "opacity-0 group-hover:opacity-100",
-                    isActive && "opacity-100"
+                    "flex-shrink-0 transition-colors text-muted-foreground cursor-pointer",
+                    isActive
+                        ? "hover:bg-muted-foreground/20"
+                        : "hover:bg-input"
                 )}
                 title={closeTitle}
             >
@@ -133,7 +134,7 @@ export function TabBar() {
                     variant="ghost"
                     size="icon-xs"
                     onClick={handleAddTab}
-                    className="h-9 w-9 shrink-0 rounded-none border-l border-r border-sidebar-border hover:bg-muted"
+                    className="h-9 w-9 shrink-0 rounded-none border-r border-sidebar-border hover:bg-muted"
                     title={t('layout.tab.newQuery')}
                 >
                     <Plus className="h-4 w-4" />
