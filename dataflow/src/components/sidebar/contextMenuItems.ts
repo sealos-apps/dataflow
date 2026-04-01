@@ -55,9 +55,9 @@ export function getConnectionMenuItems(
     : [];
   return [
     { label: t("sidebar.menu.newQuery"), onClick: () => onAction("new_query"), icon: React.createElement(Terminal, { className: "h-4 w-4" }) },
-    { separator: true },
     ...(connectionType !== "REDIS"
       ? [
+          { separator: true },
           { label: t("sidebar.menu.newDatabase"), onClick: () => onAction("new_database"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
         ] as ContextMenuItem[]
       : []),
@@ -93,21 +93,25 @@ export function getDatabaseMenuItems(
     : [];
   return [
     { label: t("sidebar.menu.newQuery"), onClick: () => onAction("new_query"), icon: React.createElement(Terminal, { className: "h-4 w-4" }) },
-    { separator: true },
     ...(connectionType === "MONGODB"
       ? [
-          { label: t("sidebar.menu.newCollection"), onClick: () => onAction("new_collection"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
           { separator: true },
+          { label: t("sidebar.menu.newCollection"), onClick: () => onAction("new_collection"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
         ] as ContextMenuItem[]
       : connectionType !== "REDIS"
       ? [
+          { separator: true },
           { label: t("sidebar.menu.newTable"), onClick: () => onAction("new_table"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
-          { separator: true },
+        ] as ContextMenuItem[]
+      : []),
+    { separator: true },
+    ...(connectionType !== "MONGODB" && connectionType !== "REDIS"
+      ? [
           { label: t("sidebar.menu.exportDatabase"), onClick: () => onAction("export_database"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
-          { separator: true },
         ] as ContextMenuItem[]
       : []),
     { label: t("sidebar.menu.renameDatabase"), onClick: () => onAction("edit_database"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) },
+    { separator: true },
     { label: t("sidebar.menu.deleteDatabase"), onClick: () => onAction("delete_database"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },
     { separator: true },
     refreshItem(onAction, t),
@@ -146,12 +150,12 @@ export function getTableMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
   const { onAction, t } = callbacks;
   return [
     { label: t("sidebar.menu.exportData"), onClick: () => onAction("export_data"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
-    { separator: true },
-    { label: t("sidebar.menu.clearData"), onClick: () => onAction("clear_table_data"), icon: React.createElement(Eraser, { className: "h-4 w-4 text-orange-500" }) },
-    { label: t("sidebar.menu.duplicateTable"), onClick: () => onAction("copy_table"), icon: React.createElement(Copy, { className: "h-4 w-4 text-blue-500" }) },
+    { label: t("sidebar.menu.duplicateTable"), onClick: () => onAction("copy_table"), icon: React.createElement(Copy, { className: "h-4 w-4" }) },
     { separator: true },
     { label: t("sidebar.menu.designTable"), onClick: () => onAction("edit_table"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) },
-    { label: t("sidebar.menu.renameTable"), onClick: () => onAction("rename_table"), icon: React.createElement(Edit2, { className: "h-4 w-4 text-blue-500" }) },
+    { label: t("sidebar.menu.renameTable"), onClick: () => onAction("rename_table"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) },
+    { separator: true },
+    { label: t("sidebar.menu.clearData"), onClick: () => onAction("clear_table_data"), icon: React.createElement(Eraser, { className: "h-4 w-4" }) },
     { label: t("sidebar.menu.deleteTable"), onClick: () => onAction("delete_table"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },
     { separator: true },
     refreshItem(onAction, t),

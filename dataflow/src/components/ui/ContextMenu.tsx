@@ -34,6 +34,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 side="bottom"
                 align="start"
                 sideOffset={0}
+                className="w-[152px]"
                 onCloseAutoFocus={(e) => e.preventDefault()}
             >
                 {items.map((item, index) => (
