@@ -122,23 +122,51 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
       }
 
       if (node.type === "schema") {
+        return [
+          {
+            id: `${node.id}-tables`,
+            name: t("sidebar.tree.tables"),
+            type: "table_folder" as const,
+            parentId: node.id,
+            connectionId: node.connectionId,
+            metadata: { database: node.metadata.database, schema: node.name },
+          },
+          {
+            id: `${node.id}-views`,
+            name: t("sidebar.tree.views"),
+            type: "view_folder" as const,
+            parentId: node.id,
+            connectionId: node.connectionId,
+            metadata: { database: node.metadata.database, schema: node.name },
+          },
+        ];
+      }
+
+      if (node.type === "table_folder" || node.type === "view_folder") {
+        const isViewFolder = node.type === "view_folder";
         const tables = await fetchTables(
           node.connectionId,
           node.metadata.database!,
-          node.name
+          node.metadata.schema!
         );
-        return tables.map((t) => ({
-          id: `${node.id}-${t.name}`,
-          name: t.name,
-          type: (t.type.toLowerCase().includes("view") ? "view" : "table") as NodeType,
-          parentId: node.id,
-          connectionId: node.connectionId,
-          metadata: {
-            database: node.metadata.database,
-            schema: node.name,
-            table: t.name,
-          },
-        }));
+        return tables
+          .filter((t) =>
+            isViewFolder
+              ? t.type.toLowerCase().includes("view")
+              : !t.type.toLowerCase().includes("view")
+          )
+          .map((t) => ({
+            id: `${node.id}-${t.name}`,
+            name: t.name,
+            type: (isViewFolder ? "view" : "table") as NodeType,
+            parentId: node.id,
+            connectionId: node.connectionId,
+            metadata: {
+              database: node.metadata.database,
+              schema: node.metadata.schema,
+              table: t.name,
+            },
+          }));
       }
 
       return [];
@@ -190,11 +218,24 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
     async (node: TreeNodeData) => {
       setTreeData((prev) => {
         const next = { ...prev };
+        // Cascade: also clear direct children's data (e.g., folder contents when refreshing schema)
+        const children = prev[node.id];
+        if (children) {
+          for (const child of children) {
+            delete next[child.id];
+          }
+        }
         delete next[node.id];
         return next;
       });
       if (expandedItems.has(node.id)) {
-        await fetchNodeChildren(node);
+        const children = await fetchNodeChildren(node);
+        // Re-fetch expanded children whose data was cleared by the cascade
+        for (const child of children) {
+          if (expandedItems.has(child.id)) {
+            await fetchNodeChildren(child);
+          }
+        }
       }
     },
     [expandedItems, fetchNodeChildren]

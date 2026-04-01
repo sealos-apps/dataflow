@@ -23,4 +23,6 @@ export const zhSidebarMessages = {
   'sidebar.tab.queryWithConnection': '查询 - {connection}',
   'sidebar.tab.redisKeys': '{database} 键列表',
   'sidebar.redis.allData': '全部数据',
+  'sidebar.tree.tables': 'Tables',
+  'sidebar.tree.views': 'Views',
 } as const

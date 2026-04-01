@@ -126,6 +126,22 @@ export function getSchemaMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] 
   ];
 }
 
+export function getTableFolderMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
+  const { onAction, t } = callbacks;
+  return [
+    { label: t("sidebar.menu.newTable"), onClick: () => onAction("new_table"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
+    { separator: true },
+    refreshItem(onAction, t),
+  ];
+}
+
+export function getViewFolderMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
+  const { onAction, t } = callbacks;
+  return [
+    refreshItem(onAction, t),
+  ];
+}
+
 export function getTableMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
   const { onAction, t } = callbacks;
   return [

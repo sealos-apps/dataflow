@@ -4,6 +4,8 @@ export type NodeType =
   | "connection"
   | "database"
   | "schema"
+  | "table_folder"
+  | "view_folder"
   | "table"
   | "view"
   | "collection"
@@ -27,6 +29,8 @@ export const EXPANDABLE_TYPES: ReadonlySet<NodeType> = new Set([
   "connection",
   "database",
   "schema",
+  "table_folder",
+  "view_folder",
 ]);
 
 /** Icon color class per node type */
@@ -34,6 +38,8 @@ export const NODE_ICON_COLORS: Record<NodeType, string> = {
   connection: "text-primary",
   database: "text-chart-3",
   schema: "text-chart-4",
+  table_folder: "text-chart-2",
+  view_folder: "text-muted-foreground",
   table: "text-chart-2",
   view: "text-muted-foreground",
   collection: "text-chart-5",

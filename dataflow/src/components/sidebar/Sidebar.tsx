@@ -12,6 +12,8 @@ import {
   getConnectionMenuItems,
   getDatabaseMenuItems,
   getSchemaMenuItems,
+  getTableFolderMenuItems,
+  getViewFolderMenuItems,
   getTableMenuItems,
   getCollectionMenuItems,
   getViewMenuItems,
@@ -178,7 +180,7 @@ function SidebarInner() {
             params: {
               connectionId: node.connectionId,
               databaseName: node.type === "database" ? node.name : node.metadata.database!,
-              schema: node.type === "schema" ? node.name : undefined,
+              schema: node.type === "schema" ? node.name : node.metadata.schema,
             },
           });
           break;
@@ -351,6 +353,10 @@ function SidebarInner() {
         );
       case "schema":
         return getSchemaMenuItems(callbacks);
+      case "table_folder":
+        return getTableFolderMenuItems(callbacks);
+      case "view_folder":
+        return getViewFolderMenuItems(callbacks);
       case "table":
         return getTableMenuItems(callbacks);
       case "view":

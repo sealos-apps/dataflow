@@ -1,7 +1,7 @@
 import React, { createContext, use } from "react";
 import {
   ChevronRight, ChevronDown, Loader2,
-  Database, LayoutGrid, Table, Files, List, Eye,
+  Database, LayoutGrid, Table, Files, List, Eye, FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TreeNodeData, NodeType } from "./types";
@@ -31,6 +31,8 @@ const NODE_ICONS: Record<NodeType, React.ComponentType<{ className?: string }>> 
   connection: Database,
   database: Database,
   schema: LayoutGrid,
+  table_folder: FolderOpen,
+  view_folder: FolderOpen,
   table: Table,
   view: Eye,
   collection: Files,
