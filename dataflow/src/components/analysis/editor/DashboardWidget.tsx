@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { DashboardComponent } from "@/stores/useAnalysisStore";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal, Trash2, Maximize2, Settings, ImageDown } from "lucide-react";
+import { GripHorizontal, MoreVertical, Trash2, Maximize2, Settings, ImageDown } from "lucide-react";
 import { SafeECharts, NativeEChartsHandle } from "@/components/ui/SafeECharts";
 import { buildWidgetChartOption } from "../chart-utils";
 import { downloadBlob } from "@/utils/export-utils";
@@ -71,8 +71,8 @@ export function DashboardWidget({
     return (
         <div
             className={cn(
-                "bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col transition-all group relative h-full",
-                isSelected ? "ring-2 ring-primary border-primary shadow-md" : "hover:border-slate-200 hover:shadow-md",
+                "bg-accent rounded-lg overflow-clip flex flex-col p-0.5 relative h-full transition-all group",
+                isSelected ? "ring-2 ring-primary" : "",
                 isReadOnly && "pointer-events-auto"
             )}
             onClick={(e) => {
@@ -82,34 +82,49 @@ export function DashboardWidget({
             onContextMenu={!isReadOnly ? handleContextMenu : undefined}
         >
             {/* Widget Header */}
-            <div className={cn(
-                "h-9 px-3 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 relative z-10",
-                !isReadOnly && "cursor-move drag-handle"
-            )}>
-                <span className="font-semibold text-xs text-slate-700 truncate">{component.title}</span>
+            <div className="h-9 flex items-center justify-between px-0.5 shrink-0 relative z-10">
+                <div className="flex items-center h-8 px-2.5 rounded-lg truncate">
+                    <span className="text-xs text-foreground truncate">{component.title}</span>
+                </div>
 
-                {/* Actions Menu Button */}
+                {!isReadOnly && (
+                    <GripHorizontal className="w-4 h-4 text-foreground/40 cursor-grab drag-handle absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2" />
+                )}
+
                 {!isReadOnly && (
                     <button
                         onMouseDown={(e) => e.stopPropagation()}
                         onClick={handleContextMenu}
                         className={cn(
-                            "p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors",
-                            contextMenu && "bg-slate-100 text-slate-600"
+                            "flex items-center justify-center size-8 rounded-lg text-foreground/60 hover:bg-input transition-colors",
+                            contextMenu && "bg-input"
                         )}
                     >
-                        <MoreHorizontal className="w-4 h-4 rotate-90" />
+                        <MoreVertical className="w-4 h-4" />
                     </button>
                 )}
             </div>
 
             {/* Widget Content */}
-            <div className="flex-1 p-0 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative">
                 <div className="absolute inset-0 p-3 z-10">
                     <WidgetContent component={component} chartRef={chartRef} />
                 </div>
                 {!isReadOnly && <div className="absolute inset-0 z-0" />}
             </div>
+
+            {/* Maximize Button - Bottom Right */}
+            {!isReadOnly && (
+                <div className="flex items-center justify-end p-2 shrink-0">
+                    <button
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => onMaximize?.(component.id)}
+                        className="text-foreground/40 hover:text-foreground transition-colors"
+                    >
+                        <Maximize2 className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
 
             {/* Portal Context Menu */}
             {contextMenu && (
