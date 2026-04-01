@@ -1,11 +1,12 @@
+import { useMemo } from 'react'
 import { Plus, Download, RefreshCw } from 'lucide-react'
 import { CollectionViewProvider, useCollectionView } from './CollectionView/CollectionViewProvider'
 import { CollectionViewDocumentList } from './CollectionView/CollectionView.DocumentList'
 import { AddDocumentModal } from './CollectionView/CollectionView.AddDocumentModal'
 import { EditDocumentModal } from './CollectionView/CollectionView.EditDocumentModal'
 import { DataView } from '@/components/database/shared/DataView'
+import { FindBar } from '@/components/database/shared/FindBar'
 import { ActionButton } from '@/components/ui/ActionButton'
-import { SearchInput } from '@/components/ui/SearchInput'
 import { ExportCollectionModal } from './ExportCollectionModal'
 import { FilterCollectionModal } from './FilterCollectionModal'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
@@ -41,14 +42,21 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
     return <DataView.Error message={state.error} />
   }
 
+  /** Extract all top-level field names from visible documents for FindBar. */
+  const docColumns = useMemo(() => {
+    const keys = new Set<string>()
+    state.documents.forEach((doc) => {
+      if (typeof doc === 'object' && doc !== null) {
+        Object.keys(doc).forEach((k) => keys.add(k))
+      }
+    })
+    return Array.from(keys)
+  }, [state.documents])
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Action bar */}
       <div className="border-b border-border/50 px-4 py-2 flex items-center justify-between">
-        <SearchInput
-          value={state.searchTerm}
-          onChange={(v) => actions.setSearchTerm(v)}
-        />
         <div className="flex items-center gap-2">
           <ActionButton onClick={actions.handleAddClick}>
             <Plus className="h-3.5 w-3.5" />
@@ -72,9 +80,12 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        <CollectionViewDocumentList />
-      </div>
+      <FindBar.Provider rows={state.documents} columns={docColumns}>
+        <FindBar.Bar />
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          <CollectionViewDocumentList />
+        </div>
+      </FindBar.Provider>
 
       {state.total > 0 && (
         <DataView.Pagination

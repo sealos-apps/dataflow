@@ -1,3 +1,4 @@
+import { use } from 'react'
 import {
   Loader2,
   Edit2,
@@ -11,11 +12,13 @@ import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { useTableView } from './TableViewProvider'
 import { TableViewColumnHeader } from './TableView.ColumnHeader'
+import { FindBarContext } from '@/components/database/shared/FindBar.Provider'
 
 /** Renders the data grid including `<table>`, column headers, add-row form, data rows with inline editing, and action buttons. */
 export function TableViewDataGrid() {
   const { t } = useI18n()
   const { state, actions } = useTableView()
+  const findBar = use(FindBarContext)
 
   const hiddenColumnCount = state.data?.columns
     ? state.data.columns.length - state.visibleColumns.length
@@ -125,10 +128,23 @@ export function TableViewDataGrid() {
               >
                 {state.data?.columns?.filter((col: string) => state.visibleColumns.includes(col)).map((col: string, colIdx: number) => {
                   const width = state.columnWidths[col] || 120
+                  const highlight = findBar?.state.total
+                    ? findBar.state.matches.findIndex((m) => m.rowIndex === rowIdx && m.columnKey === col) === findBar.state.currentMatchIndex
+                      ? 'current'
+                      : findBar.state.matches.some((m) => m.rowIndex === rowIdx && m.columnKey === col)
+                        ? 'match'
+                        : null
+                    : null
                   return (
                     <td
                       key={colIdx}
-                      className={cn("whitespace-nowrap text-sm text-foreground/80 border-b border-r border-border/50", isEditing ? "p-0" : "px-6 py-2")}
+                      data-find-current={highlight === 'current' ? 'true' : undefined}
+                      className={cn(
+                        "whitespace-nowrap text-sm text-foreground/80 border-b border-r border-border/50",
+                        isEditing ? "p-0" : "px-6 py-2",
+                        highlight === 'current' && "bg-blue-200 ",
+                        highlight === 'match' && "bg-blue-100/60",
+                      )}
                       style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
                     >
                       {isEditing ? (

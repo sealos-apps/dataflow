@@ -2,8 +2,8 @@ import { Plus, Download, RefreshCw } from 'lucide-react'
 import { TableViewProvider, useTableView } from './TableView/TableViewProvider'
 import { TableViewDataGrid } from './TableView/TableView.DataGrid'
 import { DataView } from '@/components/database/shared/DataView'
+import { FindBar } from '@/components/database/shared/FindBar'
 import { ActionButton } from '@/components/ui/ActionButton'
-import { SearchInput } from '@/components/ui/SearchInput'
 import { FilterTableModal } from './FilterTableModal'
 import { ExportDataModal } from './ExportDataModal'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
@@ -54,11 +54,6 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
 
       {/* Action bar */}
       <div className="border-b border-border/50 px-4 py-2 flex items-center justify-between">
-        <SearchInput
-          value={state.searchTerm}
-          onChange={(v) => actions.setSearchTerm(v)}
-          onSubmit={actions.handleSearchSubmit}
-        />
         <div className="flex items-center gap-2">
           {state.canEdit && (
             <>
@@ -86,7 +81,10 @@ function TableDetailViewContent({ databaseName, tableName, schema }: TableDetail
         </div>
       </div>
 
-      <TableViewDataGrid />
+      <FindBar.Provider rows={state.data?.rows} columns={state.visibleColumns}>
+        <FindBar.Bar />
+        <TableViewDataGrid />
+      </FindBar.Provider>
 
       {state.total > 0 && (
         <DataView.Pagination
