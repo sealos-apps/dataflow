@@ -4,6 +4,7 @@ import { SQLEditorView } from '@/components/editor/SQLEditorView';
 import { TableDetailView } from '@/components/database/sql/TableDetailView';
 import { CollectionDetailView } from '@/components/database/mongodb/CollectionDetailView';
 import { RedisDetailView } from '@/components/database/redis/RedisDetailView';
+import { Database } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 
 export function TabContent() {

@@ -38,7 +38,7 @@ function TabItem({ tab, isActive, onActivate, onClose, onContextMenu, closeTitle
                 "group flex items-center gap-2 p-2 h-9 cursor-pointer border-r border-sidebar-border transition-colors duration-150 select-none",
                 isActive
                     ? "bg-input text-foreground"
-                    : "bg-sidebar text-foreground hover:bg-input"
+                    : "text-foreground hover:bg-input"
             )}
         >
             <span className="flex-shrink-0">
@@ -116,7 +116,7 @@ export function TabBar() {
     };
 
     return (
-        <ScrollArea className="bg-sidebar">
+        <ScrollArea className="">
             <div className="flex items-center pr-2">
                 {tabs.map(tab => (
                     <TabItem
