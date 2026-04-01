@@ -369,7 +369,7 @@ function SidebarInner() {
   })();
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
+    <div className="flex h-full w-full flex-col border-r border-sidebar-border bg-sidebar">
       {/* Header */}
       <div className="flex items-center px-4 pt-5 pb-2 shrink-0">
         <span className="text-xl font-medium text-sidebar-foreground">{t("sidebar.title")}</span>
