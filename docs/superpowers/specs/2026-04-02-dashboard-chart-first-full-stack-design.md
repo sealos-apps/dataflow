@@ -174,6 +174,8 @@ CREATE INDEX idx_widgets_dashboard_id ON widgets (dashboard_id);
 { "database": "postgres", "schema": "public" }
 ```
 
+`query_context.schema` is persisted for editor context and future extensions, but phase 1 refresh execution does not alter server-side schema/search-path behavior from this field. Saved queries must be self-contained or schema-qualified when schema selection matters.
+
 `visualization`:
 
 ```json
@@ -512,6 +514,8 @@ Add these frontend documents:
 2. Chart widgets render persisted snapshot data immediately when available.
 3. Runtime store marks each chart widget as `loading`.
 4. Each widget query executes through the existing `RawExecute` path.
+   - phase 1 only applies the existing database override path
+   - saved `queryContext.schema` is not used to mutate runtime execution semantics
 5. On success:
    - runtime state becomes `success`
    - fresh `config/data/executedAt` replaces stale render data
