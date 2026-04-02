@@ -176,11 +176,11 @@ function ExportDataFields() {
   const disabled = state.isSubmitting || isSuccess
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
 
-      <div className="space-y-3">
-        <label className="text-sm font-medium">{t('sql.export.rowLimit')}</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('sql.export.rowLimit')}</label>
         <Input
           type="number"
           value={rowCount}
@@ -193,8 +193,8 @@ function ExportDataFields() {
         </p>
       </div>
 
-      <div className="space-y-3">
-        <label className="text-sm font-medium">{t('sql.export.filterOptional')}</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('sql.export.filterOptional')}</label>
         <Textarea
           value={filter}
           onChange={(e) => setFilter(e.target.value)}

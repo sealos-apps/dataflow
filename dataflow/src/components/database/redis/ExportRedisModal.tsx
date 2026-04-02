@@ -50,11 +50,11 @@ function ExportRedisFields() {
   const disabled = state.isSubmitting || isSuccess
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <FormatSelector options={formatOptions} value={format} onChange={setFormat} disabled={disabled} />
 
-      <div className="space-y-3">
-        <label className="text-sm font-medium">{t('redis.export.patternLabel')}</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('redis.export.patternLabel')}</label>
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {patternSummary}
         </div>
@@ -63,8 +63,8 @@ function ExportRedisFields() {
         </p>
       </div>
 
-      <div className="space-y-3">
-        <label className="text-sm font-medium">{t('redis.export.typesLabel')}</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('redis.export.typesLabel')}</label>
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {typesSummary}
         </div>

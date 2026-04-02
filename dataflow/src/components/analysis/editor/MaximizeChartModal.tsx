@@ -22,7 +22,7 @@ export function MaximizeChartModal({ open, onOpenChange, componentId }: Maximize
       <DialogContent className="max-w-6xl w-full h-[90vh] p-0 flex flex-col overflow-hidden gap-0">
         {component && (
           <>
-            <DialogHeader className="h-16 border-b px-6 flex flex-row items-center shrink-0 space-y-0">
+            <DialogHeader className="h-16 border-b px-6 flex flex-row items-center shrink-0 gap-0">
               <div className="flex-1">
                 <DialogTitle className="text-lg">{component.title}</DialogTitle>
                 {component.description && (

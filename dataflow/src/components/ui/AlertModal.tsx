@@ -55,7 +55,7 @@ export function AlertModal({
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
             <DialogContent className="max-w-sm gap-0 p-0" showCloseButton={false} aria-describedby={undefined}>
-                <DialogHeader className="flex-row items-center justify-between px-6 py-4 border-b space-y-0">
+                <DialogHeader className="flex-row items-center justify-between px-6 py-4 border-b gap-0">
                     <DialogTitle className="flex items-center gap-2">
                         {getIcon()}
                         {title}

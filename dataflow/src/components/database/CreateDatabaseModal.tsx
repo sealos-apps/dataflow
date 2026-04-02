@@ -116,9 +116,9 @@ function CreateDatabaseFields() {
   const { state } = useModalForm()
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-muted-foreground">
           {t('database.name')}
         </label>
         <Input
@@ -130,8 +130,8 @@ function CreateDatabaseFields() {
       </div>
 
       {isMongoConnection && (
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-muted-foreground">
             {t('mongodb.collection.name')}
           </label>
           <Input

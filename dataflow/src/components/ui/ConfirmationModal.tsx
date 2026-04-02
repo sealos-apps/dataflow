@@ -73,14 +73,14 @@ export function ConfirmationModal({
                     </AlertDialogTitle>
                 </AlertDialogHeader>
 
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4">
                     <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/10 text-destructive text-sm font-medium">
                         {message}
                     </div>
 
                     {verificationText && (
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-muted-foreground">
                                 {verificationLabel ?? t('common.confirmation.typeToConfirm', { value: verificationText })}
                             </label>
                             <Input

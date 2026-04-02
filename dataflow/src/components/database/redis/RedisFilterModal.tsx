@@ -44,9 +44,9 @@ function RedisFilterFields() {
   const { pattern, setPattern, selectedTypes, availableTypes, toggleType } = useRedisFilterCtx()
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">{t('redis.filter.pattern')}</label>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('redis.filter.pattern')}</label>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -62,8 +62,8 @@ function RedisFilterFields() {
         </p>
       </div>
 
-      <div className="space-y-3">
-        <label className="flex items-center justify-between text-sm font-medium text-foreground">
+      <div className="flex flex-col gap-2">
+        <label className="flex items-center justify-between text-sm font-medium text-muted-foreground">
           {t('redis.filter.types')}
           <span className="text-xs font-normal text-muted-foreground">
             {selectedTypes.length === 0

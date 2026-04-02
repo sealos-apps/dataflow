@@ -85,15 +85,15 @@ function CopyTableFields() {
   const { state } = useModalForm()
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-muted-foreground">
           {t('sql.copyTable.sourceTable')}
         </label>
         <Input value={tableName} disabled />
       </div>
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-muted-foreground">
           {t('sql.copyTable.newTableName')}
         </label>
         <Input
@@ -103,8 +103,8 @@ function CopyTableFields() {
           disabled={state.isSubmitting}
         />
       </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">
           {t('sql.copyTable.options')}
         </label>
         <RadioGroup

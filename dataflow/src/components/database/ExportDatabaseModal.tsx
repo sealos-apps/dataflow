@@ -243,7 +243,7 @@ function ExportDatabaseFields() {
   const disabled = state.isSubmitting || isSuccess
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
       <ExportProgress isExporting={state.isSubmitting} isSuccess={isSuccess} statusText={statusText} />
     </div>

@@ -144,8 +144,8 @@ function CreateTableNameField() {
   const { state } = useModalForm()
 
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-muted-foreground">
         {t('sql.createTable.tableName')}
       </label>
       <Input
@@ -166,9 +166,9 @@ function CreateTableColumnEditor() {
   const { state } = useModalForm()
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <label className="text-sm font-medium text-muted-foreground">
           {t('sql.createTable.columns')}
         </label>
         <Button
@@ -308,7 +308,7 @@ export function CreateTableModal({
           onSuccess={handleSuccess}
         >
           <ModalForm.Header />
-          <div className="flex-1 overflow-y-auto space-y-6">
+          <div className="flex-1 overflow-y-auto flex flex-col gap-6">
             <CreateTableNameField />
             <CreateTableColumnEditor />
           </div>

@@ -70,8 +70,8 @@ function DropCollectionConfirmation() {
   const { state } = useModalForm()
 
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-muted-foreground">
         {t('mongodb.collection.confirmName')}
       </label>
       <Input

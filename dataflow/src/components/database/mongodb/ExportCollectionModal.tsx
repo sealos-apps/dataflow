@@ -177,11 +177,11 @@ function ExportCollectionFields() {
   const disabled = state.isSubmitting || isSuccess
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">{t('mongodb.export.filterQuery')}</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('mongodb.export.filterQuery')}</label>
         <Input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -194,8 +194,8 @@ function ExportCollectionFields() {
         </p>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">{t('mongodb.export.limitRows')}</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-muted-foreground">{t('mongodb.export.limitRows')}</label>
         <Input
           type="number"
           value={limit}

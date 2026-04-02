@@ -30,8 +30,8 @@ export function FormatSelector<T extends string>({
   const { t } = useI18n()
 
   return (
-    <div className="space-y-3">
-      <label className="text-sm font-medium">{t('common.export.format')}</label>
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-muted-foreground">{t('common.export.format')}</label>
       <div
         className={cn(
           'grid gap-3',

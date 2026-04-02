@@ -112,9 +112,9 @@ function ColumnSelector() {
   const { columns, selectedColumns, toggleColumn, toggleAllColumns } = useFilterTable()
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <h3 className="text-sm font-medium text-muted-foreground">
           {t('sql.filter.visibleColumns')}
         </h3>
         <Button variant="link" size="sm" onClick={toggleAllColumns} className="h-6 text-xs text-primary p-0">
@@ -142,9 +142,9 @@ function ConditionList() {
   const { columns, conditions, addCondition, removeCondition, updateCondition } = useFilterTable()
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <h3 className="text-sm font-medium text-muted-foreground">
           {t('sql.filter.conditions')}
         </h3>
         {conditions.length > 0 && (
@@ -166,7 +166,7 @@ function ConditionList() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {conditions.map((condition) => (
             <div key={condition.id} className="flex items-center gap-2">
               <Select value={condition.column} onValueChange={(v) => updateCondition(condition.id, 'column', v)}>
@@ -275,7 +275,7 @@ export function FilterTableModal({
             initialConditions={initialConditions}
           >
             <ModalForm.Header />
-            <div className="flex-1 overflow-y-auto space-y-6">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-6">
               <ColumnSelector />
               <Separator />
               <ConditionList />

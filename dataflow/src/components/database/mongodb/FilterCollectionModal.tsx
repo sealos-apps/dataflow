@@ -80,9 +80,9 @@ function FilterConditionList() {
   const canAddCondition = fields.some((field) => !usedFields.has(field))
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <h3 className="text-sm font-medium text-muted-foreground">
           {t('mongodb.filter.conditions')}
         </h3>
         {conditions.length > 0 && (
@@ -115,7 +115,7 @@ function FilterConditionList() {
           <p className="text-sm text-muted-foreground">{t('mongodb.filter.noFilters')}</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {conditions.map((condition) => {
             const fieldOptions = fields.filter(
               (field) => field === condition.field || !usedFields.has(field),
