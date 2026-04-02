@@ -6,6 +6,8 @@ import { resolveLocaleFromSearch } from '@/i18n/locale';
 
 export type ComponentType = 'chart' | 'text' | 'image' | 'stats' | 'filter' | 'table';
 
+export type RefreshRule = 'on-demand' | 'by-minute';
+
 export interface DashboardComponent {
     id: string;
     type: ComponentType;
@@ -33,6 +35,7 @@ export interface Dashboard {
     id: string;
     name: string;
     description?: string;
+    refreshRule: RefreshRule;
     thumbnail?: string;
     createdAt: number;
     updatedAt: number;
@@ -62,7 +65,7 @@ interface AnalysisState {
 
     // Actions
     initializeFromAPI: () => Promise<void>;
-    createDashboard: (name: string, description?: string) => void;
+    createDashboard: (name: string, description?: string, refreshRule?: RefreshRule) => void;
     deleteDashboard: (id: string) => void;
     openDashboard: (id: string) => void;
     updateDashboard: (id: string, updates: Partial<Dashboard>) => void;
@@ -94,12 +97,13 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         set({ isInitialized: true });
     },
 
-    createDashboard: (name, description) => {
+    createDashboard: (name, description, refreshRule = 'on-demand') => {
         const id = uuidv4();
         const newDashboard: Dashboard = {
             id,
             name,
             description,
+            refreshRule,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             components: []

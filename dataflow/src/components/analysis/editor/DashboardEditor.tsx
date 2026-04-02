@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAnalysisStore } from "@/stores/useAnalysisStore";
 import { Plus, Layout, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { EditorCanvas } from "./EditorCanvas";
 import { ChartCreateModal } from "../chart-create/ChartCreateModal";
@@ -68,6 +69,16 @@ export function DashboardEditor() {
         }
     }, [dashboard, rawExecute, updateComponent]);
 
+    // Auto-refresh: run handleRefresh on interval when refreshRule is 'by-minute'
+    const handleRefreshRef = useRef(handleRefresh);
+    handleRefreshRef.current = handleRefresh;
+
+    useEffect(() => {
+        if (dashboard?.refreshRule !== 'by-minute') return;
+        const id = setInterval(() => { handleRefreshRef.current() }, 60_000);
+        return () => clearInterval(id);
+    }, [dashboard?.refreshRule]);
+
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [maximizedComponentId, setMaximizedComponentId] = useState<string | null>(null);
     const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
@@ -84,27 +95,47 @@ export function DashboardEditor() {
             {/* Top Toolbar */}
             <div className="h-14 border-b flex items-center justify-between px-6 shrink-0 bg-background z-20">
                 <div className="flex items-center gap-4">
-                    <div className="font-bold text-lg">
-                        {dashboard.name}
+                    <div className="flex flex-col justify-center">
+                        <div className="font-bold text-lg leading-tight">
+                            {dashboard.name}
+                        </div>
+                        {dashboard.description && (
+                            <div className="text-xs text-muted-foreground leading-tight">
+                                {dashboard.description}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 ml-auto">
-                    <Button
-                        variant="outline"
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        {t('analysis.dashboard.refresh')}
-                    </Button>
-                    <Button
-                        onClick={() => toggleChartModal(true)}
-                    >
-                        <Plus className="w-4 h-4" />
-                        {t('analysis.chart.add')}
-                    </Button>
-                </div>
+                <TooltipProvider>
+                    <div className="flex items-center gap-1 ml-auto">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={handleRefresh}
+                                    disabled={isRefreshing}
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t('analysis.dashboard.refresh')}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => toggleChartModal(true)}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t('analysis.chart.add')}</TooltipContent>
+                        </Tooltip>
+                    </div>
+                </TooltipProvider>
             </div>
 
             {/* Main Workspace */}

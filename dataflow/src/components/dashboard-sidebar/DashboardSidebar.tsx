@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useAnalysisStore } from "@/stores/useAnalysisStore";
+import type { Dashboard } from "@/stores/useAnalysisStore";
 import { Plus, LayoutDashboard, Edit2, Trash2, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { ContextMenu } from "@/components/ui/ContextMenu";
-import { CreateDashboardModal } from './CreateDashboardModal'
-import { RenameDashboardModal } from './RenameDashboardModal'
+import { DashboardFormModal } from './DashboardFormModal'
 import { DeleteDashboardModal } from './DeleteDashboardModal'
 import { useI18n } from '@/i18n/useI18n'
 import { Separator } from "../ui/separator";
@@ -19,7 +19,7 @@ export function DashboardSidebar() {
 
     // Modal State
     const [createOpen, setCreateOpen] = useState(false)
-    const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null)
+    const [editTarget, setEditTarget] = useState<Dashboard | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
     const sortedDashboards = [...dashboards].sort((a, b) => b.createdAt - a.createdAt);
@@ -102,11 +102,11 @@ export function DashboardSidebar() {
                         },
                         { separator: true },
                         {
-                            label: t('analysis.dashboard.rename'),
+                            label: t('analysis.dashboard.edit'),
                             icon: <Edit2 className="w-4 h-4" />,
                             onClick: () => {
                                 const d = dashboards.find(d => d.id === contextMenu.id);
-                                if (d) setRenameTarget({ id: d.id, name: d.name });
+                                if (d) setEditTarget(d);
                                 setContextMenu(null);
                             }
                         },
@@ -125,12 +125,11 @@ export function DashboardSidebar() {
                 />
             )}
 
-            <CreateDashboardModal open={createOpen} onOpenChange={setCreateOpen} />
-            <RenameDashboardModal
-                open={!!renameTarget}
-                onOpenChange={(open) => { if (!open) setRenameTarget(null) }}
-                dashboardId={renameTarget?.id ?? ''}
-                currentName={renameTarget?.name ?? ''}
+            <DashboardFormModal open={createOpen} onOpenChange={setCreateOpen} />
+            <DashboardFormModal
+                open={!!editTarget}
+                onOpenChange={(open) => { if (!open) setEditTarget(null) }}
+                dashboard={editTarget ?? undefined}
             />
             <DeleteDashboardModal
                 open={!!deleteTarget}
