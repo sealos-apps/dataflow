@@ -87,7 +87,7 @@ export function EditTableColumnsTab() {
                     disabled={isExecuting || col.isMarkedForDeletion}
                   >
                     <SelectTrigger size="sm" className={cn(
-                      'w-full border-transparent bg-transparent text-xs',
+                      'w-full bg-transparent text-xs',
                       col.isMarkedForDeletion && 'line-through text-muted-foreground',
                     )}>
                       <SelectValue />

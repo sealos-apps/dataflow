@@ -214,7 +214,7 @@ function CreateTableColumnEditor() {
                     onValueChange={(v) => updateColumn(col.id, 'type', v)}
                     disabled={state.isSubmitting}
                   >
-                    <SelectTrigger size="sm" className="w-full border-transparent bg-transparent">
+                    <SelectTrigger size="sm" className="w-full bg-transparent">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
