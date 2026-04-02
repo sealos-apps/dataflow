@@ -1,5 +1,6 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm } from '@/components/ui/ModalForm'
+import { Textarea } from '@/components/ui/Textarea'
 import { useI18n } from '@/i18n/useI18n'
 
 export interface DocumentEditorDialogProps {
@@ -32,8 +33,8 @@ export function DocumentEditorDialog({
         <ModalForm.Provider onSubmit={onSave} meta={{ title, description }}>
           <ModalForm.Header />
           <div className="flex-1 overflow-hidden">
-            <textarea
-              className="w-full h-full min-h-[300px] p-4 font-mono text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-muted/30 resize-none"
+            <Textarea
+              className="h-full min-h-[300px] p-4 font-mono resize-none"
               value={content}
               onChange={(e) => onContentChange(e.target.value)}
               placeholder={placeholder}

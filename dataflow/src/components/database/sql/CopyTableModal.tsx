@@ -3,6 +3,7 @@ import { Copy } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -106,30 +107,20 @@ function CopyTableFields() {
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {t('sql.copyTable.options')}
         </label>
-        <div className="flex flex-col gap-2">
+        <RadioGroup
+          value={copyOption}
+          onValueChange={(v) => setCopyOption(v as typeof copyOption)}
+          disabled={state.isSubmitting}
+        >
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="copyOption"
-              checked={copyOption === 'structure'}
-              onChange={() => setCopyOption('structure')}
-              disabled={state.isSubmitting}
-              className="h-4 w-4"
-            />
+            <RadioGroupItem value="structure" />
             <span className="text-sm">{t('sql.copyTable.structureOnly')}</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="copyOption"
-              checked={copyOption === 'structure_data'}
-              onChange={() => setCopyOption('structure_data')}
-              disabled={state.isSubmitting}
-              className="h-4 w-4"
-            />
+            <RadioGroupItem value="structure_data" />
             <span className="text-sm">{t('sql.copyTable.structureAndData')}</span>
           </label>
-        </div>
+        </RadioGroup>
       </div>
     </div>
   )

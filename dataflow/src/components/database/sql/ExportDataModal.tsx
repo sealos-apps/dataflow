@@ -4,6 +4,7 @@ import { useRawExecuteLazyQuery } from '@/generated/graphql'
 import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from '@/utils/export-utils'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
@@ -194,12 +195,12 @@ function ExportDataFields() {
 
       <div className="space-y-3">
         <label className="text-sm font-medium">{t('sql.export.filterOptional')}</label>
-        <textarea
+        <Textarea
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={t('sql.export.filterPlaceholder')}
           disabled={disabled}
-          className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+          className="h-24 resize-none font-mono"
         />
       </div>
 

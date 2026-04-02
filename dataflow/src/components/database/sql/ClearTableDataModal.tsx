@@ -3,6 +3,7 @@ import { Eraser } from 'lucide-react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -97,21 +98,18 @@ function ClearTableDataModeSelector() {
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         {t('sql.clearTable.mode')}
       </label>
-      <div className="space-y-2">
+      <RadioGroup
+        value={mode}
+        onValueChange={(v) => setMode(v as typeof mode)}
+        disabled={state.isSubmitting}
+      >
         <label
           className={cn(
             'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
             mode === 'truncate' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
           )}
         >
-          <input
-            type="radio"
-            name="clearMode"
-            checked={mode === 'truncate'}
-            onChange={() => setMode('truncate')}
-            disabled={state.isSubmitting}
-            className="mt-0.5"
-          />
+          <RadioGroupItem value="truncate" className="mt-0.5" />
           <div>
             <div className="text-sm font-medium">{t('sql.clearTable.fastTruncate')}</div>
             <div className="text-xs text-muted-foreground">
@@ -125,14 +123,7 @@ function ClearTableDataModeSelector() {
             mode === 'delete' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
           )}
         >
-          <input
-            type="radio"
-            name="clearMode"
-            checked={mode === 'delete'}
-            onChange={() => setMode('delete')}
-            disabled={state.isSubmitting}
-            className="mt-0.5"
-          />
+          <RadioGroupItem value="delete" className="mt-0.5" />
           <div>
             <div className="text-sm font-medium">{t('sql.clearTable.safeDelete')}</div>
             <div className="text-xs text-muted-foreground">
@@ -140,7 +131,7 @@ function ClearTableDataModeSelector() {
             </div>
           </div>
         </label>
-      </div>
+      </RadioGroup>
     </div>
   )
 }
