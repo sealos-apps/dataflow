@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,6 +37,8 @@ type shellCommand struct {
 // shellCommandPattern matches MongoDB shell syntax: db.<collection>.<method>(<args>)
 // The (?s) flag allows '.' to match newlines so multi-line argument blocks are captured.
 var shellCommandPattern = regexp.MustCompile(`(?s)^\s*db\.([a-zA-Z_][\w.]*?)\.(\w+)\s*\((.*)\)\s*;?\s*$`)
+var getCollectionCommandPattern = regexp.MustCompile(`(?s)^\s*db\.getCollection\(\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\s*\)\.(\w+)\s*\((.*)\)\s*;?\s*$`)
+var databaseCommandPattern = regexp.MustCompile(`(?s)^\s*db\.(\w+)\s*\((.*)\)\s*;?\s*$`)
 
 // parseShellCommand parses a MongoDB shell command string such as
 // `db.users.find({ "age": { "$gt": 25 } })` into its components.
@@ -43,14 +46,38 @@ var shellCommandPattern = regexp.MustCompile(`(?s)^\s*db\.([a-zA-Z_][\w.]*?)\.(\
 func parseShellCommand(input string) (*shellCommand, error) {
 	cleaned := stripComments(input)
 	matches := shellCommandPattern.FindStringSubmatch(cleaned)
-	if matches == nil {
-		return nil, fmt.Errorf("not a valid MongoDB shell command: %s", truncate(strings.TrimSpace(input), 80))
+	if matches != nil {
+		return &shellCommand{
+			Collection: matches[1],
+			Method:     matches[2],
+			RawArgs:    strings.TrimSpace(matches[3]),
+		}, nil
 	}
-	return &shellCommand{
-		Collection: matches[1],
-		Method:     matches[2],
-		RawArgs:    strings.TrimSpace(matches[3]),
-	}, nil
+
+	matches = getCollectionCommandPattern.FindStringSubmatch(cleaned)
+	if matches != nil {
+		collection, err := strconv.Unquote(matches[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid getCollection argument: %w", err)
+		}
+
+		return &shellCommand{
+			Collection: collection,
+			Method:     matches[2],
+			RawArgs:    strings.TrimSpace(matches[3]),
+		}, nil
+	}
+
+	matches = databaseCommandPattern.FindStringSubmatch(cleaned)
+	if matches != nil {
+		return &shellCommand{
+			Collection: "",
+			Method:     matches[1],
+			RawArgs:    strings.TrimSpace(matches[2]),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("not a valid MongoDB shell command: %s", truncate(strings.TrimSpace(input), 80))
 }
 
 // stripComments removes single-line (//) and block (/* */) comments from s.

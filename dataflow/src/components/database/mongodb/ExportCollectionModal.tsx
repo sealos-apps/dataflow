@@ -125,6 +125,8 @@ function ExportCollectionBridge({
           schema: graphqlSchema,
           storageUnit: collectionName,
           format: backendFormat,
+          filter: filter.trim() || undefined,
+          limit: typeof limit === 'number' ? limit : undefined,
         }),
       })
 

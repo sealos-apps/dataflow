@@ -1,4 +1,4 @@
-import { splitRedisCommands, splitSQLStatements } from '../sql-split';
+import { splitRedisCommands, splitSQLStatements } from '@/utils/sql-split';
 
 describe('splitRedisCommands', () => {
   it('splits commands by newline', () => {

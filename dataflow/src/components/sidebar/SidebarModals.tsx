@@ -181,6 +181,7 @@ export function SidebarModals({
         <ExportDataModal
           open
           onOpenChange={onOpenChange}
+          connectionId={activeModal.params.connectionId}
           databaseName={activeModal.params.databaseName}
           schema={activeModal.params.schema}
           tableName={activeModal.params.tableName}
@@ -192,6 +193,7 @@ export function SidebarModals({
         <ExportDatabaseModal
           open
           onOpenChange={onOpenChange}
+          connectionId={activeModal.params.connectionId}
           databaseName={activeModal.params.databaseName}
           schema={activeModal.params.schema}
         />

@@ -5,6 +5,20 @@
 
 export type SqlDialect = 'MYSQL' | 'POSTGRES' | 'SQLITE3' | 'CLICKHOUSE';
 
+/** Resolve a frontend/backend connection type to a supported SQL dialect. */
+export function resolveSqlDialect(dbType: string | undefined): SqlDialect {
+  switch (dbType?.toUpperCase()) {
+    case 'MYSQL':
+      return 'MYSQL';
+    case 'CLICKHOUSE':
+      return 'CLICKHOUSE';
+    case 'SQLITE3':
+      return 'SQLITE3';
+    default:
+      return 'POSTGRES';
+  }
+}
+
 /** Quote an identifier for the target database dialect. */
 export function quoteId(name: string, dialect: SqlDialect): string {
   if (dialect === 'MYSQL' || dialect === 'CLICKHOUSE') {
@@ -20,6 +34,11 @@ export function qualifiedTable(dialect: SqlDialect, table: string, schema?: stri
     return `${quoteId(schema, dialect)}.${q}`;
   }
   return q;
+}
+
+/** Build a quoted storage-unit reference directly from a connection type. */
+export function buildStorageUnitReference(dbType: string | undefined, table: string, schema?: string): string {
+  return qualifiedTable(resolveSqlDialect(dbType), table, schema);
 }
 
 // ---------------------------------------------------------------------------
@@ -58,6 +77,9 @@ export function truncateTableSQL(dialect: SqlDialect, table: string, schema?: st
 }
 
 export function deleteAllRowsSQL(dialect: SqlDialect, table: string, schema?: string): string {
+  if (dialect === 'CLICKHOUSE') {
+    return `ALTER TABLE ${qualifiedTable(dialect, table, schema)} DELETE WHERE 1=1`;
+  }
   return `DELETE FROM ${qualifiedTable(dialect, table, schema)}`;
 }
 
@@ -75,6 +97,9 @@ export function copyTableStructureSQL(dialect: SqlDialect, source: string, targe
   if (dialect === 'MYSQL') {
     return `CREATE TABLE ${tgt} LIKE ${src}`;
   }
+  if (dialect === 'POSTGRES') {
+    return `CREATE TABLE ${tgt} (LIKE ${src} INCLUDING ALL)`;
+  }
   return `CREATE TABLE ${tgt} AS SELECT * FROM ${src} WHERE false`;
 }
 
@@ -83,6 +108,9 @@ export function copyTableWithDataSQL(dialect: SqlDialect, source: string, target
   const tgt = qualifiedTable(dialect, target, schema);
   if (dialect === 'MYSQL') {
     return `CREATE TABLE ${tgt} LIKE ${src};\nINSERT INTO ${tgt} SELECT * FROM ${src}`;
+  }
+  if (dialect === 'POSTGRES') {
+    return `CREATE TABLE ${tgt} (LIKE ${src} INCLUDING ALL);\nINSERT INTO ${tgt} SELECT * FROM ${src}`;
   }
   return `CREATE TABLE ${tgt} AS SELECT * FROM ${src}`;
 }

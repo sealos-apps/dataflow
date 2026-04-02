@@ -76,6 +76,22 @@ func TestParseShellCommand_NoArgs(t *testing.T) {
 	}
 }
 
+func TestParseShellCommand_DropDatabase(t *testing.T) {
+	cmd, err := parseShellCommand(`db.dropDatabase()`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cmd.Collection != "" {
+		t.Errorf("expected empty collection, got %q", cmd.Collection)
+	}
+	if cmd.Method != "dropDatabase" {
+		t.Errorf("expected method %q, got %q", "dropDatabase", cmd.Method)
+	}
+	if cmd.RawArgs != "" {
+		t.Errorf("expected empty RawArgs, got %q", cmd.RawArgs)
+	}
+}
+
 func TestParseShellCommand_InvalidFormat(t *testing.T) {
 	_, err := parseShellCommand(`SELECT * FROM users`)
 	if err == nil {

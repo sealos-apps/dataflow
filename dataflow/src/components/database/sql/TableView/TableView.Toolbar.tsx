@@ -7,6 +7,8 @@ import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 import { useTabStore } from '@/stores/useTabStore'
+import { useConnectionStore } from '@/stores/useConnectionStore'
+import { buildStorageUnitReference } from '@/utils/ddl-sql'
 
 interface TableViewToolbarProps {
   connectionId: string
@@ -19,9 +21,11 @@ export function TableViewToolbar({ connectionId, databaseName, tableName, schema
   const { t } = useI18n()
   const { state, actions } = useTableView()
   const openTab = useTabStore((s) => s.openTab)
+  const connections = useConnectionStore((s) => s.connections)
 
   const handleOpenQuery = () => {
-    const qualifiedName = schema ? `${schema}.${tableName}` : tableName
+    const connectionType = connections.find((connection) => connection.id === connectionId)?.type
+    const qualifiedName = buildStorageUnitReference(connectionType, tableName, schema)
     openTab({
       type: 'query',
       title: t('sidebar.tab.queryWithDatabase', { database: databaseName }),

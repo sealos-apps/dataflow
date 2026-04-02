@@ -1,13 +1,17 @@
 import { useCallback, useState } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import {
-  useAddRowMutation,
   useDeleteRowMutation,
+  useRawExecuteLazyQuery,
   useUpdateStorageUnitMutation,
 } from '@graphql'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { useI18n } from '@/i18n/useI18n'
 import type { Alert } from '@/components/database/shared/types'
+import {
+  buildMongoInsertOneCommand,
+  parseMongoDocumentInput,
+} from '@/utils/mongodb-shell'
 
 interface UseDocumentEditingParams {
   connectionId: string
@@ -58,8 +62,8 @@ export function useDocumentEditing({
   const { connections } = useConnectionStore()
 
   // ---- GraphQL mutations ----
-  const [addRowMutation] = useAddRowMutation()
   const [deleteRowMutation] = useDeleteRowMutation()
+  const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
   const [updateStorageUnitMutation] = useUpdateStorageUnitMutation()
 
   // ---- Document editing state ----
@@ -87,43 +91,29 @@ export function useDocumentEditing({
 
   const handleAddSave = useCallback(async () => {
     try {
-      const newDoc = JSON.parse(addContent)
-
-      const conn = connections.find(c => c.id === connectionId)
-      if (!conn) return
-
-      const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
-      const values = Object.entries(newDoc).map(([key, value]) => ({
-        Key: key,
-        Value: typeof value === 'object' && value !== null
-          ? JSON.stringify(value)
-          : String(value ?? ''),
-      }))
-
-      if (values.length === 0) {
+      const newDoc = parseMongoDocumentInput(addContent)
+      if (Object.keys(newDoc).length === 0) {
         showAlert(t('common.alert.error'), t('mongodb.error.emptyDocument'), 'error')
         return
       }
 
-      const { data: result, errors } = await addRowMutation({
+      const { data, error } = await rawExecute({
         variables: {
-          schema: graphqlSchema,
-          storageUnit: collectionName,
-          values,
+          query: buildMongoInsertOneCommand(collectionName, newDoc),
         },
         context: { database: databaseName },
       })
 
-      if (errors?.length) {
+      if (error) {
         showAlert(
           t('common.alert.error'),
-          t('mongodb.alert.addFailedWithError', { error: errors[0].message }),
+          t('mongodb.alert.addFailedWithError', { error: error.message }),
           'error',
         )
         return
       }
 
-      if (result?.AddRow.Status) {
+      if (data?.RawExecute) {
         showAlert(t('common.alert.success'), t('mongodb.alert.addSuccess'), 'success')
         setShowAddModal(false)
         refresh()
@@ -133,7 +123,7 @@ export function useDocumentEditing({
     } catch (e: any) {
       showAlert(t('common.alert.error'), t('mongodb.alert.invalidJsonAdd', { error: e.message }), 'error')
     }
-  }, [addContent, connections, connectionId, databaseName, collectionName, addRowMutation, showAlert, refresh, t])
+  }, [addContent, databaseName, collectionName, rawExecute, showAlert, refresh, t])
 
   // ---- Edit handlers ----
   const handleEditClick = useCallback((doc: any) => {

@@ -31,6 +31,10 @@ import {
   dropTableSQL, truncateTableSQL, deleteAllRowsSQL,
   renameTableSQL, copyTableStructureSQL, copyTableWithDataSQL,
 } from '@/utils/ddl-sql';
+import {
+  buildMongoCollectionCommand,
+  buildMongoDropDatabaseCommand,
+} from '@/utils/mongodb-shell';
 
 export interface Connection {
   id: string;
@@ -219,11 +223,17 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   createDatabase: async (databaseName) => {
+    if (getAuth()?.Type === 'MongoDB') {
+      return { success: false, message: 'MongoDB database creation requires creating the first collection' };
+    }
     const sql = createDatabaseSQL(getDialect(), databaseName);
     return executeDDL(sql);
   },
 
   renameDatabase: async (oldName, newName) => {
+    if (getAuth()?.Type === 'MongoDB') {
+      return { success: false, message: 'Rename database is not supported for MongoDB' };
+    }
     const sql = renameDatabaseSQL(getDialect(), oldName, newName);
     if (!sql) {
       return { success: false, message: 'Rename database is not supported for this database type' };
@@ -232,6 +242,26 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   deleteDatabase: async (databaseName) => {
+    if (getAuth()?.Type === 'MongoDB') {
+      try {
+        const { data, errors } = await graphqlClient.query<
+          RawExecuteQuery,
+          RawExecuteQueryVariables
+        >({
+          query: RawExecuteDocument,
+          variables: { query: buildMongoDropDatabaseCommand() },
+          fetchPolicy: 'no-cache',
+          context: { database: databaseName },
+        });
+        if (errors?.length) {
+          return { success: false, message: errors[0].message };
+        }
+        const acknowledged = data?.RawExecute?.Rows?.[0]?.[0];
+        return { success: acknowledged === 'true' };
+      } catch (err: any) {
+        return { success: false, message: err.message ?? 'Unknown error' };
+      }
+    }
     const sql = dropDatabaseSQL(getDialect(), databaseName);
     return executeDDL(sql);
   },
@@ -286,7 +316,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
     return { success: true };
   },
 
-  /** Drop a MongoDB collection via RawExecute. The database is determined by the active session. */
+  /** Drop a MongoDB collection via RawExecute in the selected database context. */
   dropCollection: async (databaseName, collectionName) => {
     try {
       const { data, errors } = await graphqlClient.query<
@@ -294,8 +324,9 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
         RawExecuteQueryVariables
       >({
         query: RawExecuteDocument,
-        variables: { query: `db.${collectionName}.drop()` },
+        variables: { query: buildMongoCollectionCommand(collectionName, 'drop') },
         fetchPolicy: 'no-cache',
+        context: { database: databaseName },
       });
       if (errors?.length) {
         return { success: false, message: errors[0].message };

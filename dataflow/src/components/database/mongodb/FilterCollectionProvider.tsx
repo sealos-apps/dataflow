@@ -123,19 +123,6 @@ function findFirstUnusedField(fields: string[], conditions: FilterConditionDraft
   return null
 }
 
-function getDuplicateFields(conditions: FilterConditionDraft[]): string[] {
-  const counts = new Map<string, number>()
-  for (const condition of conditions) {
-    const field = getNormalizedField(condition.field)
-    if (!field) continue
-    counts.set(field, (counts.get(field) ?? 0) + 1)
-  }
-
-  return Array.from(counts.entries())
-    .filter(([, count]) => count > 1)
-    .map(([field]) => field)
-}
-
 function parseInitialFilter(initialFilter: FlatMongoFilter | undefined): ParsedFilterResult {
   if (!initialFilter || Object.keys(initialFilter).length === 0) {
     return { conditions: [], hasUnsupported: false }
@@ -256,8 +243,16 @@ function buildFlatFilter(conditions: FilterConditionDraft[]): FlatMongoFilter {
     const operatorValue =
       condition.operator === '$in' ? parseInDraftValue(condition.value) : parseDraftToken(condition.value)
 
-    filter[field] = {
-      [condition.operator]: operatorValue,
+    const existing = filter[field]
+    if (typeof existing === 'object' && existing !== null && !Array.isArray(existing)) {
+      filter[field] = {
+        ...(existing as Record<string, unknown>),
+        [condition.operator]: operatorValue,
+      }
+    } else {
+      filter[field] = {
+        [condition.operator]: operatorValue,
+      }
     }
   }
 
@@ -355,7 +350,7 @@ export function FilterCollectionProvider({
   }, [open, initialFilter, fields, pushAlert, t])
 
   const addCondition = useCallback(() => {
-    const nextField = findFirstUnusedField(fields, conditions)
+    const nextField = findFirstUnusedField(fields, conditions) ?? fields[0] ?? null
     if (!nextField) {
       pushAlert({
         type: 'info',
@@ -373,30 +368,8 @@ export function FilterCollectionProvider({
   }, [])
 
   const updateCondition = useCallback((id: string, updates: Partial<FilterConditionDraft>) => {
-    setConditions((prev) => {
-      const target = prev.find((condition) => condition.id === id)
-      if (!target) return prev
-
-      const requestedField =
-        typeof updates.field === 'string' ? getNormalizedField(updates.field) : getNormalizedField(target.field)
-      if (requestedField) {
-        const isTakenByAnother = prev.some(
-          (condition) =>
-            condition.id !== id && getNormalizedField(condition.field) === requestedField,
-        )
-        if (isTakenByAnother) {
-          pushAlert({
-            type: 'error',
-            title: t('mongodb.alert.duplicateFieldTitle'),
-            message: t('mongodb.alert.duplicateFieldMessage', { field: requestedField }),
-          })
-          return prev
-        }
-      }
-
-      return prev.map((condition) => (condition.id === id ? { ...condition, ...updates } : condition))
-    })
-  }, [pushAlert, t])
+    setConditions((prev) => prev.map((condition) => (condition.id === id ? { ...condition, ...updates } : condition)))
+  }, [])
 
   const clearConditions = useCallback(() => {
     setConditions([])
@@ -408,14 +381,9 @@ export function FilterCollectionProvider({
   }, [onApply, onOpenChange])
 
   const handleSubmit = useCallback(async () => {
-    const duplicates = getDuplicateFields(conditions)
-    if (duplicates.length > 0) {
-      throw new Error(t('mongodb.error.uniqueFieldsOnly'))
-    }
-
     onApply(buildFlatFilter(conditions))
     onOpenChange(false)
-  }, [conditions, onApply, onOpenChange, t])
+  }, [conditions, onApply, onOpenChange])
 
   return (
     <FilterCollectionCtx

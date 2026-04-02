@@ -1,6 +1,6 @@
 import { createContext, use, useCallback, useState, type ReactNode } from 'react'
 import { Database, FileJson, FileSpreadsheet, FileCode, FileText } from 'lucide-react'
-import { useRawExecuteLazyQuery, useGetStorageUnitsLazyQuery } from '@/generated/graphql'
+import { useRawExecuteLazyQuery } from '@/generated/graphql'
 import { toCSV, toJSON, toSQL, toExcel, downloadBlob } from '@/utils/export-utils'
 import JSZip from 'jszip'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -8,6 +8,13 @@ import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
 import { useI18n } from '@/i18n/useI18n'
+import { useConnectionStore } from '@/stores/useConnectionStore'
+import { buildStorageUnitReference } from '@/utils/ddl-sql'
+import {
+  buildDatabaseExportPlan,
+  formatDatabaseExportEntryName,
+  formatDatabaseExportTargetName,
+} from '@/utils/database-export'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -56,10 +63,12 @@ function useExportDatabaseCtx(): ExportDatabaseCtxValue {
 
 /** Wraps ModalForm.Provider (complex mode, no onSubmit) and domain context for database ZIP export. */
 function ExportDatabaseProvider({
+  connectionId,
   databaseName,
   schema,
   children,
 }: {
+  connectionId: string
   databaseName: string
   schema: string
   children: ReactNode
@@ -69,7 +78,7 @@ function ExportDatabaseProvider({
     <ModalForm.Provider
       meta={{ title: t('database.export.title'), description: databaseName, icon: Database }}
     >
-      <ExportDatabaseBridge databaseName={databaseName} schema={schema}>
+      <ExportDatabaseBridge connectionId={connectionId} databaseName={databaseName} schema={schema}>
         {children}
       </ExportDatabaseBridge>
     </ModalForm.Provider>
@@ -82,10 +91,12 @@ function ExportDatabaseProvider({
  * bundles into ZIP via JSZip, triggers download. Partial failures surface as an info alert.
  */
 function ExportDatabaseBridge({
+  connectionId,
   databaseName,
   schema,
   children,
 }: {
+  connectionId: string
   databaseName: string
   schema: string
   children: ReactNode
@@ -95,8 +106,12 @@ function ExportDatabaseBridge({
   const [isSuccess, setIsSuccess] = useState(false)
   const [statusText, setStatusText] = useState('')
   const { actions } = useModalForm()
-  const [fetchTables] = useGetStorageUnitsLazyQuery({ fetchPolicy: 'no-cache' })
   const [executeQuery] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
+  const connections = useConnectionStore((s) => s.connections)
+  const fetchSchemas = useConnectionStore((s) => s.fetchSchemas)
+  const fetchTables = useConnectionStore((s) => s.fetchTables)
+  const systemSchemas = useConnectionStore((s) => s.systemSchemas)
+  const showSystemObjectsFor = useConnectionStore((s) => s.showSystemObjectsFor)
 
   const handleExport = useCallback(async () => {
     actions.setSubmitting(true)
@@ -105,32 +120,50 @@ function ExportDatabaseBridge({
     setStatusText(t('database.export.fetchingTableList'))
 
     try {
-      const { data: tablesData, error: tablesError } = await fetchTables({
-        variables: { schema },
-        context: { database: databaseName },
+      const connectionType = connections.find((connection) => connection.id === connectionId)?.type
+      const databaseNodeId = `${connectionId}-${databaseName}`
+      const allSchemas = connectionType === 'POSTGRES'
+        ? await fetchSchemas(connectionId, databaseName)
+        : []
+      const schemasToExport = buildDatabaseExportPlan({
+        connectionType,
+        fallbackSchema: schema,
+        allSchemas,
+        systemSchemas,
+        includeSystemSchemas: showSystemObjectsFor.has(databaseNodeId),
       })
+      const exportTargets: Array<{ schema: string; tableName: string }> = []
 
-      if (tablesError) throw new Error(tablesError.message)
-      const tables = tablesData?.StorageUnit ?? []
-      if (tables.length === 0) throw new Error(t('database.export.noTablesFound'))
+      for (const schemaName of schemasToExport) {
+        const tables = await fetchTables(connectionId, databaseName, schemaName)
+        for (const table of tables) {
+          exportTargets.push({ schema: schemaName, tableName: table.name })
+        }
+      }
+
+      if (exportTargets.length === 0) throw new Error(t('database.export.noTablesFound'))
 
       const zip = new JSZip()
       const failedTables: string[] = []
 
-      for (let i = 0; i < tables.length; i++) {
-        const table = tables[i]
-        const tableName = table.Name
-        setStatusText(t('database.export.exportingTable', { current: i + 1, total: tables.length, tableName }))
+      for (let i = 0; i < exportTargets.length; i++) {
+        const target = exportTargets[i]
+        const targetLabel = formatDatabaseExportTargetName(connectionType, target.schema, target.tableName)
+        setStatusText(t('database.export.exportingTable', {
+          current: i + 1,
+          total: exportTargets.length,
+          tableName: targetLabel,
+        }))
 
         try {
-          const qualifiedName = schema ? `${schema}.${tableName}` : tableName
+          const qualifiedName = buildStorageUnitReference(connectionType, target.tableName, target.schema)
           const { data, error } = await executeQuery({
             variables: { query: `SELECT * FROM ${qualifiedName}` },
             context: { database: databaseName },
           })
 
           if (error || !data?.RawExecute) {
-            failedTables.push(tableName)
+            failedTables.push(targetLabel)
             continue
           }
 
@@ -141,12 +174,12 @@ function ExportDatabaseBridge({
             case 'csv': blob = toCSV(Columns, Rows); break
             case 'json': blob = toJSON(Columns, Rows); break
             case 'sql': blob = toSQL(qualifiedName, Columns, Rows); break
-            case 'excel': blob = toExcel(tableName, Columns, Rows); break
+            case 'excel': blob = toExcel(target.tableName, Columns, Rows); break
           }
 
-          zip.file(`${tableName}.${FORMAT_EXTENSIONS[format]}`, blob)
+          zip.file(formatDatabaseExportEntryName(connectionType, target.schema, target.tableName, format), blob)
         } catch {
-          failedTables.push(tableName)
+          failedTables.push(targetLabel)
         }
       }
 
@@ -162,8 +195,8 @@ function ExportDatabaseBridge({
           type: 'info',
           title: t('database.export.partialExportTitle'),
           message: t('database.export.partialExportMessage', {
-            successful: tables.length - failedTables.length,
-            total: tables.length,
+            successful: exportTargets.length - failedTables.length,
+            total: exportTargets.length,
             failedTables: failedTables.join(', '),
           }),
         })
@@ -177,7 +210,20 @@ function ExportDatabaseBridge({
     } finally {
       actions.setSubmitting(false)
     }
-  }, [actions, databaseName, executeQuery, fetchTables, format, schema, t])
+  }, [
+    actions,
+    connectionId,
+    connections,
+    databaseName,
+    executeQuery,
+    fetchSchemas,
+    fetchTables,
+    format,
+    schema,
+    showSystemObjectsFor,
+    systemSchemas,
+    t,
+  ])
 
   return (
     <ExportDatabaseCtx value={{ format, setFormat, isSuccess, statusText, handleExport }}>
@@ -217,6 +263,7 @@ function ExportDatabaseFooterBridge() {
 interface ExportDatabaseModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  connectionId: string
   databaseName: string
   schema: string
 }
@@ -225,13 +272,14 @@ interface ExportDatabaseModalProps {
 export function ExportDatabaseModal({
   open,
   onOpenChange,
+  connectionId,
   databaseName,
   schema,
 }: ExportDatabaseModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
-        <ExportDatabaseProvider databaseName={databaseName} schema={schema}>
+        <ExportDatabaseProvider connectionId={connectionId} databaseName={databaseName} schema={schema}>
           <ModalForm.Header />
           <ExportDatabaseFields />
           <ModalForm.Alert />

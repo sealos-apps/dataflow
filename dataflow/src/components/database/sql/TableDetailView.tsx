@@ -91,6 +91,7 @@ function TableDetailViewContent({ connectionId, databaseName, tableName, schema 
         <ExportDataModal
           open={state.showExportModal}
           onOpenChange={(open) => { if (!open) actions.setShowExportModal(false) }}
+          connectionId={connectionId}
           databaseName={databaseName}
           schema={schema}
           tableName={tableName}

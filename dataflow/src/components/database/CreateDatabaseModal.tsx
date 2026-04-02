@@ -5,6 +5,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { useI18n } from '@/i18n/useI18n'
+import { resolveSchemaParam } from '@/utils/database-features'
 
 // ---------------------------------------------------------------------------
 // Context
@@ -13,6 +14,9 @@ import { useI18n } from '@/i18n/useI18n'
 interface CreateDatabaseCtxValue {
   dbName: string
   setDbName: (v: string) => void
+  initialCollectionName: string
+  setInitialCollectionName: (v: string) => void
+  isMongoConnection: boolean
 }
 
 const CreateDatabaseCtx = createContext<CreateDatabaseCtxValue | null>(null)
@@ -38,21 +42,53 @@ function CreateDatabaseProvider({
   children: ReactNode
 }) {
   const { t } = useI18n()
-  const { createDatabase } = useConnectionStore()
+  const { connections, createDatabase, createTable } = useConnectionStore()
   const [dbName, setDbName] = useState('')
+  const [initialCollectionName, setInitialCollectionName] = useState('')
+  const connection = connections.find((item) => item.id === connectionId)
+  const isMongoConnection = connection?.type === 'MONGODB'
 
   const handleSubmit = useCallback(async () => {
     if (!dbName) return
+    if (isMongoConnection) {
+      if (!initialCollectionName) return
+      const schemaParam = resolveSchemaParam(connection?.type, dbName)
+      const result = await createTable(dbName, schemaParam, initialCollectionName, [])
+      if (result.success) {
+        onSuccess?.()
+      } else {
+        throw new Error(result.message ?? t('common.unknownError'))
+      }
+      return
+    }
+
     const result = await createDatabase(dbName)
     if (result.success) {
       onSuccess?.()
     } else {
       throw new Error(result.message ?? t('common.unknownError'))
     }
-  }, [dbName, createDatabase, onSuccess, t])
+  }, [
+    connection?.type,
+    createDatabase,
+    createTable,
+    dbName,
+    initialCollectionName,
+    isMongoConnection,
+    onSuccess,
+    t,
+  ])
 
   return (
-    <CreateDatabaseCtx value={{ dbName, setDbName }}>
+    <CreateDatabaseCtx
+      value={{
+        dbName,
+        setDbName,
+        initialCollectionName,
+        setInitialCollectionName,
+        isMongoConnection,
+      }}
+    >
       <ModalForm.Provider
         onSubmit={handleSubmit}
         meta={{ title: t('database.create.title'), icon: Database }}
@@ -70,20 +106,42 @@ function CreateDatabaseProvider({
 /** Input field for the new database name. */
 function CreateDatabaseFields() {
   const { t } = useI18n()
-  const { dbName, setDbName } = useCreateDatabaseCtx()
+  const {
+    dbName,
+    setDbName,
+    initialCollectionName,
+    setInitialCollectionName,
+    isMongoConnection,
+  } = useCreateDatabaseCtx()
   const { state } = useModalForm()
 
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {t('database.name')}
-      </label>
-      <Input
-        value={dbName}
-        onChange={(e) => setDbName(e.target.value)}
-        placeholder={t('database.namePlaceholder')}
-        disabled={state.isSubmitting}
-      />
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {t('database.name')}
+        </label>
+        <Input
+          value={dbName}
+          onChange={(e) => setDbName(e.target.value)}
+          placeholder={t('database.namePlaceholder')}
+          disabled={state.isSubmitting}
+        />
+      </div>
+
+      {isMongoConnection && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {t('mongodb.collection.name')}
+          </label>
+          <Input
+            value={initialCollectionName}
+            onChange={(e) => setInitialCollectionName(e.target.value)}
+            placeholder={t('mongodb.collection.namePlaceholder')}
+            disabled={state.isSubmitting}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -91,8 +149,9 @@ function CreateDatabaseFields() {
 /** Submit button disabled when database name is empty. */
 function CreateSubmitButton() {
   const { t } = useI18n()
-  const { dbName } = useCreateDatabaseCtx()
-  return <ModalForm.SubmitButton label={t('database.create.submit')} disabled={!dbName} />
+  const { dbName, initialCollectionName, isMongoConnection } = useCreateDatabaseCtx()
+  const isDisabled = !dbName || (isMongoConnection && !initialCollectionName)
+  return <ModalForm.SubmitButton label={t('database.create.submit')} disabled={isDisabled} />
 }
 
 // ---------------------------------------------------------------------------

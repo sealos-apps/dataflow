@@ -52,6 +52,20 @@ func (p *MongoDBPlugin) RawExecute(config *engine.PluginConfig, query string, _ 
 	defer disconnectClient(client)
 
 	db := client.Database(config.Credentials.Database)
+	if cmd.Collection == "" {
+		switch cmd.Method {
+		case "dropDatabase":
+			if err := db.Drop(ctx); err != nil {
+				return nil, err
+			}
+			return mutationResult(map[string]string{
+				"acknowledged": "true",
+				"database":     config.Credentials.Database,
+			}), nil
+		default:
+			return nil, fmt.Errorf("unsupported database method %q; supported methods: dropDatabase", cmd.Method)
+		}
+	}
 	coll := db.Collection(cmd.Collection)
 
 	switch cmd.Method {

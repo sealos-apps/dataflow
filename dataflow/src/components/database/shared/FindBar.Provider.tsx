@@ -47,14 +47,34 @@ interface FindBarProviderProps {
   rows: Record<string, unknown>[] | undefined
   /** Column keys to search. */
   columns: string[] | undefined
+  /** Optional controlled search term. */
+  searchTerm?: string
+  /** Optional controlled setter for integrating external search state. */
+  onSearchTermChange?: (term: string) => void
   children: ReactNode
 }
 
 /** Provider that manages find-in-page state. Wrap around both the FindBar UI and the data grid. */
-export function FindBarProvider({ rows, columns, children }: FindBarProviderProps) {
-  const [searchTerm, setSearchTerm] = useState('')
+export function FindBarProvider({
+  rows,
+  columns,
+  searchTerm: controlledSearchTerm,
+  onSearchTermChange,
+  children,
+}: FindBarProviderProps) {
+  const [internalSearchTerm, setInternalSearchTerm] = useState('')
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const searchTerm = controlledSearchTerm ?? internalSearchTerm
+
+  const setSearchTerm = useCallback((term: string) => {
+    if (onSearchTermChange) {
+      onSearchTermChange(term)
+      return
+    }
+
+    setInternalSearchTerm(term)
+  }, [onSearchTermChange])
 
   const matches = useMemo<FindMatch[]>(() => {
     if (!searchTerm.trim() || !rows || !columns) return []

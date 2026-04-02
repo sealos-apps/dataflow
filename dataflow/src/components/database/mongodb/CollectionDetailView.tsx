@@ -55,7 +55,12 @@ function CollectionDetailViewContent({ databaseName, collectionName, connectionI
     <div className="flex flex-col h-full bg-background">
       <CollectionViewToolbar connectionId={connectionId} databaseName={databaseName} collectionName={collectionName} />
 
-      <FindBar.Provider rows={state.documents} columns={docColumns}>
+      <FindBar.Provider
+        rows={state.documents}
+        columns={docColumns}
+        searchTerm={state.searchTerm}
+        onSearchTermChange={actions.setSearchTerm}
+      >
         <FindBar.Bar />
         <div className="flex-1 overflow-auto p-4 space-y-4">
           <CollectionViewDocumentList />

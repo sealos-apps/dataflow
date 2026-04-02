@@ -18,6 +18,40 @@ interface SystemObjectsState {
   showSystemObjects: boolean;
 }
 
+const CONNECTION_TYPES_WITH_DATABASE_CREATE: ReadonlySet<ConnectionType> = new Set([
+  "MYSQL",
+  "MONGODB",
+  "POSTGRES",
+  "CLICKHOUSE",
+]);
+
+const CONNECTION_TYPES_WITH_DATABASE_RENAME: ReadonlySet<ConnectionType> = new Set([
+  "POSTGRES",
+]);
+
+const CONNECTION_TYPES_WITH_DATABASE_DELETE: ReadonlySet<ConnectionType> = new Set([
+  "MYSQL",
+  "MONGODB",
+  "POSTGRES",
+  "CLICKHOUSE",
+]);
+
+const CONNECTION_TYPES_WITH_DATABASE_EXPORT: ReadonlySet<ConnectionType> = new Set([
+  "MYSQL",
+  "POSTGRES",
+  "CLICKHOUSE",
+]);
+
+const CONNECTION_TYPES_WITH_TABLE_COPY: ReadonlySet<ConnectionType> = new Set([
+  "MYSQL",
+  "POSTGRES",
+]);
+
+const CONNECTION_TYPES_WITH_TABLE_RENAME: ReadonlySet<ConnectionType> = new Set([
+  "MYSQL",
+  "POSTGRES",
+]);
+
 function refreshItem(
   onAction: (action: string) => void,
   t: (key: MessageKey) => string
@@ -35,6 +69,7 @@ export function getConnectionMenuItems(
   systemObjectsState?: SystemObjectsState
 ): ContextMenuItem[] {
   const { onAction, t } = callbacks;
+  const canCreateDatabase = CONNECTION_TYPES_WITH_DATABASE_CREATE.has(connectionType);
   // Connection-level toggle only applies to types where systemSchemas are
   // database names (MongoDB, MySQL, ClickHouse). For Postgres, systemSchemas
   // are schema names — the toggle belongs at the database level instead.
@@ -55,7 +90,7 @@ export function getConnectionMenuItems(
     : [];
   return [
     { label: t("sidebar.menu.newQuery"), onClick: () => onAction("new_query"), icon: React.createElement(Terminal, { className: "h-4 w-4" }) },
-    ...(connectionType !== "REDIS"
+    ...(canCreateDatabase
       ? [
           { separator: true },
           { label: t("sidebar.menu.newDatabase"), onClick: () => onAction("new_database"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
@@ -73,6 +108,9 @@ export function getDatabaseMenuItems(
   systemObjectsState?: SystemObjectsState
 ): ContextMenuItem[] {
   const { onAction, t } = callbacks;
+  const canRenameDatabase = CONNECTION_TYPES_WITH_DATABASE_RENAME.has(connectionType);
+  const canDeleteDatabase = CONNECTION_TYPES_WITH_DATABASE_DELETE.has(connectionType);
+  const canExportDatabase = CONNECTION_TYPES_WITH_DATABASE_EXPORT.has(connectionType);
   // Database-level toggle only applies to Postgres where systemSchemas are
   // schema names filtered within a database. For other types, collections/tables
   // have no frontend-level system object filtering.
@@ -91,28 +129,38 @@ export function getDatabaseMenuItems(
         },
       ]
     : [];
-  return [
-    { label: t("sidebar.menu.newQuery"), onClick: () => onAction("new_query"), icon: React.createElement(Terminal, { className: "h-4 w-4" }) },
-    ...(connectionType === "MONGODB"
-      ? [
-          { separator: true },
-          { label: t("sidebar.menu.newCollection"), onClick: () => onAction("new_collection"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
-        ] as ContextMenuItem[]
-      : connectionType !== "REDIS"
-      ? [
-          { separator: true },
-          { label: t("sidebar.menu.newTable"), onClick: () => onAction("new_table"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
-        ] as ContextMenuItem[]
-      : []),
-    { separator: true },
-    ...(connectionType !== "MONGODB" && connectionType !== "REDIS"
+  const creationItems: ContextMenuItem[] = connectionType === "MONGODB"
+    ? [
+        { label: t("sidebar.menu.newCollection"), onClick: () => onAction("new_collection"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
+      ]
+    : connectionType !== "REDIS"
+    ? [
+        { label: t("sidebar.menu.newTable"), onClick: () => onAction("new_table"), icon: React.createElement(Plus, { className: "h-4 w-4" }) },
+      ]
+    : [];
+
+  const managementItems: ContextMenuItem[] = [
+    ...(canExportDatabase
       ? [
           { label: t("sidebar.menu.exportDatabase"), onClick: () => onAction("export_database"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
         ] as ContextMenuItem[]
       : []),
-    { label: t("sidebar.menu.renameDatabase"), onClick: () => onAction("edit_database"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) },
-    { separator: true },
-    { label: t("sidebar.menu.deleteDatabase"), onClick: () => onAction("delete_database"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },
+    ...(canRenameDatabase
+      ? [{ label: t("sidebar.menu.renameDatabase"), onClick: () => onAction("edit_database"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) }] as ContextMenuItem[]
+      : []),
+  ];
+
+  const destructiveItems: ContextMenuItem[] = canDeleteDatabase
+    ? [
+        { label: t("sidebar.menu.deleteDatabase"), onClick: () => onAction("delete_database"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },
+      ]
+    : [];
+
+  return [
+    { label: t("sidebar.menu.newQuery"), onClick: () => onAction("new_query"), icon: React.createElement(Terminal, { className: "h-4 w-4" }) },
+    ...(creationItems.length > 0 ? [{ separator: true }, ...creationItems] as ContextMenuItem[] : []),
+    ...(managementItems.length > 0 ? [{ separator: true }, ...managementItems] as ContextMenuItem[] : []),
+    ...(destructiveItems.length > 0 ? [{ separator: true }, ...destructiveItems] as ContextMenuItem[] : []),
     { separator: true },
     refreshItem(onAction, t),
     ...systemItems,
@@ -148,14 +196,20 @@ export function getViewFolderMenuItems(callbacks: MenuCallbacks): ContextMenuIte
 
 export function getTableMenuItems(connectionType: ConnectionType, callbacks: MenuCallbacks): ContextMenuItem[] {
   const { onAction, t } = callbacks;
+  const canCopyTable = CONNECTION_TYPES_WITH_TABLE_COPY.has(connectionType);
+  const canRenameTable = CONNECTION_TYPES_WITH_TABLE_RENAME.has(connectionType);
   return [
     { label: t("sidebar.menu.exportData"), onClick: () => onAction("export_data"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
-    { label: t("sidebar.menu.duplicateTable"), onClick: () => onAction("copy_table"), icon: React.createElement(Copy, { className: "h-4 w-4" }) },
+    ...(canCopyTable
+      ? [{ label: t("sidebar.menu.duplicateTable"), onClick: () => onAction("copy_table"), icon: React.createElement(Copy, { className: "h-4 w-4" }) }] as ContextMenuItem[]
+      : []),
     { separator: true },
     ...(connectionType === "CLICKHOUSE"
       ? []
       : [{ label: t("sidebar.menu.designTable"), onClick: () => onAction("edit_table"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) }] as ContextMenuItem[]),
-    { label: t("sidebar.menu.renameTable"), onClick: () => onAction("rename_table"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) },
+    ...(canRenameTable
+      ? [{ label: t("sidebar.menu.renameTable"), onClick: () => onAction("rename_table"), icon: React.createElement(Edit2, { className: "h-4 w-4" }) }] as ContextMenuItem[]
+      : []),
     { separator: true },
     { label: t("sidebar.menu.clearData"), onClick: () => onAction("clear_table_data"), icon: React.createElement(Eraser, { className: "h-4 w-4" }) },
     { label: t("sidebar.menu.deleteTable"), onClick: () => onAction("delete_table"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },

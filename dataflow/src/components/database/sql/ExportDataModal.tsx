@@ -8,6 +8,8 @@ import { ModalForm, useModalForm } from '@/components/ui/ModalForm'
 import { FormatSelector, type FormatOption } from '@/components/database/shared/FormatSelector'
 import { ExportProgress, ExportFooter } from '@/components/database/shared/ExportProgress'
 import { useI18n } from '@/i18n/useI18n'
+import { useConnectionStore } from '@/stores/useConnectionStore'
+import { buildStorageUnitReference } from '@/utils/ddl-sql'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -59,11 +61,13 @@ function useExportDataCtx(): ExportDataCtxValue {
 
 /** Wraps ModalForm.Provider (complex mode, no onSubmit) and domain context for SQL table export. */
 function ExportDataProvider({
+  connectionId,
   databaseName,
   schema,
   tableName,
   children,
 }: {
+  connectionId: string
   databaseName: string
   schema?: string | null
   tableName: string
@@ -79,7 +83,7 @@ function ExportDataProvider({
         icon: Table2,
       }}
     >
-      <ExportDataBridge databaseName={databaseName} schema={schema} tableName={tableName}>
+      <ExportDataBridge connectionId={connectionId} databaseName={databaseName} schema={schema} tableName={tableName}>
         {children}
       </ExportDataBridge>
     </ModalForm.Provider>
@@ -88,11 +92,13 @@ function ExportDataProvider({
 
 /** Inner bridge that owns domain state and export logic, accessing ModalForm actions via useModalForm(). */
 function ExportDataBridge({
+  connectionId,
   databaseName,
   schema,
   tableName,
   children,
 }: {
+  connectionId: string
   databaseName: string
   schema?: string | null
   tableName: string
@@ -105,6 +111,7 @@ function ExportDataBridge({
   const [isSuccess, setIsSuccess] = useState(false)
   const { actions } = useModalForm()
   const [executeQuery] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
+  const connections = useConnectionStore((s) => s.connections)
 
   const handleExport = useCallback(async () => {
     actions.setSubmitting(true)
@@ -112,7 +119,8 @@ function ExportDataBridge({
     setIsSuccess(false)
 
     try {
-      const qualifiedName = schema ? `${schema}.${tableName}` : tableName
+      const connectionType = connections.find((connection) => connection.id === connectionId)?.type
+      const qualifiedName = buildStorageUnitReference(connectionType, tableName, schema ?? undefined)
       let query = `SELECT * FROM ${qualifiedName}`
       if (filter.trim()) query += ` WHERE ${filter.trim()}`
       if (rowCount !== '') query += ` LIMIT ${rowCount}`
@@ -146,7 +154,7 @@ function ExportDataBridge({
     } finally {
       actions.setSubmitting(false)
     }
-  }, [actions, databaseName, executeQuery, filter, format, rowCount, schema, t, tableName])
+  }, [actions, connectionId, connections, databaseName, executeQuery, filter, format, rowCount, schema, t, tableName])
 
   return (
     <ExportDataCtx value={{ format, setFormat, rowCount, setRowCount, filter, setFilter, isSuccess, handleExport }}>
@@ -213,6 +221,7 @@ function ExportDataFooterBridge() {
 interface ExportDataModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  connectionId: string
   databaseName: string
   schema?: string | null
   tableName: string
@@ -222,6 +231,7 @@ interface ExportDataModalProps {
 export function ExportDataModal({
   open,
   onOpenChange,
+  connectionId,
   databaseName,
   schema,
   tableName,
@@ -229,7 +239,7 @@ export function ExportDataModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
-        <ExportDataProvider databaseName={databaseName} schema={schema} tableName={tableName}>
+        <ExportDataProvider connectionId={connectionId} databaseName={databaseName} schema={schema} tableName={tableName}>
           <ModalForm.Header />
           <ExportDataFields />
           <ModalForm.Alert />
