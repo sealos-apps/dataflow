@@ -27,6 +27,7 @@ export function DashboardEditor() {
 
     const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' });
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const dashboard = dashboards.find(d => d.id === activeDashboardId);
 
@@ -66,6 +67,7 @@ export function DashboardEditor() {
             }));
         } finally {
             setIsRefreshing(false);
+            setRefreshKey(k => k + 1);
         }
     }, [dashboard, rawExecute, updateComponent]);
 
@@ -142,6 +144,7 @@ export function DashboardEditor() {
             <div className="flex-1 overflow-auto">
                 {dashboard.components.length > 0 ? (
                     <EditorCanvas
+                        key={refreshKey}
                         dashboard={dashboard}
                         isReadOnly={false}
                         onEditComponent={handleEditComponent}

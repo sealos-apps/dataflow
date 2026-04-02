@@ -31,6 +31,7 @@ export const enAnalysisMessages = {
   'analysis.dashboard.refresh': 'Refresh',
   'analysis.chart.add': 'Add Chart',
   'analysis.chart.create': 'Create Chart',
+  'analysis.chart.edit': 'Edit Chart',
   'analysis.chart.type': 'Chart Type',
   'analysis.chart.type.bar': 'Bar Chart',
   'analysis.chart.type.line': 'Line Chart',

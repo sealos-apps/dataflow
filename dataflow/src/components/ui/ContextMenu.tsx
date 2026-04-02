@@ -22,17 +22,19 @@ interface ContextMenuProps {
     y: number;
     items: ContextMenuItem[];
     onClose: () => void;
+    side?: "top" | "right" | "bottom" | "left";
+    align?: "start" | "end";
 }
 
-export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
+export function ContextMenu({ x, y, items, onClose, side = "bottom", align = "start" }: ContextMenuProps) {
     return (
         <DropdownMenu open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
             <DropdownMenuTrigger asChild>
                 <span style={{ position: "fixed", top: y, left: x, width: 0, height: 0 }} />
             </DropdownMenuTrigger>
             <DropdownMenuContent
-                side="bottom"
-                align="start"
+                side={side}
+                align={align}
                 sideOffset={0}
                 className="w-[152px]"
                 onCloseAutoFocus={(e) => e.preventDefault()}

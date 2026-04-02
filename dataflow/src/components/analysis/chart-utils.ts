@@ -233,6 +233,47 @@ export function buildWidgetChartOption(config: any): any | null {
 }
 
 /**
+ * Reconstruct QueryData from a stored widget component for editing.
+ * Reverses `toWidgetConfig` by reading xAxis labels and series data
+ * back into column/row form that the chart config panel needs.
+ */
+export function fromWidgetConfig(component: {
+    config?: any;
+    query?: string;
+    queryContext?: { database?: string; schema?: string };
+}): QueryData | null {
+    const chartConfig = component.config?.chartConfig as ChartConfig | undefined;
+    if (!chartConfig || !component.config?.series) return null;
+
+    const xAxisColumn = chartConfig.xAxisColumn;
+    const xAxisData: string[] = component.config.xAxis || [];
+    const series: any[] = component.config.series;
+    const isPie = component.config.type === 'pie';
+
+    const columns = [xAxisColumn, ...chartConfig.yAxisColumns];
+    const rows: Record<string, any>[] = xAxisData.map((xVal, i) => {
+        const row: Record<string, any> = { [xAxisColumn]: xVal };
+        for (const s of series) {
+            if (isPie) {
+                const pieItem = s.data?.[i];
+                row[s.name] = pieItem?.value ?? pieItem ?? 0;
+            } else {
+                row[s.name] = s.data?.[i] ?? 0;
+            }
+        }
+        return row;
+    });
+
+    return {
+        columns,
+        rows,
+        query: component.query || '',
+        database: component.queryContext?.database,
+        schema: component.queryContext?.schema,
+    };
+}
+
+/**
  * Convert ChartConfig + QueryData into the config/data shape
  * that DashboardWidget's WidgetContent expects for type='chart'.
  *

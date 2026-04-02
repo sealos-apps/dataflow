@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { DashboardComponent } from "@/stores/useAnalysisStore";
 import { cn } from "@/lib/utils";
 import { GripHorizontal, MoreVertical, Trash2, Maximize2, Settings, ImageDown } from "lucide-react";
@@ -28,13 +29,17 @@ export function DashboardWidget({
     onSelect
 }: DashboardWidgetProps) {
     const { t } = useI18n()
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [contextMenu, setContextMenu] = useState<{
+        x: number; y: number;
+        side: "top" | "right" | "bottom" | "left";
+        align: "start" | "end";
+    } | null>(null);
     const chartRef = useRef<NativeEChartsHandle>(null);
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenu({ x: e.clientX, y: e.clientY });
+        setContextMenu({ x: e.clientX, y: e.clientY, side: "bottom", align: "start" });
     };
 
     const handleExportPNG = async () => {
@@ -94,7 +99,12 @@ export function DashboardWidget({
                 {!isReadOnly && (
                     <button
                         onMouseDown={(e) => e.stopPropagation()}
-                        onClick={handleContextMenu}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setContextMenu({ x: rect.right, y: rect.top, side: "right", align: "start" });
+                        }}
                         className={cn(
                             "flex items-center justify-center size-8 rounded-lg text-foreground/60 hover:bg-input transition-colors",
                             contextMenu && "bg-input"
@@ -125,14 +135,17 @@ export function DashboardWidget({
                 </div>
             )}
 
-            {/* Portal Context Menu */}
-            {contextMenu && (
+            {/* Portal Context Menu — must escape react-grid-layout's CSS transform */}
+            {contextMenu && createPortal(
                 <ContextMenu
                     x={contextMenu.x}
                     y={contextMenu.y}
+                    side={contextMenu.side}
+                    align={contextMenu.align}
                     items={menuItems}
                     onClose={() => setContextMenu(null)}
-                />
+                />,
+                document.body
             )}
         </div>
     );

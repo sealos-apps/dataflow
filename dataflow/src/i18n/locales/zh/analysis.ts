@@ -25,6 +25,7 @@ export const zhAnalysisMessages = {
   'analysis.dashboard.refresh': '刷新',
   'analysis.chart.add': '添加图表',
   'analysis.chart.create': '创建图表',
+  'analysis.chart.edit': '编辑图表',
   'analysis.chart.type': '图表类型',
   'analysis.chart.type.bar': '柱状图',
   'analysis.chart.type.line': '折线图',

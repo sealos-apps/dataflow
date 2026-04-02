@@ -1,17 +1,18 @@
 import { createContext, use, useState, useCallback, type ReactNode } from 'react'
-import { useAnalysisStore } from '@/stores/useAnalysisStore'
+import { useAnalysisStore, type DashboardComponent } from '@/stores/useAnalysisStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import {
     DEFAULT_CHART_CONFIG,
     buildEChartsOption,
     toWidgetConfig,
+    fromWidgetConfig,
     type ChartConfig,
     type QueryData,
 } from '../chart-utils'
 
 type ModalView = 'chart-config' | 'data-config'
 
-/** Context value for the chart creation wizard. */
+/** Context value for the chart creation/editing wizard. */
 interface ChartCreateCtxValue {
     // State
     activeView: ModalView
@@ -19,6 +20,7 @@ interface ChartCreateCtxValue {
     chartConfig: ChartConfig
     queryData: QueryData | null
     sqlQuery: string
+    isEditing: boolean
 
     // Derived
     canSave: boolean
@@ -48,20 +50,26 @@ export function useChartCreateCtx(): ChartCreateCtxValue {
 }
 
 interface ChartCreateProviderProps {
+    editComponent?: DashboardComponent | null
     onClose: () => void
     children: ReactNode
 }
 
-/** Owns all state and business logic for the chart creation wizard. */
-export function ChartCreateProvider({ onClose, children }: ChartCreateProviderProps) {
-    const { addComponent } = useAnalysisStore()
+/** Owns all state and business logic for the chart creation/editing wizard. */
+export function ChartCreateProvider({ editComponent, onClose, children }: ChartCreateProviderProps) {
+    const { addComponent, updateComponent } = useAnalysisStore()
     const { connections } = useConnectionStore()
 
+    const isEditing = !!editComponent
+    const initialQueryData = editComponent ? fromWidgetConfig(editComponent) : null
+
     const [activeView, setActiveView] = useState<ModalView>('chart-config')
-    const [title, setTitle] = useState('')
-    const [chartConfig, setChartConfig] = useState<ChartConfig>(DEFAULT_CHART_CONFIG)
-    const [queryData, setQueryData] = useState<QueryData | null>(null)
-    const [sqlQuery, setSqlQuery] = useState('')
+    const [title, setTitle] = useState(editComponent?.title ?? '')
+    const [chartConfig, setChartConfig] = useState<ChartConfig>(
+        editComponent?.config?.chartConfig ?? DEFAULT_CHART_CONFIG,
+    )
+    const [queryData, setQueryData] = useState<QueryData | null>(initialQueryData)
+    const [sqlQuery, setSqlQuery] = useState(editComponent?.query ?? '')
 
     const connection = connections[0]
     const editorContext = connection
@@ -102,19 +110,25 @@ export function ChartCreateProvider({ onClose, children }: ChartCreateProviderPr
     const handleSave = useCallback(() => {
         if (!queryData || !title.trim()) return
         const { config, data } = toWidgetConfig(chartConfig, queryData)
-        addComponent('chart', {
+        const payload = {
             title: title.trim(),
             config,
             data,
             query: queryData.query,
             queryContext: { database: queryData.database, schema: queryData.schema },
-        })
+        }
+
+        if (editComponent) {
+            updateComponent(editComponent.id, payload)
+        } else {
+            addComponent('chart', payload)
+        }
         onClose()
-    }, [queryData, title, chartConfig, addComponent, onClose])
+    }, [queryData, title, chartConfig, addComponent, updateComponent, editComponent, onClose])
 
     return (
         <ChartCreateCtx value={{
-            activeView, title, chartConfig, queryData, sqlQuery,
+            activeView, title, chartConfig, queryData, sqlQuery, isEditing,
             canSave, previewOption, editorContext,
             setActiveView, setTitle, handleConfigChange, setSqlQuery, handleQueryResults, handleSave,
         }}>

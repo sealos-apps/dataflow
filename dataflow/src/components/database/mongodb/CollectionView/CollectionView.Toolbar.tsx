@@ -1,4 +1,4 @@
-import { Plus, Minus, Download, RefreshCw, Undo2, TerminalSquare } from 'lucide-react'
+import { Download, RefreshCw, TerminalSquare } from 'lucide-react'
 import { useCollectionView } from './CollectionViewProvider'
 import { DataView } from '@/components/database/shared/DataView'
 import { Button } from '@/components/ui/Button'
@@ -29,7 +29,7 @@ export function CollectionViewToolbar({ connectionId, databaseName, collectionNa
   }
 
   return (
-    <div className="flex items-center justify-between h-12 pr-2">
+    <div className="flex items-center justify-between h-12 px-2">
       <div className="flex items-center">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -38,34 +38,6 @@ export function CollectionViewToolbar({ connectionId, databaseName, collectionNa
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('mongodb.collection.refresh')}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={actions.handleAddClick}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('mongodb.collection.addData')}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button variant="ghost" size="icon" disabled>
-                <Minus className="h-4 w-4" />
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{t('common.actions.delete')}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button variant="ghost" size="icon" disabled>
-                <Undo2 className="h-4 w-4" />
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{t('common.actions.undo')}</TooltipContent>
         </Tooltip>
       </div>
       <div className="flex items-center gap-2">
