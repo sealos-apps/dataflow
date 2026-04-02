@@ -1,0 +1,5 @@
+mutation DeleteDashboard($id: ID!) {
+  DeleteDashboard(id: $id) {
+    Status
+  }
+}

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { DashboardComponent } from "@/stores/useAnalysisStore";
+import type { ChartWidgetDefinition } from "@/stores/analysisDefinitionStore";
+import { useAnalysisRuntimeStore } from "@/stores/analysisRuntimeStore";
 import { cn } from "@/lib/utils";
 import { GripHorizontal, MoreVertical, Trash2, Maximize2, Settings, ImageDown } from "lucide-react";
 import { SafeECharts, NativeEChartsHandle } from "@/components/ui/SafeECharts";
@@ -10,7 +11,7 @@ import { ContextMenu } from "../../ui/ContextMenu";
 import { useI18n } from '@/i18n/useI18n'
 
 interface DashboardWidgetProps {
-    component: DashboardComponent;
+    widget: ChartWidgetDefinition;
     isReadOnly: boolean;
     isSelected: boolean;
     onEdit?: (id: string) => void;
@@ -20,7 +21,7 @@ interface DashboardWidgetProps {
 }
 
 export function DashboardWidget({
-    component,
+    widget,
     isReadOnly,
     isSelected,
     onEdit,
@@ -29,6 +30,7 @@ export function DashboardWidget({
     onSelect
 }: DashboardWidgetProps) {
     const { t } = useI18n()
+    const runtimeState = useAnalysisRuntimeStore(state => state.widgetStatesById[widget.id]);
     const [contextMenu, setContextMenu] = useState<{
         x: number; y: number;
         side: "top" | "right" | "bottom" | "left";
@@ -46,16 +48,16 @@ export function DashboardWidget({
         setContextMenu(null);
         const blob = await chartRef.current?.exportPNG(2);
         if (!blob) return;
-        downloadBlob(blob, `${component.title || t('analysis.defaultTitle.chart')}.png`);
+        downloadBlob(blob, `${widget.title || t('analysis.defaultTitle.chart')}.png`);
     };
 
     const menuItems = [
         {
             label: t('analysis.widget.maximize'),
             icon: <Maximize2 className="w-4 h-4" />,
-            onClick: () => onMaximize?.(component.id)
+            onClick: () => onMaximize?.(widget.id)
         },
-        ...(component.type === 'chart' ? [{
+        ...(widget.type === 'chart' ? [{
             label: t('analysis.chart.exportPng'),
             icon: <ImageDown className="w-4 h-4" />,
             onClick: handleExportPNG
@@ -63,13 +65,13 @@ export function DashboardWidget({
         {
             label: t('analysis.widget.settings'),
             icon: <Settings className="w-4 h-4" />,
-            onClick: () => onEdit?.(component.id)
+            onClick: () => onEdit?.(widget.id)
         },
         {
             label: t('analysis.widget.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             danger: true,
-            onClick: () => onDelete?.(component.id)
+            onClick: () => onDelete?.(widget.id)
         }
     ];
 
@@ -82,14 +84,14 @@ export function DashboardWidget({
             )}
             onClick={(e) => {
                 e.stopPropagation();
-                onSelect(component.id);
+                onSelect(widget.id);
             }}
             onContextMenu={!isReadOnly ? handleContextMenu : undefined}
         >
             {/* Widget Header */}
             <div className="h-9 flex items-center justify-between px-0.5 shrink-0 relative z-10">
                 <div className="flex items-center h-8 px-2.5 rounded-lg truncate">
-                    <span className="text-xs text-foreground truncate">{component.title}</span>
+                    <span className="text-xs text-foreground truncate">{widget.title}</span>
                 </div>
 
                 {!isReadOnly && (
@@ -118,16 +120,22 @@ export function DashboardWidget({
             {/* Widget Content */}
             <div className="flex-1 overflow-hidden relative">
                 <div className="absolute inset-0 p-3 z-10">
-                    <WidgetContent component={component} chartRef={chartRef} />
+                    <WidgetContent widget={widget} chartRef={chartRef} runtimeState={runtimeState} />
                 </div>
             </div>
+
+            {runtimeState?.status === 'error' && (
+                <div className="px-3 pb-2 text-[10px] text-destructive truncate">
+                    {runtimeState.error}
+                </div>
+            )}
 
             {/* Maximize Button - Bottom Right */}
             {!isReadOnly && (
                 <div className="flex items-center justify-end p-2 shrink-0 relative z-10">
                     <button
                         onMouseDown={(e) => e.stopPropagation()}
-                        onClick={() => onMaximize?.(component.id)}
+                        onClick={() => onMaximize?.(widget.id)}
                         className="text-foreground/40 hover:text-foreground transition-colors"
                     >
                         <Maximize2 className="w-4 h-4" />
@@ -151,11 +159,22 @@ export function DashboardWidget({
     );
 }
 
-function WidgetContent({ component, chartRef }: { component: DashboardComponent; chartRef: React.RefObject<NativeEChartsHandle | null> }) {
+function WidgetContent({
+    widget,
+    chartRef,
+    runtimeState,
+}: {
+    widget: ChartWidgetDefinition;
+    chartRef: React.RefObject<NativeEChartsHandle | null>;
+    runtimeState?: { status: 'idle' | 'loading' | 'success' | 'error'; config?: any; isStale: boolean };
+}) {
     const { t } = useI18n()
-    switch (component.type) {
+    switch (widget.type) {
         case 'chart': {
-            const option = buildWidgetChartOption(component.config);
+            const config = runtimeState?.status === 'success' && !runtimeState.isStale
+                ? runtimeState.config
+                : widget.snapshot?.config;
+            const option = buildWidgetChartOption(config);
             if (!option) return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">{t('analysis.chart.noData')}</div>;
             return (
                 <SafeECharts
@@ -166,58 +185,10 @@ function WidgetContent({ component, chartRef }: { component: DashboardComponent;
             );
         }
 
-        case 'table':
-            if (!component.data?.rows) return <div>{t('analysis.widget.noData')}</div>;
-            return (
-                <div className="overflow-auto absolute inset-0 bg-background scrollbar-thin">
-                    <table className="w-full text-sm text-left border-collapse">
-                        <thead className="text-xs text-muted-foreground font-semibold bg-muted/50 sticky top-0 z-10">
-                            <tr>
-                                {component.data.columns.map((col: string, i: number) => (
-                                    <th key={i} className="px-3 py-2 border-b border-border">{col}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {component.data.rows.map((row: any, i: number) => (
-                                <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                                    {component.data.columns.map((col: string, j: number) => (
-                                        <td key={j} className="px-3 py-1.5 whitespace-nowrap text-foreground">
-                                            {row[col]}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            );
-
-        case 'text':
-            return (
-                <div
-                    className="prose prose-sm max-w-none h-full w-full flex items-center justify-center"
-                    dangerouslySetInnerHTML={{ __html: component.data?.content || '' }}
-                />
-            );
-
-        case 'stats':
-            return (
-                <div className="flex flex-col justify-center h-full px-4">
-                    <div className="text-2xl font-bold">{component.data?.value || '0'}</div>
-                    <div className={cn(
-                        "text-xs font-medium mt-1",
-                        component.data?.trend?.startsWith('+') ? "text-green-600" : "text-red-600"
-                    )}>
-                        {t('analysis.widget.statsComparison', { trend: component.data?.trend || '0%' })}
-                    </div>
-                </div>
-            );
-
         default:
             return (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                    {t('analysis.widget.unknownType', { type: component.type })}
+                    {t('analysis.widget.unknownType', { type: widget.type })}
                 </div>
             );
     }

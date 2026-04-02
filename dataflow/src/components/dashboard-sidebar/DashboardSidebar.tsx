@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useAnalysisStore } from "@/stores/useAnalysisStore";
-import type { Dashboard } from "@/stores/useAnalysisStore";
+import { useAnalysisDefinitionStore } from "@/stores/analysisDefinitionStore";
+import { useAnalysisUIStore } from "@/stores/analysisUiStore";
+import type { DashboardDefinition as Dashboard } from "@/stores/analysisDefinitionStore";
 import { Plus, LayoutDashboard, Edit2, Trash2, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +13,10 @@ import { Separator } from "../ui/separator";
 
 export function DashboardSidebar() {
     const { t } = useI18n()
-    const { dashboards, activeDashboardId, openDashboard } = useAnalysisStore();
+    const dashboards = useAnalysisDefinitionStore(state => state.dashboards);
+    const activeDashboardId = useAnalysisDefinitionStore(state => state.activeDashboardId);
+    const openDashboard = useAnalysisDefinitionStore(state => state.openDashboard);
+    const openCreateChartModal = useAnalysisUIStore(state => state.openCreateChartModal);
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id: string } | null>(null);
@@ -22,7 +26,9 @@ export function DashboardSidebar() {
     const [editTarget, setEditTarget] = useState<Dashboard | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
-    const sortedDashboards = [...dashboards].sort((a, b) => b.createdAt - a.createdAt);
+    const sortedDashboards = [...dashboards].sort((a, b) => (
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ));
 
     const handleContextMenu = (e: React.MouseEvent, id: string) => {
         e.preventDefault();
@@ -96,7 +102,7 @@ export function DashboardSidebar() {
                                 const dashboard = dashboards.find(d => d.id === contextMenu.id);
                                 if (dashboard) {
                                     openDashboard(dashboard.id);
-                                    useAnalysisStore.getState().toggleChartModal(true);
+                                    openCreateChartModal();
                                 }
                             }
                         },

@@ -5,7 +5,7 @@ import { SafeECharts } from '@/components/ui/SafeECharts'
 import { SQLEditorView } from '@/components/editor/SQLEditorView'
 import { ChartConfigPanel } from './ChartConfigPanel'
 import { ChartCreateProvider, useChartCreateCtx } from './ChartCreateProvider'
-import { useAnalysisStore, type DashboardComponent } from '@/stores/useAnalysisStore'
+import { useAnalysisDefinitionStore, type ChartWidgetDefinition } from '@/stores/analysisDefinitionStore'
 import { useI18n } from '@/i18n/useI18n'
 
 interface ChartCreateModalProps {
@@ -17,11 +17,12 @@ interface ChartCreateModalProps {
 /** Modal for creating or editing chart widgets with two views: chart configuration and SQL data. */
 export function ChartCreateModal({ open, onOpenChange, editComponentId }: ChartCreateModalProps) {
     const { t } = useI18n()
-    const { dashboards, activeDashboardId } = useAnalysisStore()
+    const dashboards = useAnalysisDefinitionStore(state => state.dashboards)
+    const activeDashboardId = useAnalysisDefinitionStore(state => state.activeDashboardId)
 
     const dashboard = dashboards.find(d => d.id === activeDashboardId)
-    const editComponent: DashboardComponent | null = editComponentId
-        ? dashboard?.components.find(c => c.id === editComponentId) ?? null
+    const editComponent: ChartWidgetDefinition | null = editComponentId
+        ? dashboard?.widgets.find(c => c.id === editComponentId) ?? null
         : null
 
     return (

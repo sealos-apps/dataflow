@@ -1,6 +1,6 @@
 import { useCallback, type ReactNode } from 'react'
 import { Trash2 } from 'lucide-react'
-import { useAnalysisStore } from '@/stores/useAnalysisStore'
+import { useAnalysisDefinitionStore } from '@/stores/analysisDefinitionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm } from '@/components/ui/ModalForm'
 import { useI18n } from '@/i18n/useI18n'
@@ -22,10 +22,10 @@ function DeleteDashboardProvider({
   children: ReactNode
 }) {
   const { t } = useI18n()
-  const { deleteDashboard } = useAnalysisStore()
+  const deleteDashboard = useAnalysisDefinitionStore(state => state.deleteDashboard)
 
   const handleSubmit = useCallback(async () => {
-    deleteDashboard(dashboardId)
+    await deleteDashboard(dashboardId)
     onSuccess?.()
   }, [deleteDashboard, dashboardId, onSuccess])
 

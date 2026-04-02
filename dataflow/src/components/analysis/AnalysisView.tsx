@@ -1,18 +1,32 @@
 import { useEffect } from "react";
 import { DashboardEditor } from "./editor";
-import { useAnalysisStore } from "@/stores/useAnalysisStore";
+import { useAnalysisDefinitionStore } from "@/stores/analysisDefinitionStore";
 import { useI18n } from '@/i18n/useI18n'
 import { LayoutDashboard } from 'lucide-react';
 
 export function AnalysisView() {
-    const { activeDashboardId, isInitialized, initializeFromAPI } = useAnalysisStore();
+    const activeDashboardId = useAnalysisDefinitionStore(state => state.activeDashboardId);
+    const isInitialized = useAnalysisDefinitionStore(state => state.isInitialized);
+    const loadError = useAnalysisDefinitionStore(state => state.loadError);
+    const initializeFromAPI = useAnalysisDefinitionStore(state => state.initializeFromAPI);
     const { t } = useI18n()
 
     useEffect(() => {
         if (!isInitialized) {
-            initializeFromAPI();
+            void initializeFromAPI();
         }
     }, [isInitialized, initializeFromAPI]);
+
+    if (loadError) {
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-muted/10 p-8 text-center">
+                <div>
+                    <p className="text-lg font-medium text-foreground">{t('analysis.dashboard.emptyTitle')}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-full w-full overflow-hidden">

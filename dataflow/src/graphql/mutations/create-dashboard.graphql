@@ -1,0 +1,22 @@
+mutation CreateDashboard($name: String!, $description: String, $refreshRule: String!) {
+  CreateDashboard(name: $name, description: $description, refreshRule: $refreshRule) {
+    ID
+    Name
+    Description
+    RefreshRule
+    CreatedAt
+    UpdatedAt
+    Widgets {
+      ID
+      Type
+      Title
+      Description
+      Layout
+      Query
+      QueryContext
+      Visualization
+      Snapshot
+      SortOrder
+    }
+  }
+}

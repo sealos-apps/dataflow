@@ -135,6 +135,31 @@ export enum ConnectionStatus {
   Unknown = 'Unknown'
 }
 
+export type Dashboard = {
+  __typename?: 'Dashboard';
+  CreatedAt: Scalars['String']['output'];
+  Description?: Maybe<Scalars['String']['output']>;
+  ID: Scalars['ID']['output'];
+  Name: Scalars['String']['output'];
+  RefreshRule: Scalars['String']['output'];
+  UpdatedAt: Scalars['String']['output'];
+  Widgets: Array<DashboardWidget>;
+};
+
+export type DashboardWidget = {
+  __typename?: 'DashboardWidget';
+  Description?: Maybe<Scalars['String']['output']>;
+  ID: Scalars['ID']['output'];
+  Layout: Scalars['String']['output'];
+  Query?: Maybe<Scalars['String']['output']>;
+  QueryContext?: Maybe<Scalars['String']['output']>;
+  Snapshot?: Maybe<Scalars['String']['output']>;
+  SortOrder: Scalars['Int']['output'];
+  Title: Scalars['String']['output'];
+  Type: Scalars['String']['output'];
+  Visualization?: Maybe<Scalars['String']['output']>;
+};
+
 export type DatabaseMetadata = {
   __typename?: 'DatabaseMetadata';
   aliasMap: Array<Record>;
@@ -280,6 +305,11 @@ export type ImportSqlInput = {
   Script?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type LayoutInput = {
+  Layout: Scalars['String']['input'];
+  WidgetID: Scalars['ID']['input'];
+};
+
 export type LocalAwsProfile = {
   __typename?: 'LocalAWSProfile';
   AuthType: Scalars['String']['output'];
@@ -361,7 +391,11 @@ export type Mutation = {
   AddAWSProvider: AwsProvider;
   AddRow: StatusResponse;
   AddStorageUnit: StatusResponse;
+  AddWidget: DashboardWidget;
+  CreateDashboard: Dashboard;
+  DeleteDashboard: StatusResponse;
   DeleteRow: StatusResponse;
+  DeleteWidget: StatusResponse;
   ExecuteConfirmedSQL: AiChatMessage;
   GenerateChatTitle: GenerateChatTitleResponse;
   GenerateMockData: MockDataGenerationStatus;
@@ -377,8 +411,12 @@ export type Mutation = {
   TestAWSCredentials: CloudProviderStatus;
   TestCloudProvider: CloudProviderStatus;
   UpdateAWSProvider: AwsProvider;
+  UpdateDashboard: Dashboard;
   UpdateSettings: StatusResponse;
   UpdateStorageUnit: StatusResponse;
+  UpdateWidget: DashboardWidget;
+  UpdateWidgetLayouts: StatusResponse;
+  UpdateWidgetSnapshot: StatusResponse;
 };
 
 
@@ -401,10 +439,33 @@ export type MutationAddStorageUnitArgs = {
 };
 
 
+export type MutationAddWidgetArgs = {
+  dashboardId: Scalars['ID']['input'];
+  input: WidgetInput;
+};
+
+
+export type MutationCreateDashboardArgs = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  refreshRule: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteDashboardArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationDeleteRowArgs = {
   schema: Scalars['String']['input'];
   storageUnit: Scalars['String']['input'];
   values: Array<RecordInput>;
+};
+
+
+export type MutationDeleteWidgetArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -488,6 +549,14 @@ export type MutationUpdateAwsProviderArgs = {
 };
 
 
+export type MutationUpdateDashboardArgs = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  refreshRule?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type MutationUpdateSettingsArgs = {
   newSettings: SettingsConfigInput;
 };
@@ -498,6 +567,24 @@ export type MutationUpdateStorageUnitArgs = {
   storageUnit: Scalars['String']['input'];
   updatedColumns: Array<Scalars['String']['input']>;
   values: Array<RecordInput>;
+};
+
+
+export type MutationUpdateWidgetArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateWidgetInput;
+};
+
+
+export type MutationUpdateWidgetLayoutsArgs = {
+  dashboardId: Scalars['ID']['input'];
+  layouts: Array<LayoutInput>;
+};
+
+
+export type MutationUpdateWidgetSnapshotArgs = {
+  id: Scalars['ID']['input'];
+  snapshot: SnapshotInput;
 };
 
 export type OperationWhereCondition = {
@@ -519,6 +606,7 @@ export type Query = {
   DatabaseMetadata?: Maybe<DatabaseMetadata>;
   DatabaseQuerySuggestions: Array<DatabaseQuerySuggestion>;
   DiscoveredConnections: Array<DiscoveredConnection>;
+  GetDashboards: Array<Dashboard>;
   Graph: Array<GraphUnit>;
   Health: HealthStatus;
   LocalAWSProfiles: Array<LocalAwsProfile>;
@@ -654,6 +742,12 @@ export type SettingsConfigInput = {
   MetricsEnabled?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type SnapshotInput = {
+  Config: Scalars['String']['input'];
+  Data: Scalars['String']['input'];
+  ExecutedAt: Scalars['String']['input'];
+};
+
 export type SortCondition = {
   Column: Scalars['String']['input'];
   Direction: SortDirection;
@@ -711,6 +805,17 @@ export type UpdateInfo = {
   updateAvailable: Scalars['Boolean']['output'];
 };
 
+export type UpdateWidgetInput = {
+  Description?: InputMaybe<Scalars['String']['input']>;
+  Layout?: InputMaybe<Scalars['String']['input']>;
+  Query?: InputMaybe<Scalars['String']['input']>;
+  QueryContext?: InputMaybe<Scalars['String']['input']>;
+  Snapshot?: InputMaybe<Scalars['String']['input']>;
+  SortOrder?: InputMaybe<Scalars['Int']['input']>;
+  Title?: InputMaybe<Scalars['String']['input']>;
+  Visualization?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type WhereCondition = {
   And?: InputMaybe<OperationWhereCondition>;
   Atomic?: InputMaybe<AtomicWhereCondition>;
@@ -723,6 +828,18 @@ export enum WhereConditionType {
   Atomic = 'Atomic',
   Or = 'Or'
 }
+
+export type WidgetInput = {
+  Description?: InputMaybe<Scalars['String']['input']>;
+  Layout: Scalars['String']['input'];
+  Query?: InputMaybe<Scalars['String']['input']>;
+  QueryContext?: InputMaybe<Scalars['String']['input']>;
+  Snapshot?: InputMaybe<Scalars['String']['input']>;
+  SortOrder?: InputMaybe<Scalars['Int']['input']>;
+  Title: Scalars['String']['input'];
+  Type: Scalars['String']['input'];
+  Visualization?: InputMaybe<Scalars['String']['input']>;
+};
 
 export type AddRowMutationVariables = Exact<{
   schema: Scalars['String']['input'];
@@ -742,6 +859,30 @@ export type AddStorageUnitMutationVariables = Exact<{
 
 export type AddStorageUnitMutation = { __typename?: 'Mutation', AddStorageUnit: { __typename?: 'StatusResponse', Status: boolean } };
 
+export type AddWidgetMutationVariables = Exact<{
+  dashboardId: Scalars['ID']['input'];
+  input: WidgetInput;
+}>;
+
+
+export type AddWidgetMutation = { __typename?: 'Mutation', AddWidget: { __typename?: 'DashboardWidget', ID: string, Type: string, Title: string, Description?: string | null, Layout: string, Query?: string | null, QueryContext?: string | null, Visualization?: string | null, Snapshot?: string | null, SortOrder: number } };
+
+export type CreateDashboardMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
+  refreshRule: Scalars['String']['input'];
+}>;
+
+
+export type CreateDashboardMutation = { __typename?: 'Mutation', CreateDashboard: { __typename?: 'Dashboard', ID: string, Name: string, Description?: string | null, RefreshRule: string, CreatedAt: string, UpdatedAt: string, Widgets: Array<{ __typename?: 'DashboardWidget', ID: string, Type: string, Title: string, Description?: string | null, Layout: string, Query?: string | null, QueryContext?: string | null, Visualization?: string | null, Snapshot?: string | null, SortOrder: number }> } };
+
+export type DeleteDashboardMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteDashboardMutation = { __typename?: 'Mutation', DeleteDashboard: { __typename?: 'StatusResponse', Status: boolean } };
+
 export type DeleteRowMutationVariables = Exact<{
   schema: Scalars['String']['input'];
   storageUnit: Scalars['String']['input'];
@@ -750,6 +891,13 @@ export type DeleteRowMutationVariables = Exact<{
 
 
 export type DeleteRowMutation = { __typename?: 'Mutation', DeleteRow: { __typename?: 'StatusResponse', Status: boolean } };
+
+export type DeleteWidgetMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteWidgetMutation = { __typename?: 'Mutation', DeleteWidget: { __typename?: 'StatusResponse', Status: boolean } };
 
 export type ExecuteConfirmedSqlMutationVariables = Exact<{
   query: Scalars['String']['input'];
@@ -766,6 +914,16 @@ export type LoginMutationVariables = Exact<{
 
 export type LoginMutation = { __typename?: 'Mutation', Login: { __typename?: 'StatusResponse', Status: boolean } };
 
+export type UpdateDashboardMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  refreshRule?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type UpdateDashboardMutation = { __typename?: 'Mutation', UpdateDashboard: { __typename?: 'Dashboard', ID: string, Name: string, Description?: string | null, RefreshRule: string, CreatedAt: string, UpdatedAt: string, Widgets: Array<{ __typename?: 'DashboardWidget', ID: string, Type: string, Title: string, Description?: string | null, Layout: string, Query?: string | null, QueryContext?: string | null, Visualization?: string | null, Snapshot?: string | null, SortOrder: number }> } };
+
 export type UpdateStorageUnitMutationVariables = Exact<{
   schema: Scalars['String']['input'];
   storageUnit: Scalars['String']['input'];
@@ -775,6 +933,30 @@ export type UpdateStorageUnitMutationVariables = Exact<{
 
 
 export type UpdateStorageUnitMutation = { __typename?: 'Mutation', UpdateStorageUnit: { __typename?: 'StatusResponse', Status: boolean } };
+
+export type UpdateWidgetLayoutsMutationVariables = Exact<{
+  dashboardId: Scalars['ID']['input'];
+  layouts: Array<LayoutInput> | LayoutInput;
+}>;
+
+
+export type UpdateWidgetLayoutsMutation = { __typename?: 'Mutation', UpdateWidgetLayouts: { __typename?: 'StatusResponse', Status: boolean } };
+
+export type UpdateWidgetSnapshotMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  snapshot: SnapshotInput;
+}>;
+
+
+export type UpdateWidgetSnapshotMutation = { __typename?: 'Mutation', UpdateWidgetSnapshot: { __typename?: 'StatusResponse', Status: boolean } };
+
+export type UpdateWidgetMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateWidgetInput;
+}>;
+
+
+export type UpdateWidgetMutation = { __typename?: 'Mutation', UpdateWidget: { __typename?: 'DashboardWidget', ID: string, Type: string, Title: string, Description?: string | null, Layout: string, Query?: string | null, QueryContext?: string | null, Visualization?: string | null, Snapshot?: string | null, SortOrder: number } };
 
 export type GetColumnsBatchQueryVariables = Exact<{
   schema: Scalars['String']['input'];
@@ -803,6 +985,11 @@ export type GetDatabaseQueryVariables = Exact<{
 
 
 export type GetDatabaseQuery = { __typename?: 'Query', Database: Array<string> };
+
+export type GetDashboardsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetDashboardsQuery = { __typename?: 'Query', GetDashboards: Array<{ __typename?: 'Dashboard', ID: string, Name: string, Description?: string | null, RefreshRule: string, CreatedAt: string, UpdatedAt: string, Widgets: Array<{ __typename?: 'DashboardWidget', ID: string, Type: string, Title: string, Description?: string | null, Layout: string, Query?: string | null, QueryContext?: string | null, Visualization?: string | null, Snapshot?: string | null, SortOrder: number }> }> };
 
 export type RawExecuteQueryVariables = Exact<{
   query: Scalars['String']['input'];
@@ -906,6 +1093,138 @@ export function useAddStorageUnitMutation(baseOptions?: Apollo.MutationHookOptio
 export type AddStorageUnitMutationHookResult = ReturnType<typeof useAddStorageUnitMutation>;
 export type AddStorageUnitMutationResult = Apollo.MutationResult<AddStorageUnitMutation>;
 export type AddStorageUnitMutationOptions = Apollo.BaseMutationOptions<AddStorageUnitMutation, AddStorageUnitMutationVariables>;
+export const AddWidgetDocument = gql`
+    mutation AddWidget($dashboardId: ID!, $input: WidgetInput!) {
+  AddWidget(dashboardId: $dashboardId, input: $input) {
+    ID
+    Type
+    Title
+    Description
+    Layout
+    Query
+    QueryContext
+    Visualization
+    Snapshot
+    SortOrder
+  }
+}
+    `;
+export type AddWidgetMutationFn = Apollo.MutationFunction<AddWidgetMutation, AddWidgetMutationVariables>;
+
+/**
+ * __useAddWidgetMutation__
+ *
+ * To run a mutation, you first call `useAddWidgetMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddWidgetMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addWidgetMutation, { data, loading, error }] = useAddWidgetMutation({
+ *   variables: {
+ *      dashboardId: // value for 'dashboardId'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useAddWidgetMutation(baseOptions?: Apollo.MutationHookOptions<AddWidgetMutation, AddWidgetMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddWidgetMutation, AddWidgetMutationVariables>(AddWidgetDocument, options);
+      }
+export type AddWidgetMutationHookResult = ReturnType<typeof useAddWidgetMutation>;
+export type AddWidgetMutationResult = Apollo.MutationResult<AddWidgetMutation>;
+export type AddWidgetMutationOptions = Apollo.BaseMutationOptions<AddWidgetMutation, AddWidgetMutationVariables>;
+export const CreateDashboardDocument = gql`
+    mutation CreateDashboard($name: String!, $description: String, $refreshRule: String!) {
+  CreateDashboard(
+    name: $name
+    description: $description
+    refreshRule: $refreshRule
+  ) {
+    ID
+    Name
+    Description
+    RefreshRule
+    CreatedAt
+    UpdatedAt
+    Widgets {
+      ID
+      Type
+      Title
+      Description
+      Layout
+      Query
+      QueryContext
+      Visualization
+      Snapshot
+      SortOrder
+    }
+  }
+}
+    `;
+export type CreateDashboardMutationFn = Apollo.MutationFunction<CreateDashboardMutation, CreateDashboardMutationVariables>;
+
+/**
+ * __useCreateDashboardMutation__
+ *
+ * To run a mutation, you first call `useCreateDashboardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDashboardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDashboardMutation, { data, loading, error }] = useCreateDashboardMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      description: // value for 'description'
+ *      refreshRule: // value for 'refreshRule'
+ *   },
+ * });
+ */
+export function useCreateDashboardMutation(baseOptions?: Apollo.MutationHookOptions<CreateDashboardMutation, CreateDashboardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateDashboardMutation, CreateDashboardMutationVariables>(CreateDashboardDocument, options);
+      }
+export type CreateDashboardMutationHookResult = ReturnType<typeof useCreateDashboardMutation>;
+export type CreateDashboardMutationResult = Apollo.MutationResult<CreateDashboardMutation>;
+export type CreateDashboardMutationOptions = Apollo.BaseMutationOptions<CreateDashboardMutation, CreateDashboardMutationVariables>;
+export const DeleteDashboardDocument = gql`
+    mutation DeleteDashboard($id: ID!) {
+  DeleteDashboard(id: $id) {
+    Status
+  }
+}
+    `;
+export type DeleteDashboardMutationFn = Apollo.MutationFunction<DeleteDashboardMutation, DeleteDashboardMutationVariables>;
+
+/**
+ * __useDeleteDashboardMutation__
+ *
+ * To run a mutation, you first call `useDeleteDashboardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteDashboardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteDashboardMutation, { data, loading, error }] = useDeleteDashboardMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteDashboardMutation(baseOptions?: Apollo.MutationHookOptions<DeleteDashboardMutation, DeleteDashboardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteDashboardMutation, DeleteDashboardMutationVariables>(DeleteDashboardDocument, options);
+      }
+export type DeleteDashboardMutationHookResult = ReturnType<typeof useDeleteDashboardMutation>;
+export type DeleteDashboardMutationResult = Apollo.MutationResult<DeleteDashboardMutation>;
+export type DeleteDashboardMutationOptions = Apollo.BaseMutationOptions<DeleteDashboardMutation, DeleteDashboardMutationVariables>;
 export const DeleteRowDocument = gql`
     mutation DeleteRow($schema: String!, $storageUnit: String!, $values: [RecordInput!]!) {
   DeleteRow(schema: $schema, storageUnit: $storageUnit, values: $values) {
@@ -941,6 +1260,39 @@ export function useDeleteRowMutation(baseOptions?: Apollo.MutationHookOptions<De
 export type DeleteRowMutationHookResult = ReturnType<typeof useDeleteRowMutation>;
 export type DeleteRowMutationResult = Apollo.MutationResult<DeleteRowMutation>;
 export type DeleteRowMutationOptions = Apollo.BaseMutationOptions<DeleteRowMutation, DeleteRowMutationVariables>;
+export const DeleteWidgetDocument = gql`
+    mutation DeleteWidget($id: ID!) {
+  DeleteWidget(id: $id) {
+    Status
+  }
+}
+    `;
+export type DeleteWidgetMutationFn = Apollo.MutationFunction<DeleteWidgetMutation, DeleteWidgetMutationVariables>;
+
+/**
+ * __useDeleteWidgetMutation__
+ *
+ * To run a mutation, you first call `useDeleteWidgetMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteWidgetMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteWidgetMutation, { data, loading, error }] = useDeleteWidgetMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteWidgetMutation(baseOptions?: Apollo.MutationHookOptions<DeleteWidgetMutation, DeleteWidgetMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteWidgetMutation, DeleteWidgetMutationVariables>(DeleteWidgetDocument, options);
+      }
+export type DeleteWidgetMutationHookResult = ReturnType<typeof useDeleteWidgetMutation>;
+export type DeleteWidgetMutationResult = Apollo.MutationResult<DeleteWidgetMutation>;
+export type DeleteWidgetMutationOptions = Apollo.BaseMutationOptions<DeleteWidgetMutation, DeleteWidgetMutationVariables>;
 export const ExecuteConfirmedSqlDocument = gql`
     mutation ExecuteConfirmedSQL($query: String!, $operationType: String!) {
   ExecuteConfirmedSQL(query: $query, operationType: $operationType) {
@@ -1018,6 +1370,64 @@ export function useLoginMutation(baseOptions?: Apollo.MutationHookOptions<LoginM
 export type LoginMutationHookResult = ReturnType<typeof useLoginMutation>;
 export type LoginMutationResult = Apollo.MutationResult<LoginMutation>;
 export type LoginMutationOptions = Apollo.BaseMutationOptions<LoginMutation, LoginMutationVariables>;
+export const UpdateDashboardDocument = gql`
+    mutation UpdateDashboard($id: ID!, $name: String, $description: String, $refreshRule: String) {
+  UpdateDashboard(
+    id: $id
+    name: $name
+    description: $description
+    refreshRule: $refreshRule
+  ) {
+    ID
+    Name
+    Description
+    RefreshRule
+    CreatedAt
+    UpdatedAt
+    Widgets {
+      ID
+      Type
+      Title
+      Description
+      Layout
+      Query
+      QueryContext
+      Visualization
+      Snapshot
+      SortOrder
+    }
+  }
+}
+    `;
+export type UpdateDashboardMutationFn = Apollo.MutationFunction<UpdateDashboardMutation, UpdateDashboardMutationVariables>;
+
+/**
+ * __useUpdateDashboardMutation__
+ *
+ * To run a mutation, you first call `useUpdateDashboardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDashboardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDashboardMutation, { data, loading, error }] = useUpdateDashboardMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *      description: // value for 'description'
+ *      refreshRule: // value for 'refreshRule'
+ *   },
+ * });
+ */
+export function useUpdateDashboardMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDashboardMutation, UpdateDashboardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateDashboardMutation, UpdateDashboardMutationVariables>(UpdateDashboardDocument, options);
+      }
+export type UpdateDashboardMutationHookResult = ReturnType<typeof useUpdateDashboardMutation>;
+export type UpdateDashboardMutationResult = Apollo.MutationResult<UpdateDashboardMutation>;
+export type UpdateDashboardMutationOptions = Apollo.BaseMutationOptions<UpdateDashboardMutation, UpdateDashboardMutationVariables>;
 export const UpdateStorageUnitDocument = gql`
     mutation UpdateStorageUnit($schema: String!, $storageUnit: String!, $values: [RecordInput!]!, $updatedColumns: [String!]!) {
   UpdateStorageUnit(
@@ -1059,6 +1469,117 @@ export function useUpdateStorageUnitMutation(baseOptions?: Apollo.MutationHookOp
 export type UpdateStorageUnitMutationHookResult = ReturnType<typeof useUpdateStorageUnitMutation>;
 export type UpdateStorageUnitMutationResult = Apollo.MutationResult<UpdateStorageUnitMutation>;
 export type UpdateStorageUnitMutationOptions = Apollo.BaseMutationOptions<UpdateStorageUnitMutation, UpdateStorageUnitMutationVariables>;
+export const UpdateWidgetLayoutsDocument = gql`
+    mutation UpdateWidgetLayouts($dashboardId: ID!, $layouts: [LayoutInput!]!) {
+  UpdateWidgetLayouts(dashboardId: $dashboardId, layouts: $layouts) {
+    Status
+  }
+}
+    `;
+export type UpdateWidgetLayoutsMutationFn = Apollo.MutationFunction<UpdateWidgetLayoutsMutation, UpdateWidgetLayoutsMutationVariables>;
+
+/**
+ * __useUpdateWidgetLayoutsMutation__
+ *
+ * To run a mutation, you first call `useUpdateWidgetLayoutsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateWidgetLayoutsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateWidgetLayoutsMutation, { data, loading, error }] = useUpdateWidgetLayoutsMutation({
+ *   variables: {
+ *      dashboardId: // value for 'dashboardId'
+ *      layouts: // value for 'layouts'
+ *   },
+ * });
+ */
+export function useUpdateWidgetLayoutsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateWidgetLayoutsMutation, UpdateWidgetLayoutsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateWidgetLayoutsMutation, UpdateWidgetLayoutsMutationVariables>(UpdateWidgetLayoutsDocument, options);
+      }
+export type UpdateWidgetLayoutsMutationHookResult = ReturnType<typeof useUpdateWidgetLayoutsMutation>;
+export type UpdateWidgetLayoutsMutationResult = Apollo.MutationResult<UpdateWidgetLayoutsMutation>;
+export type UpdateWidgetLayoutsMutationOptions = Apollo.BaseMutationOptions<UpdateWidgetLayoutsMutation, UpdateWidgetLayoutsMutationVariables>;
+export const UpdateWidgetSnapshotDocument = gql`
+    mutation UpdateWidgetSnapshot($id: ID!, $snapshot: SnapshotInput!) {
+  UpdateWidgetSnapshot(id: $id, snapshot: $snapshot) {
+    Status
+  }
+}
+    `;
+export type UpdateWidgetSnapshotMutationFn = Apollo.MutationFunction<UpdateWidgetSnapshotMutation, UpdateWidgetSnapshotMutationVariables>;
+
+/**
+ * __useUpdateWidgetSnapshotMutation__
+ *
+ * To run a mutation, you first call `useUpdateWidgetSnapshotMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateWidgetSnapshotMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateWidgetSnapshotMutation, { data, loading, error }] = useUpdateWidgetSnapshotMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      snapshot: // value for 'snapshot'
+ *   },
+ * });
+ */
+export function useUpdateWidgetSnapshotMutation(baseOptions?: Apollo.MutationHookOptions<UpdateWidgetSnapshotMutation, UpdateWidgetSnapshotMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateWidgetSnapshotMutation, UpdateWidgetSnapshotMutationVariables>(UpdateWidgetSnapshotDocument, options);
+      }
+export type UpdateWidgetSnapshotMutationHookResult = ReturnType<typeof useUpdateWidgetSnapshotMutation>;
+export type UpdateWidgetSnapshotMutationResult = Apollo.MutationResult<UpdateWidgetSnapshotMutation>;
+export type UpdateWidgetSnapshotMutationOptions = Apollo.BaseMutationOptions<UpdateWidgetSnapshotMutation, UpdateWidgetSnapshotMutationVariables>;
+export const UpdateWidgetDocument = gql`
+    mutation UpdateWidget($id: ID!, $input: UpdateWidgetInput!) {
+  UpdateWidget(id: $id, input: $input) {
+    ID
+    Type
+    Title
+    Description
+    Layout
+    Query
+    QueryContext
+    Visualization
+    Snapshot
+    SortOrder
+  }
+}
+    `;
+export type UpdateWidgetMutationFn = Apollo.MutationFunction<UpdateWidgetMutation, UpdateWidgetMutationVariables>;
+
+/**
+ * __useUpdateWidgetMutation__
+ *
+ * To run a mutation, you first call `useUpdateWidgetMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateWidgetMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateWidgetMutation, { data, loading, error }] = useUpdateWidgetMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateWidgetMutation(baseOptions?: Apollo.MutationHookOptions<UpdateWidgetMutation, UpdateWidgetMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateWidgetMutation, UpdateWidgetMutationVariables>(UpdateWidgetDocument, options);
+      }
+export type UpdateWidgetMutationHookResult = ReturnType<typeof useUpdateWidgetMutation>;
+export type UpdateWidgetMutationResult = Apollo.MutationResult<UpdateWidgetMutation>;
+export type UpdateWidgetMutationOptions = Apollo.BaseMutationOptions<UpdateWidgetMutation, UpdateWidgetMutationVariables>;
 export const GetColumnsBatchDocument = gql`
     query GetColumnsBatch($schema: String!, $storageUnits: [String!]!) {
   ColumnsBatch(schema: $schema, storageUnits: $storageUnits) {
@@ -1260,6 +1781,62 @@ export type GetDatabaseQueryHookResult = ReturnType<typeof useGetDatabaseQuery>;
 export type GetDatabaseLazyQueryHookResult = ReturnType<typeof useGetDatabaseLazyQuery>;
 export type GetDatabaseSuspenseQueryHookResult = ReturnType<typeof useGetDatabaseSuspenseQuery>;
 export type GetDatabaseQueryResult = Apollo.QueryResult<GetDatabaseQuery, GetDatabaseQueryVariables>;
+export const GetDashboardsDocument = gql`
+    query GetDashboards {
+  GetDashboards {
+    ID
+    Name
+    Description
+    RefreshRule
+    CreatedAt
+    UpdatedAt
+    Widgets {
+      ID
+      Type
+      Title
+      Description
+      Layout
+      Query
+      QueryContext
+      Visualization
+      Snapshot
+      SortOrder
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetDashboardsQuery__
+ *
+ * To run a query within a React component, call `useGetDashboardsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetDashboardsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetDashboardsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetDashboardsQuery(baseOptions?: Apollo.QueryHookOptions<GetDashboardsQuery, GetDashboardsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetDashboardsQuery, GetDashboardsQueryVariables>(GetDashboardsDocument, options);
+      }
+export function useGetDashboardsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetDashboardsQuery, GetDashboardsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetDashboardsQuery, GetDashboardsQueryVariables>(GetDashboardsDocument, options);
+        }
+export function useGetDashboardsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetDashboardsQuery, GetDashboardsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetDashboardsQuery, GetDashboardsQueryVariables>(GetDashboardsDocument, options);
+        }
+export type GetDashboardsQueryHookResult = ReturnType<typeof useGetDashboardsQuery>;
+export type GetDashboardsLazyQueryHookResult = ReturnType<typeof useGetDashboardsLazyQuery>;
+export type GetDashboardsSuspenseQueryHookResult = ReturnType<typeof useGetDashboardsSuspenseQuery>;
+export type GetDashboardsQueryResult = Apollo.QueryResult<GetDashboardsQuery, GetDashboardsQueryVariables>;
 export const RawExecuteDocument = gql`
     query RawExecute($query: String!) {
   RawExecute(query: $query) {

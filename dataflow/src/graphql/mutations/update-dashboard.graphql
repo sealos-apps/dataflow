@@ -1,0 +1,22 @@
+mutation UpdateDashboard($id: ID!, $name: String, $description: String, $refreshRule: String) {
+  UpdateDashboard(id: $id, name: $name, description: $description, refreshRule: $refreshRule) {
+    ID
+    Name
+    Description
+    RefreshRule
+    CreatedAt
+    UpdatedAt
+    Widgets {
+      ID
+      Type
+      Title
+      Description
+      Layout
+      Query
+      QueryContext
+      Visualization
+      Snapshot
+      SortOrder
+    }
+  }
+}

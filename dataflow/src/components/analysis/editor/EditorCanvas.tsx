@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
-import { useAnalysisStore, Dashboard } from "@/stores/useAnalysisStore";
+import { useAnalysisDefinitionStore, type DashboardDefinition } from "@/stores/analysisDefinitionStore";
+import { useAnalysisUIStore } from "@/stores/analysisUiStore";
 import { DashboardWidget } from "./DashboardWidget";
 
 // Import RGL styles
@@ -10,7 +11,7 @@ import "react-resizable/css/styles.css";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface EditorCanvasProps {
-    dashboard: Dashboard;
+    dashboard: DashboardDefinition;
     isReadOnly: boolean;
     onEditComponent?: (id: string) => void;
     onMaximizeComponent?: (id: string) => void;
@@ -18,33 +19,35 @@ interface EditorCanvasProps {
 }
 
 export function EditorCanvas({ dashboard, isReadOnly, onEditComponent, onMaximizeComponent, onDeleteComponent }: EditorCanvasProps) {
-    const { updateLayout, selectComponent, selectedComponentId } = useAnalysisStore();
+    const updateWidgetLayouts = useAnalysisDefinitionStore(state => state.updateWidgetLayouts);
+    const selectedWidgetId = useAnalysisUIStore(state => state.selectedWidgetId);
+    const setSelectedWidgetId = useAnalysisUIStore(state => state.setSelectedWidgetId);
 
     const layouts = useMemo(() => {
         return {
-            lg: dashboard.components.map(c => c.layout),
-            md: dashboard.components.map((c, i) => ({
+            lg: dashboard.widgets.map(c => c.layout),
+            md: dashboard.widgets.map((c, i) => ({
                 ...c.layout,
                 w: 5,
                 h: 6, // Fixed height for consistency
                 x: (i % 2) * 5,
                 y: Math.floor(i / 2) * 6
             })),
-            sm: dashboard.components.map((c, i) => ({
+            sm: dashboard.widgets.map((c, i) => ({
                 ...c.layout,
                 w: 3,
                 h: 6, // Fixed height for consistency
                 x: (i % 2) * 3,
                 y: Math.floor(i / 2) * 6
             })),
-            xs: dashboard.components.map((c, i) => ({ ...c.layout, w: 4, x: 0, y: i })), // 1 col
-            xxs: dashboard.components.map((c, i) => ({ ...c.layout, w: 2, x: 0, y: i })) // 1 col
+            xs: dashboard.widgets.map((c, i) => ({ ...c.layout, w: 4, x: 0, y: i })), // 1 col
+            xxs: dashboard.widgets.map((c, i) => ({ ...c.layout, w: 2, x: 0, y: i })) // 1 col
         };
-    }, [dashboard.components]);
+    }, [dashboard.widgets]);
 
     const handleLayoutChange = (layout: any[]) => {
         if (!isReadOnly) {
-            updateLayout(layout);
+            void updateWidgetLayouts(dashboard.id, layout);
         }
     };
 
@@ -63,16 +66,16 @@ export function EditorCanvas({ dashboard, isReadOnly, onEditComponent, onMaximiz
                 containerPadding={[0, 0]}
                 draggableHandle=".drag-handle"
             >
-                {dashboard.components.map(component => (
-                    <div key={component.layout.i} className="h-full">
+                {dashboard.widgets.map(widget => (
+                    <div key={widget.layout.i} className="h-full">
                         <DashboardWidget
-                            component={component}
+                            widget={widget}
                             isReadOnly={isReadOnly}
-                            isSelected={selectedComponentId === component.id}
+                            isSelected={selectedWidgetId === widget.id}
                             onEdit={onEditComponent}
                             onMaximize={onMaximizeComponent}
                             onDelete={onDeleteComponent}
-                            onSelect={selectComponent}
+                            onSelect={setSelectedWidgetId}
                         />
                     </div>
                 ))}

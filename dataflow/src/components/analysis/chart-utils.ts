@@ -238,17 +238,19 @@ export function buildWidgetChartOption(config: any): any | null {
  * back into column/row form that the chart config panel needs.
  */
 export function fromWidgetConfig(component: {
-    config?: any;
+    visualization?: { chartConfig?: ChartConfig };
+    snapshot?: { config?: any };
     query?: string;
     queryContext?: { database?: string; schema?: string };
 }): QueryData | null {
-    const chartConfig = component.config?.chartConfig as ChartConfig | undefined;
-    if (!chartConfig || !component.config?.series) return null;
+    const chartConfig = component.visualization?.chartConfig as ChartConfig | undefined;
+    const storedConfig = component.snapshot?.config;
+    if (!chartConfig || !storedConfig?.series) return null;
 
     const xAxisColumn = chartConfig.xAxisColumn;
-    const xAxisData: string[] = component.config.xAxis || [];
-    const series: any[] = component.config.series;
-    const isPie = component.config.type === 'pie';
+    const xAxisData: string[] = storedConfig.xAxis || [];
+    const series: any[] = storedConfig.series;
+    const isPie = storedConfig.type === 'pie';
 
     const columns = [xAxisColumn, ...chartConfig.yAxisColumns];
     const rows: Record<string, any>[] = xAxisData.map((xVal, i) => {

@@ -1,5 +1,7 @@
-import { createContext, use, useState, useCallback, type ReactNode } from 'react'
-import { useAnalysisStore, type DashboardComponent } from '@/stores/useAnalysisStore'
+import { createContext, use, useRef, useState, useCallback, type ReactNode } from 'react'
+
+import { useAnalysisDefinitionStore, type ChartWidgetDefinition, type WidgetLayout } from '@/stores/analysisDefinitionStore'
+import { useAnalysisRuntimeStore } from '@/stores/analysisRuntimeStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import {
     DEFAULT_CHART_CONFIG,
@@ -12,22 +14,16 @@ import {
 
 type ModalView = 'chart-config' | 'data-config'
 
-/** Context value for the chart creation/editing wizard. */
 interface ChartCreateCtxValue {
-    // State
     activeView: ModalView
     title: string
     chartConfig: ChartConfig
     queryData: QueryData | null
     sqlQuery: string
     isEditing: boolean
-
-    // Derived
     canSave: boolean
     previewOption: ReturnType<typeof buildEChartsOption>
     editorContext: { connectionId: string; databaseName: string } | null
-
-    // Actions
     setActiveView: (view: ModalView) => void
     setTitle: (title: string) => void
     handleConfigChange: (updates: Partial<ChartConfig>) => void
@@ -42,7 +38,6 @@ interface ChartCreateCtxValue {
 
 const ChartCreateCtx = createContext<ChartCreateCtxValue | null>(null)
 
-/** Hook to access ChartCreate context. Throws outside provider. */
 export function useChartCreateCtx(): ChartCreateCtxValue {
     const ctx = use(ChartCreateCtx)
     if (!ctx) throw new Error('useChartCreateCtx must be used within ChartCreateProvider')
@@ -50,14 +45,47 @@ export function useChartCreateCtx(): ChartCreateCtxValue {
 }
 
 interface ChartCreateProviderProps {
-    editComponent?: DashboardComponent | null
+    editComponent?: ChartWidgetDefinition | null
     onClose: () => void
     children: ReactNode
 }
 
-/** Owns all state and business logic for the chart creation/editing wizard. */
+function getNextWidgetLayout(widgets: ChartWidgetDefinition[]): WidgetLayout {
+    const width = 4
+    const height = 6
+
+    if (widgets.length === 0) {
+        return { i: crypto.randomUUID(), x: 0, y: 0, w: width, h: height }
+    }
+
+    const sorted = [...widgets].sort((a, b) => {
+        if (a.layout.y !== b.layout.y) return a.layout.y - b.layout.y
+        return a.layout.x - b.layout.x
+    })
+    const last = sorted[sorted.length - 1]!
+
+    const maxY = widgets.reduce((currentMax, widget) => (
+        Math.max(currentMax, widget.layout.y + widget.layout.h)
+    ), 0)
+
+    if (last.layout.x + last.layout.w + width <= 12) {
+        return {
+            i: crypto.randomUUID(),
+            x: last.layout.x + last.layout.w,
+            y: last.layout.y,
+            w: width,
+            h: height,
+        }
+    }
+
+    return { i: crypto.randomUUID(), x: 0, y: maxY, w: width, h: height }
+}
+
 export function ChartCreateProvider({ editComponent, onClose, children }: ChartCreateProviderProps) {
-    const { addComponent, updateComponent } = useAnalysisStore()
+    const addWidget = useAnalysisDefinitionStore(state => state.addWidget)
+    const updateWidget = useAnalysisDefinitionStore(state => state.updateWidget)
+    const dashboards = useAnalysisDefinitionStore(state => state.dashboards)
+    const activeDashboardId = useAnalysisDefinitionStore(state => state.activeDashboardId)
     const { connections } = useConnectionStore()
 
     const isEditing = !!editComponent
@@ -66,15 +94,21 @@ export function ChartCreateProvider({ editComponent, onClose, children }: ChartC
     const [activeView, setActiveView] = useState<ModalView>('chart-config')
     const [title, setTitle] = useState(editComponent?.title ?? '')
     const [chartConfig, setChartConfig] = useState<ChartConfig>(
-        editComponent?.config?.chartConfig ?? DEFAULT_CHART_CONFIG,
+        editComponent?.visualization?.chartConfig ?? DEFAULT_CHART_CONFIG,
     )
     const [queryData, setQueryData] = useState<QueryData | null>(initialQueryData)
-    const [sqlQuery, setSqlQuery] = useState(editComponent?.query ?? '')
+    const [sqlQuery, setSqlQueryState] = useState(editComponent?.query ?? '')
+    const sqlQueryRef = useRef(editComponent?.query ?? '')
 
     const connection = connections[0]
     const editorContext = connection
         ? { connectionId: connection.id, databaseName: connection.database }
         : null
+
+    const setSqlQuery = useCallback((sql: string) => {
+        sqlQueryRef.current = sql
+        setSqlQueryState(sql)
+    }, [])
 
     const handleConfigChange = useCallback((updates: Partial<ChartConfig>) => {
         setChartConfig(prev => ({
@@ -89,16 +123,22 @@ export function ChartCreateProvider({ editComponent, onClose, children }: ChartC
         rows: Record<string, any>[],
         ctx: { database?: string; schema?: string },
     ) => {
-        setQueryData({ columns, rows, query: sqlQuery, database: ctx.database, schema: ctx.schema })
+        setQueryData({
+            columns,
+            rows,
+            query: sqlQueryRef.current,
+            database: ctx.database,
+            schema: ctx.schema,
+        })
         setChartConfig(prev => {
             const colSet = new Set(columns)
             return {
                 ...prev,
                 xAxisColumn: colSet.has(prev.xAxisColumn) ? prev.xAxisColumn : '',
-                yAxisColumns: prev.yAxisColumns.filter(c => colSet.has(c)),
+                yAxisColumns: prev.yAxisColumns.filter(column => colSet.has(column)),
             }
         })
-    }, [sqlQuery])
+    }, [])
 
     const canSave = title.trim() !== ''
         && queryData !== null
@@ -107,30 +147,71 @@ export function ChartCreateProvider({ editComponent, onClose, children }: ChartC
 
     const previewOption = buildEChartsOption(chartConfig, queryData)
 
-    const handleSave = useCallback(() => {
+    const handleSave = useCallback(async () => {
         if (!queryData || !title.trim()) return
+
         const { config, data } = toWidgetConfig(chartConfig, queryData)
+        const executedAt = new Date().toISOString()
         const payload = {
             title: title.trim(),
-            config,
-            data,
             query: queryData.query,
             queryContext: { database: queryData.database, schema: queryData.schema },
+            visualization: { chartConfig },
+            snapshot: { config, data, executedAt },
         }
 
+        let widgetId = editComponent?.id
         if (editComponent) {
-            updateComponent(editComponent.id, payload)
-        } else {
-            addComponent('chart', payload)
+            await updateWidget(editComponent.id, {
+                ...payload,
+                layout: editComponent.layout,
+                sortOrder: editComponent.sortOrder,
+            })
+        } else if (activeDashboardId) {
+            const activeDashboard = dashboards.find(dashboard => dashboard.id === activeDashboardId)
+            const widget = await addWidget(activeDashboardId, {
+                ...payload,
+                layout: getNextWidgetLayout(activeDashboard?.widgets ?? []),
+                sortOrder: activeDashboard?.widgets.length ?? 0,
+            })
+            widgetId = widget.id
         }
+
+        if (widgetId) {
+            useAnalysisRuntimeStore.setState(state => ({
+                widgetStatesById: {
+                    ...state.widgetStatesById,
+                    [widgetId]: {
+                        status: 'success',
+                        config,
+                        data,
+                        executedAt,
+                        isStale: false,
+                    },
+                },
+            }))
+        }
+
         onClose()
-    }, [queryData, title, chartConfig, addComponent, updateComponent, editComponent, onClose])
+    }, [queryData, title, chartConfig, addWidget, updateWidget, editComponent, activeDashboardId, dashboards, onClose])
 
     return (
         <ChartCreateCtx value={{
-            activeView, title, chartConfig, queryData, sqlQuery, isEditing,
-            canSave, previewOption, editorContext,
-            setActiveView, setTitle, handleConfigChange, setSqlQuery, handleQueryResults, handleSave,
+            activeView,
+            title,
+            chartConfig,
+            queryData,
+            sqlQuery,
+            isEditing,
+            canSave,
+            previewOption,
+            editorContext,
+            setActiveView,
+            setTitle,
+            handleConfigChange,
+            setSqlQuery,
+            handleQueryResults,
+            handleSave,
         }}>
             {children}
         </ChartCreateCtx>

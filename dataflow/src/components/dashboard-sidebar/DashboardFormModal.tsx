@@ -1,7 +1,7 @@
 import { createContext, use, useState, useCallback, type ReactNode } from 'react'
 import { Plus, Settings } from 'lucide-react'
-import { useAnalysisStore } from '@/stores/useAnalysisStore'
-import type { Dashboard, RefreshRule } from '@/stores/useAnalysisStore'
+import { useAnalysisDefinitionStore } from '@/stores/analysisDefinitionStore'
+import type { DashboardDefinition as Dashboard, RefreshRule } from '@/stores/analysisDefinitionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/label'
@@ -53,7 +53,9 @@ function DashboardFormProvider({
   children: ReactNode
 }) {
   const { t } = useI18n()
-  const { createDashboard, updateDashboard, isDashboardNameExists } = useAnalysisStore()
+  const createDashboard = useAnalysisDefinitionStore(state => state.createDashboard)
+  const updateDashboard = useAnalysisDefinitionStore(state => state.updateDashboard)
+  const isDashboardNameExists = useAnalysisDefinitionStore(state => state.isDashboardNameExists)
   const isEditMode = !!dashboard
 
   const [name, setName] = useState(dashboard?.name ?? '')
@@ -66,9 +68,9 @@ function DashboardFormProvider({
       throw new Error(t('analysis.dashboard.nameExists'))
     }
     if (isEditMode) {
-      updateDashboard(dashboard.id, { name, description: description || undefined, refreshRule })
+      await updateDashboard(dashboard.id, { name, description: description || '', refreshRule })
     } else {
-      createDashboard(name, description || undefined, refreshRule)
+      await createDashboard(name, description || undefined, refreshRule)
     }
     onSuccess?.()
   }, [name, description, refreshRule, isDashboardNameExists, dashboard, isEditMode, createDashboard, updateDashboard, onSuccess, t])

@@ -1,0 +1,5 @@
+mutation UpdateWidgetLayouts($dashboardId: ID!, $layouts: [LayoutInput!]!) {
+  UpdateWidgetLayouts(dashboardId: $dashboardId, layouts: $layouts) {
+    Status
+  }
+}

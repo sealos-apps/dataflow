@@ -1,6 +1,6 @@
 import { useCallback, type ReactNode } from 'react'
 import { Trash2 } from 'lucide-react'
-import { useAnalysisStore } from '@/stores/useAnalysisStore'
+import { useAnalysisDefinitionStore } from '@/stores/analysisDefinitionStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm } from '@/components/ui/ModalForm'
 import { useI18n } from '@/i18n/useI18n'
@@ -20,12 +20,12 @@ function DeleteComponentProvider({
   children: ReactNode
 }) {
   const { t } = useI18n()
-  const { removeComponent } = useAnalysisStore()
+  const deleteWidget = useAnalysisDefinitionStore(state => state.deleteWidget)
 
   const handleSubmit = useCallback(async () => {
-    removeComponent(componentId)
+    await deleteWidget(componentId)
     onSuccess?.()
-  }, [removeComponent, componentId, onSuccess])
+  }, [deleteWidget, componentId, onSuccess])
 
   return (
     <ModalForm.Provider
