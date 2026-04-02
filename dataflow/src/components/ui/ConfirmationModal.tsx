@@ -88,7 +88,7 @@ export function ConfirmationModal({
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 placeholder={verificationText}
-                                className="font-mono focus-visible:border-destructive focus-visible:ring-destructive/50"
+                                className="font-mono"
                                 onPaste={(e) => e.preventDefault()}
                             />
                         </div>

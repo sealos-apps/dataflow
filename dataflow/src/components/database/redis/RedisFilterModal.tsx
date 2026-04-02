@@ -80,8 +80,8 @@ function RedisFilterFields() {
               className={[
                 'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
                 selectedTypes.includes(type)
-                  ? 'border-primary/40 bg-primary/5 text-primary'
-                  : 'border-input bg-background text-foreground hover:bg-muted/30',
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'hover:border-primary/50 hover:bg-muted/50',
               ].join(' ')}
             >
               {type.toUpperCase()}

@@ -79,8 +79,8 @@ function ClearTableDataWarning() {
   const { tableName } = useClearTableDataCtx()
 
   return (
-    <div className="rounded-lg bg-destructive/5 p-3 text-sm border border-destructive/10">
-      <p className="text-muted-foreground">
+    <div className="rounded-lg bg-destructive/5 p-4 text-sm border border-destructive/10">
+      <p className="text-destructive">
         {t('sql.clearTable.warning', { tableName })}
       </p>
     </div>
@@ -106,7 +106,7 @@ function ClearTableDataModeSelector() {
         <label
           className={cn(
             'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
-            mode === 'truncate' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
+            mode === 'truncate' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50',
           )}
         >
           <RadioGroupItem value="truncate" className="mt-0.5" />
@@ -120,7 +120,7 @@ function ClearTableDataModeSelector() {
         <label
           className={cn(
             'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
-            mode === 'delete' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
+            mode === 'delete' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50',
           )}
         >
           <RadioGroupItem value="delete" className="mt-0.5" />
