@@ -65,7 +65,7 @@ export function AlertModal({
                 <div className="p-6">
                     <div className={cn(
                         "p-4 rounded-lg text-sm font-medium border whitespace-pre-wrap",
-                        type === 'success' && "bg-success/5 border-success/10 text-success-foreground",
+                        type === 'success' && "bg-success/5 border-success/10 text-success",
                         type === 'error' && "bg-destructive/5 border-destructive/10 text-destructive",
                         type === 'info' && "bg-muted/50 border-border text-muted-foreground"
                     )}>

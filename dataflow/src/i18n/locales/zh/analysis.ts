@@ -13,6 +13,8 @@ export const zhAnalysisMessages = {
   'analysis.dashboard.sortByDate': '按日期排序',
   'analysis.dashboard.sortByName': '按名称排序',
   'analysis.dashboard.selectToView': '请选择一个仪表盘查看详情',
+  'analysis.dashboard.emptyTitle': '尚未选择仪表盘',
+  'analysis.dashboard.emptyDescription': '从左侧选择一个仪表盘，或创建一个新的仪表盘开始分析',
   'analysis.dashboard.refresh': '刷新',
   'analysis.chart.add': '添加图表',
   'analysis.chart.create': '创建图表',

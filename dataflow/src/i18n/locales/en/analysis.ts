@@ -19,6 +19,8 @@ export const enAnalysisMessages = {
   'analysis.dashboard.sortByDate': 'Sort by Date',
   'analysis.dashboard.sortByName': 'Sort by Name',
   'analysis.dashboard.selectToView': 'Select a dashboard to view details',
+  'analysis.dashboard.emptyTitle': 'No Dashboard Selected',
+  'analysis.dashboard.emptyDescription': 'Select a dashboard from the sidebar, or create a new one to start analyzing',
   'analysis.dashboard.refresh': 'Refresh',
   'analysis.chart.add': 'Add Chart',
   'analysis.chart.create': 'Create Chart',
