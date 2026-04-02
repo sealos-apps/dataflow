@@ -5,24 +5,39 @@ import { SafeECharts } from '@/components/ui/SafeECharts'
 import { SQLEditorView } from '@/components/editor/SQLEditorView'
 import { ChartConfigPanel } from './ChartConfigPanel'
 import { ChartCreateProvider, useChartCreateCtx } from './ChartCreateProvider'
+import { useAnalysisStore, type DashboardComponent } from '@/stores/useAnalysisStore'
 import { useI18n } from '@/i18n/useI18n'
 
 interface ChartCreateModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    editComponentId?: string | null
 }
 
-/** Modal for creating chart widgets with two views: chart configuration and SQL data. */
-export function ChartCreateModal({ open, onOpenChange }: ChartCreateModalProps) {
+/** Modal for creating or editing chart widgets with two views: chart configuration and SQL data. */
+export function ChartCreateModal({ open, onOpenChange, editComponentId }: ChartCreateModalProps) {
     const { t } = useI18n()
+    const { dashboards, activeDashboardId } = useAnalysisStore()
+
+    const dashboard = dashboards.find(d => d.id === activeDashboardId)
+    const editComponent: DashboardComponent | null = editComponentId
+        ? dashboard?.components.find(c => c.id === editComponentId) ?? null
+        : null
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className="max-w-[1200px] w-[90vw] h-[85vh] p-0 flex flex-col overflow-hidden gap-0"
                 showCloseButton={false}
             >
-                <DialogTitle className="sr-only">{t('analysis.chart.create')}</DialogTitle>
-                <ChartCreateProvider onClose={() => onOpenChange(false)}>
+                <DialogTitle className="sr-only">
+                    {editComponent ? t('analysis.chart.edit') : t('analysis.chart.create')}
+                </DialogTitle>
+                <ChartCreateProvider
+                    key={editComponentId ?? 'create'}
+                    editComponent={editComponent}
+                    onClose={() => onOpenChange(false)}
+                >
                     <ChartCreateContent />
                 </ChartCreateProvider>
             </DialogContent>
@@ -38,7 +53,7 @@ function ChartCreateContent() {
 
 function ChartConfigView() {
     const { t } = useI18n()
-    const { title, setTitle, previewOption, canSave, handleSave } = useChartCreateCtx()
+    const { title, setTitle, previewOption, canSave, handleSave, isEditing } = useChartCreateCtx()
 
     return (
         <>
@@ -46,7 +61,9 @@ function ChartConfigView() {
             <div className="h-14 border-b flex items-center justify-between px-6 shrink-0">
                 <div className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="font-medium text-xl">{t('analysis.chart.create')}</h2>
+                    <h2 className="font-medium text-xl">
+                        {isEditing ? t('analysis.chart.edit') : t('analysis.chart.create')}
+                    </h2>
                 </div>
                 <DialogClose className="p-2 hover:bg-muted rounded-full transition-colors">
                     <X className="w-5 h-5 text-muted-foreground" />

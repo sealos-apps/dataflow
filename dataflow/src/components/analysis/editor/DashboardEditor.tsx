@@ -7,7 +7,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { EditorCanvas } from "./EditorCanvas";
 import { ChartCreateModal } from "../chart-create/ChartCreateModal";
 import { MaximizeChartModal } from "./MaximizeChartModal";
-import { ComponentSettingsModal } from "./ComponentSettingsModal";
 import { DeleteComponentModal } from "./DeleteComponentModal";
 import { useI18n } from '@/i18n/useI18n'
 import { useRawExecuteLazyQuery } from '@graphql'
@@ -19,7 +18,6 @@ export function DashboardEditor() {
     const {
         dashboards,
         activeDashboardId,
-        selectComponent,
         updateComponent,
         isChartModalOpen,
         toggleChartModal,
@@ -81,15 +79,15 @@ export function DashboardEditor() {
         return () => clearInterval(id);
     }, [dashboard?.refreshRule]);
 
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
     const [maximizedComponentId, setMaximizedComponentId] = useState<string | null>(null);
     const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
 
     if (!dashboard) return null;
 
     const handleEditComponent = (id: string) => {
-        selectComponent(id);
-        setIsSettingsModalOpen(true);
+        setEditingComponentId(id);
+        toggleChartModal(true);
     };
 
     return (
@@ -174,12 +172,13 @@ export function DashboardEditor() {
 
             <ChartCreateModal
                 open={isChartModalOpen}
-                onOpenChange={(open) => { if (!open) toggleChartModal(false) }}
-            />
-
-            <ComponentSettingsModal
-                open={isSettingsModalOpen}
-                onOpenChange={setIsSettingsModalOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        toggleChartModal(false);
+                        setEditingComponentId(null);
+                    }
+                }}
+                editComponentId={editingComponentId}
             />
 
             <MaximizeChartModal
