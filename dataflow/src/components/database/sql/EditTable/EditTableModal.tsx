@@ -22,7 +22,7 @@ function EditTableContent() {
     <Tabs
       value={state.activeTab}
       onValueChange={(v) => actions.setActiveTab(v as typeof state.activeTab)}
-      className="flex-1 flex flex-col"
+      className="flex-1 flex flex-col min-h-0"
     >
       <TabsList
         variant="line"
@@ -42,7 +42,7 @@ function EditTableContent() {
         </TabsTrigger>
       </TabsList>
 
-      <div className="flex-1 flex flex-col overflow-y-auto px-6">
+      <div className="flex-1 flex flex-col overflow-y-auto min-h-0 px-6">
         {state.isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
