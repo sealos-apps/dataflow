@@ -1,0 +1,10 @@
+query RawExecute($query: String!) {
+  RawExecute(query: $query) {
+    Columns {
+      Type
+      Name
+    }
+    Rows
+    TotalCount
+  }
+}

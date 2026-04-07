@@ -188,6 +188,63 @@ type StatusResponse {
   Status: Boolean!
 }
 
+type DashboardWidget {
+  ID: ID!
+  Type: String!
+  Title: String!
+  Description: String
+  Layout: String!
+  Query: String
+  QueryContext: String
+  Visualization: String
+  Snapshot: String
+  SortOrder: Int!
+}
+
+type Dashboard {
+  ID: ID!
+  Name: String!
+  Description: String
+  RefreshRule: String!
+  Widgets: [DashboardWidget!]!
+  CreatedAt: String!
+  UpdatedAt: String!
+}
+
+input WidgetInput {
+  Type: String!
+  Title: String!
+  Description: String
+  Layout: String!
+  Query: String
+  QueryContext: String
+  Visualization: String
+  Snapshot: String
+  SortOrder: Int
+}
+
+input UpdateWidgetInput {
+  Title: String
+  Description: String
+  Layout: String
+  Query: String
+  QueryContext: String
+  Visualization: String
+  Snapshot: String
+  SortOrder: Int
+}
+
+input LayoutInput {
+  WidgetID: ID!
+  Layout: String!
+}
+
+input SnapshotInput {
+  Config: String!
+  Data: String!
+  ExecutedAt: String!
+}
+
 type ImportPreview {
   Sheet: String
   Columns: [String!]!
@@ -302,6 +359,7 @@ type DatabaseMetadata {
   operators: [String!]!
   aliasMap: [Record!]!
   capabilities: Capabilities!
+  systemSchemas: [String!]!
 }
 
 type DatabaseQuerySuggestion {
@@ -440,6 +498,7 @@ type Query {
   Version: String!
   UpdateInfo: UpdateInfo!
   Health: HealthStatus!
+  GetDashboards: [Dashboard!]!
   Profiles: [LoginProfile!]!
   Database(type: String!): [String!]!
   Schema: [String!]!
@@ -488,6 +547,16 @@ type Mutation {
   LoginWithProfile(profile: LoginProfileInput!): StatusResponse!
   Logout: StatusResponse!
   UpdateSettings(newSettings: SettingsConfigInput!): StatusResponse!
+  CreateDashboard(name: String!, description: String, refreshRule: String!): Dashboard!
+  UpdateDashboard(id: ID!, name: String, description: String, refreshRule: String): Dashboard!
+  DeleteDashboard(id: ID!): StatusResponse!
+
+  AddWidget(dashboardId: ID!, input: WidgetInput!): DashboardWidget!
+  UpdateWidget(id: ID!, input: UpdateWidgetInput!): DashboardWidget!
+  DeleteWidget(id: ID!): StatusResponse!
+
+  UpdateWidgetLayouts(dashboardId: ID!, layouts: [LayoutInput!]!): StatusResponse!
+  UpdateWidgetSnapshot(id: ID!, snapshot: SnapshotInput!): StatusResponse!
 
   AddStorageUnit(schema: String!, storageUnit: String!, fields: [RecordInput!]!): StatusResponse!
   UpdateStorageUnit(schema: String!, storageUnit: String!, values: [RecordInput!]!, updatedColumns: [String!]!): StatusResponse!

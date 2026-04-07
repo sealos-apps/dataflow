@@ -1,0 +1,5 @@
+mutation UpdateWidgetSnapshot($id: ID!, $snapshot: SnapshotInput!) {
+  UpdateWidgetSnapshot(id: $id, snapshot: $snapshot) {
+    Status
+  }
+}

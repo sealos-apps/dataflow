@@ -65,6 +65,9 @@ func (p *ElasticSearchPlugin) GetGraph(config *engine.PluginConfig, database str
 
 	indices := []string{}
 	for indexName := range indicesStats {
+		if strings.HasPrefix(indexName, ".") {
+			continue
+		}
 		indices = append(indices, indexName)
 	}
 
@@ -72,6 +75,9 @@ func (p *ElasticSearchPlugin) GetGraph(config *engine.PluginConfig, database str
 	uniqueRelations := make(map[string]bool)
 
 	for indexName := range indicesStats {
+		if strings.HasPrefix(indexName, ".") {
+			continue
+		}
 		var buf bytes.Buffer
 		query := map[string]any{
 			"size": 100,

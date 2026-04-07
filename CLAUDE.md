@@ -1,6 +1,6 @@
 # WhoDB Development Guide
 
-WhoDB is a database management tool with a Go backend (`/core`) and React frontend (`/frontend`).
+WhoDB is a database management tool with a Go backend (`/core`) and two React frontends: the original management UI (`/frontend`) and the DataFlow analysis platform (`/dataflow`).
 
 ## Non-Negotiable Rules
 
@@ -28,10 +28,16 @@ core/                   # CE backend (Go)
   graph/schema.graphqls # GraphQL schema
   graph/*.resolvers.go  # GraphQL resolvers
 
-frontend/               # React/TypeScript
+frontend/               # Original management UI (React/TypeScript)
   src/index.tsx        # Entry point
   src/store/           # Redux Toolkit state
   src/generated/       # GraphQL codegen output (@graphql alias)
+
+dataflow/               # DataFlow analysis platform (React 19/TypeScript/Vite)
+  src/main.tsx         # Entry point
+  src/stores/          # Zustand state (auth, connection, tab, analysis)
+  src/generated/       # GraphQL codegen output (@/* alias)
+  src/components/      # layout, database views, analysis dashboard, editor, ui
 
 dev/                    # Docker compose, test scripts, sample data
 docs/                   # Integration plan and analysis
@@ -67,13 +73,25 @@ bash dev/run-backend-tests.sh all           # Unit + integration
 - `env` package is for pure env var declarations only (no `log` import). Functions that parse env vars and need `log` for error reporting go in `envconfig`
 - Delete build binaries after testing (`go build` artifacts)
 
-## When Working on Frontend (TypeScript)
+## When Working on Frontend — Original UI (`/frontend`)
 
 - Use PNPM, not NPM. Use pnpx, not npx
 - Define GraphQL operations in `.graphql` files, then run `pnpm run generate`
 - Import generated hooks from `@graphql` alias - never use inline `gql` strings
 - CE features in `frontend/src/`
+- State management: Redux Toolkit (`frontend/src/store/`)
 - **Keyboard shortcuts** are centralized in `frontend/src/utils/shortcuts.ts`. Never hardcode shortcut keys inline — use `SHORTCUTS.*` for definitions, `matchesShortcut()` for event handling, and `SHORTCUTS.*.displayKeys` for UI display. Platform-variant shortcuts (nav numbers) use `resolveShortcut()`
+
+## When Working on Frontend — DataFlow (`/dataflow`)
+
+- Use PNPM, not NPM. Use pnpx, not npx
+- Vite SPA with React 19, TypeScript, Tailwind CSS 4
+- State management: Zustand (`dataflow/src/stores/`)
+- Path alias: `@/*` maps to `src/` (configured in `vite.config.ts` and `tsconfig.json`)
+- Styling: `cn()` utility (clsx + tailwind-merge), CSS variables in `src/globals.css`
+- GraphQL codegen: define operations in `.graphql` files, run `pnpm run generate`
+- Key libraries: Monaco Editor, ECharts, react-grid-layout, xlsx
+- See `dataflow/CLAUDE.md` for full architecture details
 
 ## When Updating Dependencies
 
@@ -85,7 +103,8 @@ See `.claude/docs/commands.md` for full reference.
 
 ```bash
 # Backend: cd core && go run .
-# Frontend: cd frontend && pnpm start
+# Frontend (Original UI): cd frontend && pnpm start
+# Frontend (DataFlow): cd dataflow && pnpm dev
 ```
 
 ## Development Principles

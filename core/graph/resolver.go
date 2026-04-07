@@ -19,8 +19,10 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/clidey/whodb/core/graph/model"
+	"github.com/clidey/whodb/core/src/dashboard"
 	"github.com/clidey/whodb/core/src"
 	"github.com/clidey/whodb/core/src/auth"
 	"github.com/clidey/whodb/core/src/engine"
@@ -33,7 +35,19 @@ import (
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
-type Resolver struct{}
+type Resolver struct {
+	DashboardService dashboard.ServiceAPI
+}
+
+func NewResolver() *Resolver {
+	service, err := dashboard.NewServiceFromEnv()
+	if err != nil {
+		log.Warnf("dashboard metadata disabled: %v", err)
+		return &Resolver{}
+	}
+
+	return &Resolver{DashboardService: service}
+}
 
 // GetPluginForContext returns the appropriate database plugin and config for the current session.
 func GetPluginForContext(ctx context.Context) (*engine.Plugin, *engine.PluginConfig) {
@@ -225,4 +239,52 @@ func discoveredConnectionToModel(conn *providers.DiscoveredConnection) *model.Di
 		Status:       mapConnectionStatusToModel(conn.Status),
 		Metadata:     metadata,
 	}
+}
+
+func requireDashboardService(resolver *Resolver) (dashboard.ServiceAPI, error) {
+	if resolver == nil || resolver.DashboardService == nil {
+		return nil, dashboard.ErrMetadataStoreNotConfigured
+	}
+	return resolver.DashboardService, nil
+}
+
+func mapDashboardModel(item dashboard.Dashboard) *model.Dashboard {
+	widgets := make([]*model.DashboardWidget, 0, len(item.Widgets))
+	for _, widget := range item.Widgets {
+		widgets = append(widgets, mapWidgetModel(widget))
+	}
+
+	return &model.Dashboard{
+		ID:          item.ID,
+		Name:        item.Name,
+		Description: item.Description,
+		RefreshRule: item.RefreshRule,
+		Widgets:     widgets,
+		CreatedAt:   item.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt:   item.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func mapWidgetModel(item dashboard.Widget) *model.DashboardWidget {
+	return &model.DashboardWidget{
+		ID:            item.ID,
+		Type:          item.Type,
+		Title:         item.Title,
+		Description:   item.Description,
+		Layout:        string(item.Layout),
+		Query:         item.Query,
+		QueryContext:  rawJSONToStringPtr(item.QueryContext),
+		Visualization: rawJSONToStringPtr(item.Visualization),
+		Snapshot:      rawJSONToStringPtr(item.Snapshot),
+		SortOrder:     item.SortOrder,
+	}
+}
+
+func rawJSONToStringPtr(value []byte) *string {
+	if len(value) == 0 {
+		return nil
+	}
+
+	text := string(value)
+	return &text
 }

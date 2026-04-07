@@ -425,6 +425,7 @@ func (p *MongoDBPlugin) GetDatabaseMetadata() *engine.DatabaseMetadata {
 		Capabilities: engine.Capabilities{
 			SupportsDatabaseSwitch: true,
 		},
+		SystemSchemas: []string{"admin", "local", "config"},
 	}
 }
 

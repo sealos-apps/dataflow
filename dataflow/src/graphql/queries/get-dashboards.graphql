@@ -1,0 +1,22 @@
+query GetDashboards {
+  GetDashboards {
+    ID
+    Name
+    Description
+    RefreshRule
+    CreatedAt
+    UpdatedAt
+    Widgets {
+      ID
+      Type
+      Title
+      Description
+      Layout
+      Query
+      QueryContext
+      Visualization
+      Snapshot
+      SortOrder
+    }
+  }
+}

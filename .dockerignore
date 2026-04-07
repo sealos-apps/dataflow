@@ -8,6 +8,7 @@
 !cli/
 !ee/
 !ee-stub/
+!dataflow/
 
 # Exclude test/dev artifacts within allowed directories
 **/node_modules

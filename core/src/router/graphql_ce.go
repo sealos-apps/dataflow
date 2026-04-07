@@ -21,5 +21,5 @@ import (
 
 // createGraphQLServer creates a GraphQL server for Community Edition
 func createGraphQLServer() *handler.Server {
-	return NewGraphQLServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	return NewGraphQLServer(graph.NewExecutableSchema(graph.Config{Resolvers: graph.NewResolver()}))
 }

@@ -1,0 +1,150 @@
+import { TableViewProvider, useTableView } from './TableView/TableViewProvider'
+import { TableViewDataGrid } from './TableView/TableView.DataGrid'
+import { TableViewToolbar } from './TableView/TableView.Toolbar'
+import { buildPreviewSql, summarizeChanges } from './TableView/changeset-sql-preview'
+import { DataView } from '@/components/database/shared/DataView'
+import { FindBar } from '@/components/database/shared/FindBar'
+import { FilterTableModal } from './FilterTableModal'
+import { ExportDataModal } from './ExportDataModal'
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
+import { AlertModal } from '@/components/ui/AlertModal'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useI18n } from '@/i18n/useI18n'
+import type { FilterChip } from '@/components/database/shared/types'
+
+interface TableDetailViewProps {
+  connectionId: string
+  databaseName: string
+  tableName: string
+  schema?: string
+}
+
+export function TableDetailView(props: TableDetailViewProps) {
+  return (
+    <TableViewProvider {...props}>
+      <TableDetailViewContent {...props} />
+    </TableViewProvider>
+  )
+}
+
+function TableDetailViewContent({ connectionId, databaseName, tableName, schema }: TableDetailViewProps) {
+  const { t } = useI18n()
+  const { state, actions } = useTableView()
+
+  if (state.error) {
+    return <DataView.Error message={state.error} onRetry={() => actions.handleSubmitRequest()} />
+  }
+
+  const filterChips: FilterChip[] = state.filterConditions.map((condition, idx) => ({
+    id: condition.id,
+    label: `${condition.column} ${condition.operator}`,
+    value: ['IS NULL', 'IS NOT NULL'].includes(condition.operator) ? '' : condition.value,
+    onRemove: () => {
+      const remaining = state.filterConditions.filter((_, i) => i !== idx)
+      actions.handleFilterApply(state.visibleColumns, remaining)
+    },
+  }))
+
+  const previewStatements = buildPreviewSql(tableName, state.changes)
+  const summary = summarizeChanges(state.changes)
+
+  return (
+    <div className="flex h-full flex-col">
+      <DataView.FilterBar
+        filters={filterChips}
+        onClearAll={() => actions.handleFilterApply(state.visibleColumns, [])}
+      />
+
+      <TableViewToolbar connectionId={connectionId} databaseName={databaseName} tableName={tableName} schema={schema} />
+
+      <FindBar.Provider
+        rows={state.renderedRows.map((row) => row.values)}
+        columns={state.visibleColumns}
+      >
+        <FindBar.Bar />
+        <TableViewDataGrid />
+      </FindBar.Provider>
+
+      {state.total > 0 && (
+        <DataView.Pagination
+          currentPage={state.currentPage}
+          totalPages={state.totalPages}
+          pageSize={state.pageSize}
+          total={state.total}
+          loading={state.loading}
+          onPageChange={actions.handlePageChange}
+          onPageSizeChange={actions.handlePageSizeChange}
+        />
+      )}
+
+      <FilterTableModal
+        open={state.isFilterModalOpen}
+        onOpenChange={actions.setIsFilterModalOpen}
+        columns={state.data?.columns || []}
+        initialSelectedColumns={state.visibleColumns}
+        initialConditions={state.filterConditions}
+        onApply={actions.handleFilterApply}
+      />
+
+      {state.showExportModal && (
+        <ExportDataModal
+          open={state.showExportModal}
+          onOpenChange={(open) => { if (!open) actions.setShowExportModal(false) }}
+          connectionId={connectionId}
+          databaseName={databaseName}
+          schema={schema}
+          tableName={tableName}
+        />
+      )}
+
+      <Dialog open={state.showPreviewModal} onOpenChange={actions.setShowPreviewModal}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t('sql.changes.previewTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('sql.changes.previewDescription', { count: state.pendingChangeCount })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh] rounded-md border bg-muted/20">
+            <pre className="whitespace-pre-wrap p-4 font-mono text-xs">
+              {previewStatements.join('\n\n')}
+            </pre>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmationModal
+        isOpen={state.showSubmitModal}
+        onClose={() => actions.setShowSubmitModal(false)}
+        onConfirm={actions.submitChanges}
+        title={t('sql.changes.submitConfirmTitle', { count: state.pendingChangeCount })}
+        message={t('sql.changes.submitConfirmMessage', {
+          count: state.pendingChangeCount,
+          updates: summary.updates,
+          inserts: summary.inserts,
+          deletes: summary.deletes,
+        })}
+        confirmText={t('common.actions.confirm')}
+      />
+
+      <ConfirmationModal
+        isOpen={state.showDiscardModal}
+        onClose={() => actions.setShowDiscardModal(false)}
+        onConfirm={actions.confirmDiscardAndContinue}
+        title={t('sql.changes.discardTitle')}
+        message={t('sql.changes.discardMessage', { count: state.pendingChangeCount })}
+        confirmText={t('common.actions.discard')}
+      />
+
+      {state.alert && (
+        <AlertModal
+          isOpen
+          onClose={actions.closeAlert}
+          {...state.alert}
+        />
+      )}
+    </div>
+  )
+}

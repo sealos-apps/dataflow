@@ -24,6 +24,11 @@ import (
 	"github.com/clidey/whodb/core/src/log"
 )
 
+func isDeleteKeyRequest(storageUnit string, values map[string]string) bool {
+	key, ok := values["key"]
+	return ok && key == storageUnit
+}
+
 func (p *RedisPlugin) DeleteRow(config *engine.PluginConfig, schema string, storageUnit string, values map[string]string) (bool, error) {
 	client, err := DB(config)
 	if err != nil {
@@ -33,6 +38,15 @@ func (p *RedisPlugin) DeleteRow(config *engine.PluginConfig, schema string, stor
 	defer client.Close()
 
 	ctx := context.Background()
+
+	if isDeleteKeyRequest(storageUnit, values) {
+		err := client.Del(ctx, storageUnit).Err()
+		if err != nil {
+			log.WithError(err).WithField("storageUnit", storageUnit).Error("Failed to delete Redis key")
+			return false, err
+		}
+		return true, nil
+	}
 
 	keyType, err := client.Type(ctx, storageUnit).Result()
 	if err != nil {

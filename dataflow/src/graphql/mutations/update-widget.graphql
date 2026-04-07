@@ -1,0 +1,14 @@
+mutation UpdateWidget($id: ID!, $input: UpdateWidgetInput!) {
+  UpdateWidget(id: $id, input: $input) {
+    ID
+    Type
+    Title
+    Description
+    Layout
+    Query
+    QueryContext
+    Visualization
+    Snapshot
+    SortOrder
+  }
+}

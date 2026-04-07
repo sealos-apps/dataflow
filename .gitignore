@@ -60,3 +60,16 @@ tools/docs-agent/runs/
 tools/
 .playwright-mcp
 dev_docs/
+dataflow/.next
+dataflow/build/
+*.env.local
+docs/superpowers/
+dataflow/docs/superpowers/
+
+# DataFlow derived files
+dataflow/public/monaco-editor/
+
+dataflow/.env
+
+.agents/
+.worktrees/

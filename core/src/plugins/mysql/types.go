@@ -91,5 +91,6 @@ func (p *MySQLPlugin) GetDatabaseMetadata() *engine.DatabaseMetadata {
 			SupportsDatabaseSwitch: true,
 			SupportsModifiers:      true,
 		},
+		SystemSchemas: []string{"information_schema", "mysql", "performance_schema", "sys"},
 	}
 }

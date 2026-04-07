@@ -60,6 +60,7 @@ type DatabaseMetadata struct {
 	Operators       []string
 	AliasMap        map[string]string
 	Capabilities    Capabilities
+	SystemSchemas   []string
 }
 
 // Helper function to create a pointer to an int

@@ -1,0 +1,9 @@
+query GetStorageUnits($schema: String!) {
+  StorageUnit(schema: $schema) {
+    Name
+    Attributes {
+      Key
+      Value
+    }
+  }
+}

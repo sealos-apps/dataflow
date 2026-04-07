@@ -1,0 +1,14 @@
+mutation AddWidget($dashboardId: ID!, $input: WidgetInput!) {
+  AddWidget(dashboardId: $dashboardId, input: $input) {
+    ID
+    Type
+    Title
+    Description
+    Layout
+    Query
+    QueryContext
+    Visualization
+    Snapshot
+    SortOrder
+  }
+}

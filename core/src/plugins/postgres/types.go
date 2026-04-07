@@ -110,5 +110,6 @@ func (p *PostgresPlugin) GetDatabaseMetadata() *engine.DatabaseMetadata {
 			SupportsDatabaseSwitch: true,
 			SupportsModifiers:      true,
 		},
+		SystemSchemas: []string{"information_schema", "pg_catalog", "pg_toast"},
 	}
 }

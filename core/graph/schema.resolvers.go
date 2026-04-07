@@ -20,6 +20,7 @@ import (
 	"github.com/clidey/whodb/core/src/auth"
 	"github.com/clidey/whodb/core/src/aws"
 	"github.com/clidey/whodb/core/src/common"
+	"github.com/clidey/whodb/core/src/dashboard"
 	"github.com/clidey/whodb/core/src/engine"
 	"github.com/clidey/whodb/core/src/env"
 	"github.com/clidey/whodb/core/src/envconfig"
@@ -265,6 +266,161 @@ func (r *mutationResolver) UpdateSettings(ctx context.Context, newSettings model
 	return &model.StatusResponse{
 		Status: updated,
 	}, nil
+}
+
+// CreateDashboard is the resolver for the CreateDashboard field.
+func (r *mutationResolver) CreateDashboard(ctx context.Context, name string, description *string, refreshRule string) (*model.Dashboard, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := service.CreateDashboard(ctx, dashboard.CreateDashboardParams{
+		Name:        name,
+		Description: description,
+		RefreshRule: refreshRule,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapDashboardModel(*item), nil
+}
+
+// UpdateDashboard is the resolver for the UpdateDashboard field.
+func (r *mutationResolver) UpdateDashboard(ctx context.Context, id string, name *string, description *string, refreshRule *string) (*model.Dashboard, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := service.UpdateDashboard(ctx, id, dashboard.UpdateDashboardParams{
+		Name:        name,
+		Description: description,
+		RefreshRule: refreshRule,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapDashboardModel(*item), nil
+}
+
+// DeleteDashboard is the resolver for the DeleteDashboard field.
+func (r *mutationResolver) DeleteDashboard(ctx context.Context, id string) (*model.StatusResponse, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := service.DeleteDashboard(ctx, id); err != nil {
+		return nil, err
+	}
+
+	return &model.StatusResponse{Status: true}, nil
+}
+
+// AddWidget is the resolver for the AddWidget field.
+func (r *mutationResolver) AddWidget(ctx context.Context, dashboardID string, input model.WidgetInput) (*model.DashboardWidget, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := service.AddWidget(ctx, dashboardID, dashboard.WidgetInput{
+		Type:          input.Type,
+		Title:         input.Title,
+		Description:   input.Description,
+		Layout:        input.Layout,
+		Query:         input.Query,
+		QueryContext:  input.QueryContext,
+		Visualization: input.Visualization,
+		Snapshot:      input.Snapshot,
+		SortOrder:     input.SortOrder,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapWidgetModel(*item), nil
+}
+
+// UpdateWidget is the resolver for the UpdateWidget field.
+func (r *mutationResolver) UpdateWidget(ctx context.Context, id string, input model.UpdateWidgetInput) (*model.DashboardWidget, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := service.UpdateWidget(ctx, id, dashboard.UpdateWidgetInput{
+		Title:         input.Title,
+		Description:   input.Description,
+		Layout:        input.Layout,
+		Query:         input.Query,
+		QueryContext:  input.QueryContext,
+		Visualization: input.Visualization,
+		Snapshot:      input.Snapshot,
+		SortOrder:     input.SortOrder,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapWidgetModel(*item), nil
+}
+
+// DeleteWidget is the resolver for the DeleteWidget field.
+func (r *mutationResolver) DeleteWidget(ctx context.Context, id string) (*model.StatusResponse, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := service.DeleteWidget(ctx, id); err != nil {
+		return nil, err
+	}
+
+	return &model.StatusResponse{Status: true}, nil
+}
+
+// UpdateWidgetLayouts is the resolver for the UpdateWidgetLayouts field.
+func (r *mutationResolver) UpdateWidgetLayouts(ctx context.Context, dashboardID string, layouts []*model.LayoutInput) (*model.StatusResponse, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	inputs := make([]dashboard.LayoutInput, 0, len(layouts))
+	for _, layout := range layouts {
+		inputs = append(inputs, dashboard.LayoutInput{
+			WidgetID: layout.WidgetID,
+			Layout:   layout.Layout,
+		})
+	}
+
+	if err := service.UpdateWidgetLayouts(ctx, dashboardID, inputs); err != nil {
+		return nil, err
+	}
+
+	return &model.StatusResponse{Status: true}, nil
+}
+
+// UpdateWidgetSnapshot is the resolver for the UpdateWidgetSnapshot field.
+func (r *mutationResolver) UpdateWidgetSnapshot(ctx context.Context, id string, snapshot model.SnapshotInput) (*model.StatusResponse, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := service.UpdateWidgetSnapshot(ctx, id, dashboard.SnapshotInput{
+		Config:     snapshot.Config,
+		Data:       snapshot.Data,
+		ExecutedAt: snapshot.ExecutedAt,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &model.StatusResponse{Status: true}, nil
 }
 
 // AddStorageUnit is the resolver for the AddStorageUnit field.
@@ -1100,6 +1256,26 @@ func (r *queryResolver) Health(ctx context.Context) (*model.HealthStatus, error)
 	return status, nil
 }
 
+// GetDashboards is the resolver for the GetDashboards field.
+func (r *queryResolver) GetDashboards(ctx context.Context) ([]*model.Dashboard, error) {
+	service, err := requireDashboardService(r.Resolver)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := service.GetDashboards(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*model.Dashboard, 0, len(items))
+	for _, item := range items {
+		result = append(result, mapDashboardModel(item))
+	}
+
+	return result, nil
+}
+
 // Profiles is the resolver for the Profiles field.
 func (r *queryResolver) Profiles(ctx context.Context) ([]*model.LoginProfile, error) {
 	var profiles []*model.LoginProfile
@@ -1683,6 +1859,7 @@ func (r *queryResolver) DatabaseMetadata(ctx context.Context) (*model.DatabaseMe
 			SupportsDatabaseSwitch: metadata.Capabilities.SupportsDatabaseSwitch,
 			SupportsModifiers:      metadata.Capabilities.SupportsModifiers,
 		},
+		SystemSchemas: metadata.SystemSchemas,
 	}, nil
 }
 

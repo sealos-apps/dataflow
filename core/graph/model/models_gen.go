@@ -113,12 +113,36 @@ type Column struct {
 	Scale            *int    `json:"Scale,omitempty"`
 }
 
+type Dashboard struct {
+	ID          string             `json:"ID"`
+	Name        string             `json:"Name"`
+	Description *string            `json:"Description,omitempty"`
+	RefreshRule string             `json:"RefreshRule"`
+	Widgets     []*DashboardWidget `json:"Widgets"`
+	CreatedAt   string             `json:"CreatedAt"`
+	UpdatedAt   string             `json:"UpdatedAt"`
+}
+
+type DashboardWidget struct {
+	ID            string  `json:"ID"`
+	Type          string  `json:"Type"`
+	Title         string  `json:"Title"`
+	Description   *string `json:"Description,omitempty"`
+	Layout        string  `json:"Layout"`
+	Query         *string `json:"Query,omitempty"`
+	QueryContext  *string `json:"QueryContext,omitempty"`
+	Visualization *string `json:"Visualization,omitempty"`
+	Snapshot      *string `json:"Snapshot,omitempty"`
+	SortOrder     int     `json:"SortOrder"`
+}
+
 type DatabaseMetadata struct {
 	DatabaseType    string            `json:"databaseType"`
 	TypeDefinitions []*TypeDefinition `json:"typeDefinitions"`
 	Operators       []string          `json:"operators"`
 	AliasMap        []*Record         `json:"aliasMap"`
 	Capabilities    *Capabilities     `json:"capabilities"`
+	SystemSchemas   []string          `json:"systemSchemas"`
 }
 
 type DatabaseQuerySuggestion struct {
@@ -215,6 +239,11 @@ type ImportSQLInput struct {
 	Script   *string         `json:"Script,omitempty"`
 	File     *graphql.Upload `json:"File,omitempty"`
 	Filename *string         `json:"Filename,omitempty"`
+}
+
+type LayoutInput struct {
+	WidgetID string `json:"WidgetID"`
+	Layout   string `json:"Layout"`
 }
 
 type LocalAWSProfile struct {
@@ -331,6 +360,12 @@ type SettingsConfigInput struct {
 	MetricsEnabled *string `json:"MetricsEnabled,omitempty"`
 }
 
+type SnapshotInput struct {
+	Config     string `json:"Config"`
+	Data       string `json:"Data"`
+	ExecutedAt string `json:"ExecutedAt"`
+}
+
 type SortCondition struct {
 	Column    string        `json:"Column"`
 	Direction SortDirection `json:"Direction"`
@@ -368,11 +403,34 @@ type UpdateInfo struct {
 	ReleaseURL      string `json:"releaseURL"`
 }
 
+type UpdateWidgetInput struct {
+	Title         *string `json:"Title,omitempty"`
+	Description   *string `json:"Description,omitempty"`
+	Layout        *string `json:"Layout,omitempty"`
+	Query         *string `json:"Query,omitempty"`
+	QueryContext  *string `json:"QueryContext,omitempty"`
+	Visualization *string `json:"Visualization,omitempty"`
+	Snapshot      *string `json:"Snapshot,omitempty"`
+	SortOrder     *int    `json:"SortOrder,omitempty"`
+}
+
 type WhereCondition struct {
 	Type   WhereConditionType       `json:"Type"`
 	Atomic *AtomicWhereCondition    `json:"Atomic,omitempty"`
 	And    *OperationWhereCondition `json:"And,omitempty"`
 	Or     *OperationWhereCondition `json:"Or,omitempty"`
+}
+
+type WidgetInput struct {
+	Type          string  `json:"Type"`
+	Title         string  `json:"Title"`
+	Description   *string `json:"Description,omitempty"`
+	Layout        string  `json:"Layout"`
+	Query         *string `json:"Query,omitempty"`
+	QueryContext  *string `json:"QueryContext,omitempty"`
+	Visualization *string `json:"Visualization,omitempty"`
+	Snapshot      *string `json:"Snapshot,omitempty"`
+	SortOrder     *int    `json:"SortOrder,omitempty"`
 }
 
 type CloudProviderStatus string

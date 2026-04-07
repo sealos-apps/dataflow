@@ -1,0 +1,28 @@
+query GetDatabaseMetadata {
+  DatabaseMetadata {
+    databaseType
+    typeDefinitions {
+      id
+      label
+      hasLength
+      hasPrecision
+      defaultLength
+      defaultPrecision
+      category
+    }
+    operators
+    aliasMap {
+      Key
+      Value
+    }
+    capabilities {
+      supportsScratchpad
+      supportsChat
+      supportsGraph
+      supportsSchema
+      supportsDatabaseSwitch
+      supportsModifiers
+    }
+    systemSchemas
+  }
+}

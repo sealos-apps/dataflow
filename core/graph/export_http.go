@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/clidey/whodb/core/src"
@@ -54,6 +56,8 @@ var InvalidDelimiters = map[byte]string{
 	'"':  "double quote (CSV escape character)",
 }
 
+var mongoCollectionNamePattern = regexp.MustCompile(`^[A-Za-z_][\w.]*$`)
+
 // validateDelimiter checks if a delimiter is valid for CSV export
 func validateDelimiter(delimiter string) error {
 	if len(delimiter) != 1 {
@@ -80,6 +84,8 @@ func HandleExport(w http.ResponseWriter, r *http.Request) {
 		StorageUnit  string           `json:"storageUnit"`
 		Delimiter    string           `json:"delimiter,omitempty"`
 		Format       string           `json:"format,omitempty"`
+		Filter       string           `json:"filter,omitempty"`
+		Limit        int              `json:"limit,omitempty"`
 		SelectedRows []map[string]any `json:"selectedRows,omitempty"`
 	}
 
@@ -129,14 +135,89 @@ func HandleExport(w http.ResponseWriter, r *http.Request) {
 	pluginConfig := engine.NewPluginConfig(credentials)
 	plugin := src.MainEngine.Choose(engine.DatabaseType(credentials.Type))
 
+	selectedRows := req.SelectedRows
+	if plugin.Type == engine.DatabaseType_MongoDB && (strings.TrimSpace(req.Filter) != "" || req.Limit > 0) {
+		rows, err := fetchMongoExportRows(plugin, pluginConfig, storageUnit, req.Filter, req.Limit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		selectedRows = rows
+	}
+
 	switch format {
 	case "excel":
-		handleExcelExport(w, plugin, pluginConfig, schema, storageUnit, req.SelectedRows)
+		handleExcelExport(w, plugin, pluginConfig, schema, storageUnit, selectedRows)
 	case "ndjson":
-		handleNDJSONExport(w, plugin, pluginConfig, schema, storageUnit, req.SelectedRows)
+		handleNDJSONExport(w, plugin, pluginConfig, schema, storageUnit, selectedRows)
 	default:
-		handleCSVExport(w, plugin, pluginConfig, schema, storageUnit, delimiter, req.SelectedRows)
+		handleCSVExport(w, plugin, pluginConfig, schema, storageUnit, delimiter, selectedRows)
 	}
+}
+
+func fetchMongoExportRows(plugin *engine.Plugin, pluginConfig *engine.PluginConfig, storageUnit, filter string, limit int) ([]map[string]any, error) {
+	query := buildMongoExportQuery(storageUnit, filter, limit)
+	result, err := plugin.RawExecute(pluginConfig, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return rawRowsToSelectedRows(result), nil
+}
+
+func buildMongoExportQuery(storageUnit, filter string, limit int) string {
+	stages := make([]string, 0, 2)
+	if trimmedFilter := strings.TrimSpace(filter); trimmedFilter != "" {
+		stages = append(stages, fmt.Sprintf(`{ $match: %s }`, trimmedFilter))
+	}
+	if limit > 0 {
+		stages = append(stages, fmt.Sprintf(`{ $limit: %d }`, limit))
+	}
+
+	return fmt.Sprintf(`%s.aggregate([%s])`, buildMongoCollectionAccessor(storageUnit), strings.Join(stages, ", "))
+}
+
+func buildMongoCollectionAccessor(storageUnit string) string {
+	if mongoCollectionNamePattern.MatchString(storageUnit) {
+		return "db." + storageUnit
+	}
+
+	return `db.getCollection(` + strconv.Quote(storageUnit) + `)`
+}
+
+func rawRowsToSelectedRows(result *engine.GetRowsResult) []map[string]any {
+	if result == nil || len(result.Columns) == 0 || len(result.Rows) == 0 {
+		return nil
+	}
+
+	rows := make([]map[string]any, 0, len(result.Rows))
+	for _, row := range result.Rows {
+		record := make(map[string]any, len(result.Columns))
+		for index, column := range result.Columns {
+			if index >= len(row) {
+				record[column.Name] = ""
+				continue
+			}
+			record[column.Name] = parseRawCellValue(row[index])
+		}
+		rows = append(rows, record)
+	}
+
+	return rows
+}
+
+func parseRawCellValue(value string) any {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+
+	var parsed any
+	if err := json.Unmarshal([]byte(trimmed), &parsed); err == nil {
+		return parsed
+	}
+
+	return value
 }
 
 func handleCSVExport(w http.ResponseWriter, plugin *engine.Plugin, pluginConfig *engine.PluginConfig, schema, storageUnit, delimiter string, selectedRows []map[string]any) {

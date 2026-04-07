@@ -1,0 +1,5 @@
+mutation AddStorageUnit($schema: String!, $storageUnit: String!, $fields: [RecordInput!]!) {
+  AddStorageUnit(schema: $schema, storageUnit: $storageUnit, fields: $fields) {
+    Status
+  }
+}

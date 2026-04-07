@@ -96,5 +96,6 @@ func (p *ClickHousePlugin) GetDatabaseMetadata() *engine.DatabaseMetadata {
 			SupportsDatabaseSwitch: true,
 			SupportsModifiers:      true,
 		},
+		SystemSchemas: []string{"system", "INFORMATION_SCHEMA", "information_schema"},
 	}
 }

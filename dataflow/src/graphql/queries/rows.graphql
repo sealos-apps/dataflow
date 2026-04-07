@@ -1,0 +1,18 @@
+query GetStorageUnitRows($schema: String!, $storageUnit: String!, $where: WhereCondition, $sort: [SortCondition!], $pageSize: Int!, $pageOffset: Int!) {
+  Row(schema: $schema, storageUnit: $storageUnit, where: $where, sort: $sort, pageSize: $pageSize, pageOffset: $pageOffset) {
+    Columns {
+      Type
+      Name
+      IsPrimary
+      IsForeignKey
+      ReferencedTable
+      ReferencedColumn
+      Length
+      Precision
+      Scale
+    }
+    Rows
+    DisableUpdate
+    TotalCount
+  }
+}

@@ -1,0 +1,14 @@
+export const zhLayoutMessages = {
+  'layout.activity.connections': '工作台',
+  'layout.activity.analysis': '仪表盘',
+  'layout.empty.noTabsTitle': '暂无打开的标签页',
+  'layout.empty.noTabsDescription': '从侧边栏选择一张表，或新建一个查询',
+  'layout.invalid.tableConfig': '无效的数据表配置',
+  'layout.invalid.collectionConfig': '无效的集合配置',
+  'layout.invalid.databaseConfig': '无效的数据库配置',
+  'layout.invalid.unknownTabType': '未知的标签页类型',
+  'layout.tab.close': '关闭标签页',
+  'layout.tab.closeOthers': '关闭其他标签页',
+  'layout.tab.closeAll': '关闭所有标签页',
+  'layout.tab.newQuery': '新建查询',
+} as const
