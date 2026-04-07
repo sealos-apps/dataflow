@@ -36,7 +36,7 @@ export function ContextMenu({ x, y, items, onClose, side = "bottom", align = "st
                 side={side}
                 align={align}
                 sideOffset={0}
-                className="w-[152px]"
+                className="w-[180px]"
                 onCloseAutoFocus={(e) => e.preventDefault()}
             >
                 {items.map((item, index) => (
