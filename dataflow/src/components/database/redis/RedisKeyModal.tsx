@@ -58,7 +58,7 @@ function RedisKeyIdentityFields() {
   return (
     <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('redis.key.name')}
         </label>
         <Input
@@ -74,7 +74,7 @@ function RedisKeyIdentityFields() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('redis.key.type')}
         </label>
         <Select value={draft.type} onValueChange={(value) => setType(value as RedisKeyType)} disabled={state.isSubmitting || !canEditType}>

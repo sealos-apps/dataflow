@@ -221,7 +221,7 @@ export function RedisViewProvider({ connectionId, databaseName, children }: Redi
 
   const handleSaveKey = useCallback(async (draft: RedisKeyDraft) => {
     const conn = connections.find(c => c.id === connectionId)
-    if (!conn) throw new Error(t('redis.error.connectionNotFound'))
+    if (!conn) throw new Error(t('common.error.connectionNotFound'))
 
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
 

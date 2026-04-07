@@ -36,7 +36,7 @@ export function RedisViewToolbar({ connectionId, databaseName }: RedisViewToolba
               <RefreshCw className={cn("h-4 w-4", state.loading && "animate-spin")} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('redis.actions.refresh')}</TooltipContent>
+          <TooltipContent>{t('common.actions.refresh')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -75,11 +75,11 @@ export function RedisViewToolbar({ connectionId, databaseName }: RedisViewToolba
           disabled={state.loading || state.filteredKeys.length === 0}
         >
           <Download className="h-4 w-4" />
-          {t('redis.actions.export')}
+          {t('common.actions.export')}
         </Button>
         <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={handleOpenQuery}>
           <TerminalSquare className="h-4 w-4" />
-          {t('redis.actions.query')}
+          {t('common.actions.query')}
         </Button>
       </div>
     </div>

@@ -133,11 +133,11 @@ export function TableViewToolbar({ connectionId, databaseName, tableName, schema
         />
         <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => actions.setShowExportModal(true)}>
           <Download className="h-4 w-4" />
-          {t('sql.actions.export')}
+          {t('common.actions.export')}
         </Button>
         <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={handleOpenQuery}>
           <TerminalSquare className="h-4 w-4" />
-          {t('sql.actions.query')}
+          {t('common.actions.query')}
         </Button>
       </div>
     </div>

@@ -58,7 +58,7 @@ function CopyTableProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? t('sql.common.unknownError'))
+      throw new Error(result.message ?? t('common.unknownError'))
     }
   }, [newTableName, copyOption, databaseName, schema, tableName, copyTable, onSuccess, t])
 
@@ -87,13 +87,13 @@ function CopyTableFields() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('sql.copyTable.sourceTable')}
         </label>
         <Input value={tableName} disabled />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('sql.copyTable.newTableName')}
         </label>
         <Input
@@ -104,7 +104,7 @@ function CopyTableFields() {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('sql.copyTable.options')}
         </label>
         <RadioGroup

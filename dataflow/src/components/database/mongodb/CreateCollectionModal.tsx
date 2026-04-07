@@ -55,7 +55,7 @@ function CreateCollectionFields() {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-muted-foreground">
+      <label className="text-sm font-medium text-foreground">
         {t('mongodb.collection.name')}
       </label>
       <Input

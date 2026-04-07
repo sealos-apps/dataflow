@@ -53,7 +53,7 @@ function RenameTableProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? t('sql.common.unknownError'))
+      throw new Error(result.message ?? t('common.unknownError'))
     }
   }, [newName, tableName, databaseName, schema, renameTable, onSuccess, t])
 
@@ -82,13 +82,13 @@ function RenameTableFields() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('sql.renameTable.currentName')}
         </label>
         <Input value={tableName} disabled />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('sql.renameTable.newName')}
         </label>
         <Input

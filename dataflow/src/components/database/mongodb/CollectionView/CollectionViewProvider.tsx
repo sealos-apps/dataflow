@@ -107,7 +107,7 @@ export function CollectionViewProvider({ connectionId, databaseName, collectionN
 
       const conn = connections.find(c => c.id === connectionId)
       if (!conn) {
-        setError(t('mongodb.error.connectionNotFound'))
+        setError(t('common.error.connectionNotFound'))
         setLoading(false)
         return
       }

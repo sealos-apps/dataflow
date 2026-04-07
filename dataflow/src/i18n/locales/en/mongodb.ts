@@ -15,9 +15,8 @@ export const enMongodbMessages = {
   'mongodb.collection.warningTitle': 'Warning: This action cannot be undone.',
   'mongodb.collection.warningMessage':
     'This will permanently drop the collection {collectionName} and all its documents.',
-  'mongodb.collection.export': 'Export',
-  'mongodb.collection.query': 'Query',
-  'mongodb.collection.refresh': 'Refresh',
+
+
   'mongodb.collection.documents': 'documents',
   'mongodb.collection.noDocuments': 'No documents found in this collection',
   'mongodb.collection.addData': 'Add Document',
@@ -53,9 +52,9 @@ export const enMongodbMessages = {
   'mongodb.alert.duplicateFieldTitle': 'Duplicate field not allowed',
   'mongodb.alert.duplicateFieldMessage': 'Field "{field}" is already used in another condition.',
   'mongodb.error.emptyDocument': 'Document must have at least one field',
-  'mongodb.error.connectionNotFound': 'Connection not found',
+
   'mongodb.error.fetchCollectionData': 'Failed to fetch collection data',
-  'mongodb.error.unknown': 'Unknown error',
+
   'mongodb.error.uniqueFieldsOnly': 'Each field can only appear once in the filter conditions.',
   'mongodb.export.title': 'Export Collection',
   'mongodb.export.filterQuery': 'Filter Query (Optional)',
@@ -77,7 +76,7 @@ export const enMongodbMessages = {
   'mongodb.filter.value': 'Value',
   'mongodb.filter.valuePlaceholder': 'Value',
   'mongodb.filter.valueInPlaceholder': 'e.g. foo, bar',
-  'mongodb.filter.removeCondition': 'Remove condition',
+  'mongodb.filter.removeCondition': 'Remove Condition',
   'mongodb.filter.clear': 'Clear Filters',
   'mongodb.filter.apply': 'Apply',
   'mongodb.filter.operator.eq': 'Equals (=)',

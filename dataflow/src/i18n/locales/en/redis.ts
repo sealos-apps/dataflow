@@ -7,9 +7,8 @@ type MessageShape<T extends Record<string, unknown>> = {
 export const enRedisMessages = {
   'redis.subtitle': 'REDIS KEY VIEW',
   'redis.actions.addKey': 'Add Key',
-  'redis.actions.export': 'Export',
-  'redis.actions.refresh': 'Refresh',
-  'redis.actions.query': 'Query',
+
+
   'redis.pagination.keys': 'keys',
   'redis.filter.title': 'Filter Redis Keys',
   'redis.filter.pattern': 'Key Pattern',
@@ -20,7 +19,7 @@ export const enRedisMessages = {
   'redis.filter.allTypes': 'All types',
   'redis.filter.selectedCount': '{count} selected',
   'redis.filter.reset': 'Reset',
-  'redis.filter.apply': 'Apply Filter',
+  'redis.filter.apply': 'Apply',
   'redis.filter.filteredPattern': 'Pattern:',
   'redis.filter.filteredTypes': 'Types:',
   'redis.filter.currentPattern': 'Current Key Pattern',
@@ -66,8 +65,8 @@ export const enRedisMessages = {
   'redis.export.failed': 'Export failed',
   'redis.export.failedWithStatus': 'Export failed with status {status}',
   'redis.export.failedWithError': 'Export failed: {error}',
-  'redis.error.connectionNotFound': 'Connection not found',
-  'redis.error.unknown': 'Unknown error',
+
+
   'redis.alert.fetchKeysFailed': 'Failed to fetch Redis keys',
   'redis.alert.fetchKeysFailedWithError': 'Failed to fetch Redis keys: {error}',
   'redis.alert.fetchKeyDetailsFailed': 'Failed to fetch key details',

@@ -118,7 +118,7 @@ function CreateDatabaseFields() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('database.name')}
         </label>
         <Input
@@ -131,7 +131,7 @@ function CreateDatabaseFields() {
 
       {isMongoConnection && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-muted-foreground">
+          <label className="text-sm font-medium text-foreground">
             {t('mongodb.collection.name')}
           </label>
           <Input

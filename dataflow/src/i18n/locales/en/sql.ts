@@ -18,13 +18,13 @@ export const enSqlMessages = {
   'sql.table.deleteRowAction': 'Delete Row',
   'sql.table.errorFetchData': 'Failed to fetch table data',
   'sql.actions.addData': 'Add Data',
-  'sql.actions.export': 'Export',
-  'sql.actions.refresh': 'Refresh',
+
+
   'sql.actions.previewChanges': 'Preview Pending Changes',
   'sql.actions.run': 'Run',
   'sql.actions.format': 'Format',
   'sql.actions.submitChanges': 'Submit Changes',
-  'sql.actions.query': 'Query',
+
   'sql.changes.deleteSelected': 'Mark selected rows for delete',
   'sql.changes.undo': 'Undo last change',
   'sql.changes.previewTitle': 'Pending SQL Preview',
@@ -42,7 +42,7 @@ export const enSqlMessages = {
   'sql.deleteRow.typeToConfirm': 'Type "{value}" to confirm',
   'sql.deleteRow.typeConfirmation': 'Type confirmation',
   'sql.filter.title': 'Filter Table',
-  'sql.filter.apply': 'Apply Filters',
+  'sql.filter.apply': 'Apply',
   'sql.filter.addCondition': 'Add Condition',
   'sql.filter.valuePlaceholder': 'Value',
   'sql.filter.visibleColumns': 'Visible Columns',
@@ -176,5 +176,5 @@ export const enSqlMessages = {
   'sql.inline.rowAdded': 'New row added successfully!',
   'sql.inline.failedToAddRowGeneric': 'Failed to add row',
   'sql.inline.errorAddingRow': 'Error adding row: {error}',
-  'sql.common.unknownError': 'Unknown error',
+
 } satisfies MessageShape<typeof zhSqlMessages>

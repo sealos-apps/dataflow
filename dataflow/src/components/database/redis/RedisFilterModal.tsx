@@ -23,7 +23,7 @@ export function RedisFilterModal({
 }: RedisFilterModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col" showCloseButton={false}>
         <RedisFilterProvider
           open={open}
           onApply={onApply}
@@ -46,7 +46,7 @@ function RedisFilterFields() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('redis.filter.pattern')}</label>
+        <label className="text-sm font-medium text-foreground">{t('redis.filter.pattern')}</label>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -63,7 +63,7 @@ function RedisFilterFields() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+        <label className="flex items-center justify-between text-sm font-medium text-foreground">
           {t('redis.filter.types')}
           <span className="text-xs font-normal text-muted-foreground">
             {selectedTypes.length === 0
@@ -95,28 +95,21 @@ function RedisFilterFields() {
 
 function RedisFilterFooter({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const { t } = useI18n()
-  const { reset } = useRedisFilterCtx()
   const { actions } = useModalForm()
 
   return (
-    <ModalForm.Footer className="justify-between gap-2 sm:justify-between">
-      <Button type="button" variant="outline" onClick={reset}>
-        {t('redis.filter.reset')}
+    <ModalForm.Footer>
+      <ModalForm.CancelButton />
+      <Button
+        type="button"
+        onClick={async () => {
+          await actions.submit?.()
+          onOpenChange(false)
+        }}
+        className="bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        {t('redis.filter.apply')}
       </Button>
-      <div className="flex items-center gap-3">
-        <ModalForm.CancelButton />
-        <Button
-          type="button"
-          onClick={async () => {
-            await actions.submit?.()
-            onOpenChange(false)
-          }}
-          className="gap-2"
-        >
-          <Search className="h-4 w-4" />
-          {t('redis.filter.apply')}
-        </Button>
-      </div>
     </ModalForm.Footer>
   )
 }

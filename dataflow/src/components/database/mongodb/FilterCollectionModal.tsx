@@ -1,4 +1,4 @@
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -53,7 +53,7 @@ export function FilterCollectionModal({
 }: FilterCollectionModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col" showCloseButton={false}>
         <FilterCollectionProvider
           open={open}
           fields={fields}
@@ -62,8 +62,10 @@ export function FilterCollectionModal({
           onOpenChange={onOpenChange}
         >
           <ModalForm.Header />
-          <FilterConditionList />
-          <FilterModalAlert />
+          <div className="flex-1 overflow-y-auto flex flex-col gap-4">
+            <FilterConditionList />
+            <FilterModalAlert />
+          </div>
           <FilterCollectionFooter />
         </FilterCollectionProvider>
       </DialogContent>
@@ -82,39 +84,22 @@ function FilterConditionList() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="text-sm font-medium text-foreground">
           {t('mongodb.filter.conditions')}
         </h3>
-        {conditions.length > 0 && (
-          <Button
-            type="button"
-            onClick={addCondition}
-            size="sm"
-            variant="outline"
-            disabled={state.isSubmitting || !canAddCondition}
-            className="h-7 text-xs gap-1"
-          >
-            <Plus className="h-3 w-3" />
-            {t('mongodb.filter.addCondition')}
-          </Button>
-        )}
+        <Button
+          type="button"
+          onClick={addCondition}
+          size="sm"
+          disabled={state.isSubmitting || !canAddCondition}
+          className="h-9 gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          {t('mongodb.filter.addCondition')}
+        </Button>
       </div>
 
-      {conditions.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-8 border border-dashed rounded-lg">
-          <Button
-            type="button"
-            size="sm"
-            onClick={addCondition}
-            disabled={state.isSubmitting || !canAddCondition}
-            className="gap-1"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t('mongodb.filter.addCondition')}
-          </Button>
-          <p className="text-sm text-muted-foreground">{t('mongodb.filter.noFilters')}</p>
-        </div>
-      ) : (
+      {conditions.length > 0 && (
         <div className="flex flex-col gap-2">
           {conditions.map((condition) => {
             const fieldOptions = fields.filter(
@@ -128,7 +113,7 @@ function FilterConditionList() {
                   onValueChange={(value) => updateCondition(condition.id, { field: value })}
                   disabled={state.isSubmitting}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className="h-9 min-w-50">
                     <SelectValue placeholder={t('mongodb.filter.selectField')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -147,7 +132,7 @@ function FilterConditionList() {
                   }
                   disabled={state.isSubmitting}
                 >
-                  <SelectTrigger className="h-9 w-28">
+                  <SelectTrigger className="h-9 w-20 shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -177,7 +162,7 @@ function FilterConditionList() {
                   size="icon"
                   onClick={() => removeCondition(condition.id)}
                   disabled={state.isSubmitting}
-                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -198,21 +183,14 @@ function FilterModalAlert() {
 
 function FilterCollectionFooter() {
   const { t } = useI18n()
-  const { clearAndClose } = useFilterCollectionCtx()
   const { state, actions } = useModalForm()
 
   return (
-    <ModalForm.Footer className="justify-between gap-2 sm:justify-between">
-      <Button type="button" variant="ghost" onClick={clearAndClose} disabled={state.isSubmitting}>
-        {t('mongodb.filter.clear')}
+    <ModalForm.Footer>
+      <ModalForm.CancelButton />
+      <Button type="button" onClick={actions.submit} disabled={state.isSubmitting} className="bg-primary text-primary-foreground hover:bg-primary/90">
+        {t('mongodb.filter.apply')}
       </Button>
-      <div className="flex items-center gap-2">
-        <ModalForm.CancelButton />
-        <Button type="button" onClick={actions.submit} disabled={state.isSubmitting}>
-          {state.isSubmitting ? null : <Search className="h-4 w-4" />}
-          {t('mongodb.filter.apply')}
-        </Button>
-      </div>
     </ModalForm.Footer>
   )
 }

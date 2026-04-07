@@ -117,7 +117,7 @@ function CreateTableProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? t('sql.common.unknownError'))
+      throw new Error(result.message ?? t('common.unknownError'))
     }
   }, [tableName, columns, connections, connectionId, databaseName, schema, createTable, onSuccess, t])
 
@@ -145,7 +145,7 @@ function CreateTableNameField() {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-muted-foreground">
+      <label className="text-sm font-medium text-foreground">
         {t('sql.createTable.tableName')}
       </label>
       <Input
@@ -168,7 +168,7 @@ function CreateTableColumnEditor() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-medium text-foreground">
           {t('sql.createTable.columns')}
         </label>
         <Button

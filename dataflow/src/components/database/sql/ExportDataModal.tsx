@@ -150,7 +150,7 @@ function ExportDataBridge({
       actions.setAlert({
         type: 'error',
         title: t('sql.export.failed'),
-        message: err.message || t('sql.common.unknownError'),
+        message: err.message || t('common.unknownError'),
       })
     } finally {
       actions.setSubmitting(false)
@@ -180,7 +180,7 @@ function ExportDataFields() {
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('sql.export.rowLimit')}</label>
+        <label className="text-sm font-medium text-foreground">{t('sql.export.rowLimit')}</label>
         <Input
           type="number"
           value={rowCount}
@@ -194,7 +194,7 @@ function ExportDataFields() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('sql.export.filterOptional')}</label>
+        <label className="text-sm font-medium text-foreground">{t('sql.export.filterOptional')}</label>
         <Textarea
           value={filter}
           onChange={(e) => setFilter(e.target.value)}

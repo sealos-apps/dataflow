@@ -148,7 +148,7 @@ function ExportRedisBridge({
 
     try {
       const connection = connections.find((item) => item.id === connectionId)
-      if (!connection) throw new Error(t('redis.error.connectionNotFound'))
+      if (!connection) throw new Error(t('common.error.connectionNotFound'))
       if (keys.length === 0) throw new Error(t('redis.table.emptyState'))
 
       const graphqlSchema = resolveSchemaParam(connection.type, databaseName)
@@ -201,7 +201,7 @@ function ExportRedisBridge({
         title: t('redis.export.failed'),
         message: rawError
           ? t('redis.export.failedWithError', { error: rawError })
-          : t('redis.error.unknown'),
+          : t('common.unknownError'),
       })
       setStatusText('')
     } finally {

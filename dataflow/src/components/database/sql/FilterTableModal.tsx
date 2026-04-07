@@ -1,11 +1,9 @@
 import { createContext, use, useState, type ReactNode } from 'react'
 import { Filter, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ModalForm } from '@/components/ui/ModalForm'
 import { useI18n } from '@/i18n/useI18n'
@@ -50,7 +48,15 @@ function FilterTableProvider({ columns, initialSelectedColumns, initialCondition
     if (initialSelectedColumns && initialSelectedColumns.length > 0) return new Set(initialSelectedColumns)
     return new Set(columns)
   })
-  const [conditions, setConditions] = useState<FilterCondition[]>(initialConditions ?? [])
+  const [conditions, setConditions] = useState<FilterCondition[]>(() => {
+    if (initialConditions && initialConditions.length > 0) return initialConditions
+    return [{
+      id: Math.random().toString(36).substring(7),
+      column: columns[0] || '',
+      operator: '=',
+      value: '',
+    }]
+  })
 
   const toggleColumn = (col: string) => {
     setSelectedColumns(prev => {
@@ -114,10 +120,10 @@ function ColumnSelector() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="text-sm font-medium text-foreground">
           {t('sql.filter.visibleColumns')}
         </h3>
-        <Button variant="link" size="sm" onClick={toggleAllColumns} className="h-6 text-xs text-primary p-0">
+        <Button variant="link" size="sm" onClick={toggleAllColumns} className="h-6 text-sm text-highlight p-0">
           {selectedColumns.size === columns.length ? t('sql.filter.deselectAll') : t('sql.filter.selectAll')}
         </Button>
       </div>
@@ -125,7 +131,7 @@ function ColumnSelector() {
         {columns.map(col => (
           <div
             key={col}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${selectedColumns.has(col) ? 'bg-primary/5 border-primary/40 text-foreground' : 'bg-background border-input text-foreground hover:bg-muted/30'}`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${selectedColumns.has(col) ? 'bg-highlight-background border-transparent text-foreground' : 'bg-background border-input text-foreground hover:bg-muted/30'}`}
             onClick={() => toggleColumn(col)}
           >
             <Checkbox checked={selectedColumns.has(col)} tabIndex={-1} className="pointer-events-none" />
@@ -144,33 +150,21 @@ function ConditionList() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="text-sm font-medium text-foreground">
           {t('sql.filter.conditions')}
         </h3>
-        {conditions.length > 0 && (
-          <Button onClick={addCondition} size="sm" variant="outline" className="h-7 text-xs gap-1">
-            <Plus className="h-3 w-3" />
-            {t('sql.filter.addCondition')}
-          </Button>
-        )}
+        <Button onClick={addCondition} size="sm" className="h-9 gap-2">
+          <Plus className="h-4 w-4" />
+          {t('sql.filter.addCondition')}
+        </Button>
       </div>
 
-      {conditions.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-8 border border-dashed rounded-lg">
-          <Button onClick={addCondition} size="sm" className="gap-1">
-            <Plus className="h-3.5 w-3.5" />
-            {t('sql.filter.addCondition')}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            {t('sql.filter.emptyState')}
-          </p>
-        </div>
-      ) : (
+      {conditions.length > 0 && (
         <div className="flex flex-col gap-2">
           {conditions.map((condition) => (
             <div key={condition.id} className="flex items-center gap-2">
               <Select value={condition.column} onValueChange={(v) => updateCondition(condition.id, 'column', v)}>
-                <SelectTrigger className="h-9">
+                <SelectTrigger className="h-9 min-w-50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,7 +173,7 @@ function ConditionList() {
               </Select>
 
               <Select value={condition.operator} onValueChange={(v) => updateCondition(condition.id, 'operator', v)}>
-                <SelectTrigger className="h-9 w-24">
+                <SelectTrigger className="h-9 w-20 shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,19 +199,14 @@ function ConditionList() {
                 disabled={['IS NULL', 'IS NOT NULL'].includes(condition.operator)}
               />
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeCondition(condition.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('sql.filter.removeCondition')}</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeCondition(condition.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>
@@ -277,7 +266,6 @@ export function FilterTableModal({
             <ModalForm.Header />
             <div className="flex-1 overflow-y-auto flex flex-col gap-4">
               <ColumnSelector />
-              <Separator />
               <ConditionList />
             </div>
             <ModalForm.Footer>

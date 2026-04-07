@@ -38,7 +38,7 @@ export function CollectionViewToolbar({ connectionId, databaseName, collectionNa
               <RefreshCw className={cn('h-4 w-4', state.loading && 'animate-spin')} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('mongodb.collection.refresh')}</TooltipContent>
+          <TooltipContent>{t('common.actions.refresh')}</TooltipContent>
         </Tooltip>
       </div>
       <div className="flex items-center gap-2">
@@ -52,11 +52,11 @@ export function CollectionViewToolbar({ connectionId, databaseName, collectionNa
         </Button>
         <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => actions.setShowExportModal(true)}>
           <Download className="h-4 w-4" />
-          {t('mongodb.collection.export')}
+          {t('common.actions.export')}
         </Button>
         <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={handleOpenQuery}>
           <TerminalSquare className="h-4 w-4" />
-          {t('mongodb.collection.query')}
+          {t('common.actions.query')}
         </Button>
       </div>
     </div>

@@ -11,7 +11,7 @@ export function RedisKeyStringEditor() {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-muted-foreground">{t('redis.key.value')}</label>
+      <label className="text-sm font-medium text-foreground">{t('redis.key.value')}</label>
       <Textarea
         className="min-h-[220px] font-mono"
         value={draft.stringValue}

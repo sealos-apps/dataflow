@@ -58,7 +58,7 @@ function ExportRedisFields() {
       <FormatSelector options={formatOptions} value={format} onChange={setFormat} disabled={disabled} />
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('redis.export.patternLabel')}</label>
+        <label className="text-sm font-medium text-foreground">{t('redis.export.patternLabel')}</label>
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {patternSummary}
         </div>
@@ -68,7 +68,7 @@ function ExportRedisFields() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('redis.export.typesLabel')}</label>
+        <label className="text-sm font-medium text-foreground">{t('redis.export.typesLabel')}</label>
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {typesSummary}
         </div>

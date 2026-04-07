@@ -1,9 +1,8 @@
 export const zhRedisMessages = {
   'redis.subtitle': 'Redis 键视图',
   'redis.actions.addKey': '新增键',
-  'redis.actions.export': '导出',
-  'redis.actions.refresh': '刷新',
-  'redis.actions.query': '查询',
+
+
   'redis.pagination.keys': '键',
   'redis.filter.title': '筛选 Redis 键',
   'redis.filter.pattern': '键模式',
@@ -59,8 +58,8 @@ export const zhRedisMessages = {
   'redis.export.failed': '导出失败',
   'redis.export.failedWithStatus': '导出失败（状态码：{status}）',
   'redis.export.failedWithError': '导出失败：{error}',
-  'redis.error.connectionNotFound': '未找到连接',
-  'redis.error.unknown': '未知错误',
+
+
   'redis.alert.fetchKeysFailed': '获取 Redis 键失败',
   'redis.alert.fetchKeysFailedWithError': '获取 Redis 键失败：{error}',
   'redis.alert.fetchKeyDetailsFailed': '获取键详情失败',

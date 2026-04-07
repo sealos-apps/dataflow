@@ -110,7 +110,7 @@ function ExportCollectionBridge({
 
     try {
       const connection = connections.find((c) => c.id === connectionId)
-      if (!connection) throw new Error(t('mongodb.error.connectionNotFound'))
+      if (!connection) throw new Error(t('common.error.connectionNotFound'))
 
       const graphqlSchema = resolveSchemaParam(connection.type, databaseName)
       const backendFormat = format === 'json' ? 'ndjson' : 'csv'
@@ -181,7 +181,7 @@ function ExportCollectionFields() {
       <FormatSelector options={FORMAT_OPTIONS} value={format} onChange={setFormat} disabled={disabled} />
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('mongodb.export.filterQuery')}</label>
+        <label className="text-sm font-medium text-foreground">{t('mongodb.export.filterQuery')}</label>
         <Input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -195,7 +195,7 @@ function ExportCollectionFields() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">{t('mongodb.export.limitRows')}</label>
+        <label className="text-sm font-medium text-foreground">{t('mongodb.export.limitRows')}</label>
         <Input
           type="number"
           value={limit}

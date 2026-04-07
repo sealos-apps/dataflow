@@ -52,7 +52,7 @@ export function DropCollectionProvider({
     if (result.success) {
       onSuccess?.()
     } else {
-      throw new Error(result.message ?? t('mongodb.error.unknown'))
+      throw new Error(result.message ?? t('common.unknownError'))
     }
   }, [canDrop, dropCollection, databaseName, collectionName, onSuccess, t])
 

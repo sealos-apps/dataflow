@@ -8,9 +8,8 @@ export const zhMongodbMessages = {
   'mongodb.collection.confirmName': '输入集合名称以确认',
   'mongodb.collection.warningTitle': '警告：此操作无法撤销。',
   'mongodb.collection.warningMessage': '这将永久删除集合 {collectionName} 及其所有文档。',
-  'mongodb.collection.export': '导出',
-  'mongodb.collection.query': '查询',
-  'mongodb.collection.refresh': '刷新',
+
+
   'mongodb.collection.documents': '文档',
   'mongodb.collection.noDocuments': '当前集合中没有文档',
   'mongodb.collection.addData': '新增文档',
@@ -44,9 +43,9 @@ export const zhMongodbMessages = {
   'mongodb.alert.duplicateFieldTitle': '不允许重复字段',
   'mongodb.alert.duplicateFieldMessage': '字段“{field}”已在其他条件中使用。',
   'mongodb.error.emptyDocument': '文档至少需要一个字段',
-  'mongodb.error.connectionNotFound': '未找到连接',
+
   'mongodb.error.fetchCollectionData': '获取集合数据失败',
-  'mongodb.error.unknown': '未知错误',
+
   'mongodb.error.uniqueFieldsOnly': '每个字段在筛选条件中只能出现一次。',
   'mongodb.export.title': '导出集合',
   'mongodb.export.filterQuery': '筛选条件（可选）',
@@ -58,7 +57,7 @@ export const zhMongodbMessages = {
   'mongodb.export.failedWithStatus': '导出失败，状态码：{status}',
   'mongodb.export.errorOccurred': '发生错误',
   'mongodb.filter.title': '筛选集合',
-  'mongodb.filter.conditions': '过滤条件',
+  'mongodb.filter.conditions': '筛选条件',
   'mongodb.filter.noFilters': '未应用筛选条件',
   'mongodb.filter.addCondition': '添加条件',
   'mongodb.filter.addAnotherCondition': '再添加一个条件',
@@ -68,7 +67,7 @@ export const zhMongodbMessages = {
   'mongodb.filter.value': '值',
   'mongodb.filter.valuePlaceholder': '值',
   'mongodb.filter.valueInPlaceholder': '例如：foo, bar',
-  'mongodb.filter.removeCondition': '移除条件',
+  'mongodb.filter.removeCondition': '删除条件',
   'mongodb.filter.clear': '清空筛选',
   'mongodb.filter.apply': '应用',
   'mongodb.filter.operator.eq': '等于 (=)',
