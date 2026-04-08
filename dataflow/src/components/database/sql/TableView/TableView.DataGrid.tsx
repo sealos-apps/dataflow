@@ -136,7 +136,7 @@ export function TableViewDataGrid() {
                     'sticky left-0 z-30 border-b border-r border-border/50 px-2 py-2 text-center text-xs font-medium',
                     row.isInserted && 'bg-blue-100/60',
                     row.isDeleted && 'bg-red-100/60 text-muted-foreground line-through',
-                    isSelected && 'bg-primary text-primary-foreground',
+                    isSelected && 'bg-primary/10',
                   )}
                   style={{ width: 64, minWidth: 64, maxWidth: 64 }}
                   onClick={() => {
