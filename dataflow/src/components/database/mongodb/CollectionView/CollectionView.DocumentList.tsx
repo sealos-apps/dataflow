@@ -70,7 +70,7 @@ export function CollectionViewDocumentList() {
             key={item.rowKey}
             data-find-current={hasCurrentMatch ? 'true' : undefined}
             className={cn(
-              'rounded-xl p-4 group relative transition-all duration-200 cursor-pointer',
+              'rounded-xl p-4 group relative transition-colors duration-200 cursor-pointer',
               // Change type styling
               item.changeType === 'insert' && 'bg-blue-50 border border-blue-200',
               item.changeType === 'delete' && 'bg-red-50/60 border border-red-200 opacity-60',
@@ -81,7 +81,7 @@ export function CollectionViewDocumentList() {
               // Default styling
               !item.changeType && !hasMatch && 'bg-background border border-border/50 hover:bg-muted/30 hover:shadow-sm',
               // Selection: outline sits outside border, no layout shift
-              isSelected && 'outline-1 outline-primary',
+              isSelected && 'outline-2 outline-primary',
             )}
             onClick={() => actions.toggleRowSelection(item.rowKey)}
           >
