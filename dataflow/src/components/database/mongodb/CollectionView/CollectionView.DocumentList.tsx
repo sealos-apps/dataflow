@@ -70,20 +70,18 @@ export function CollectionViewDocumentList() {
             key={item.rowKey}
             data-find-current={hasCurrentMatch ? 'true' : undefined}
             className={cn(
-              'rounded-xl border p-4 group relative transition-all duration-200 cursor-pointer',
-              isSelected
-                ? 'border-primary bg-primary/5'
-                : item.changeType === 'insert'
-                  ? 'bg-blue-50 border-blue-200'
-                  : item.isDeleted
-                    ? 'bg-red-50/60 border-red-200 opacity-60'
-                    : item.changeType === 'update'
-                      ? 'bg-green-50/60 border-green-200'
-                      : hasCurrentMatch
-                        ? 'bg-blue-100 border-blue-300 shadow-sm'
-                        : hasMatch
-                          ? 'bg-blue-50/60 border-blue-200'
-                          : 'bg-background border-border/50 hover:bg-muted/30 hover:shadow-sm',
+              'rounded-xl p-4 group relative transition-all duration-200 cursor-pointer',
+              // Change type styling
+              item.changeType === 'insert' && 'bg-blue-50 border border-blue-200',
+              item.changeType === 'delete' && 'bg-red-50/60 border border-red-200 opacity-60',
+              item.changeType === 'update' && 'bg-green-50/60 border border-green-200',
+              // FindBar match styling (only when no change type)
+              !item.changeType && hasCurrentMatch && 'bg-blue-100 border border-blue-300 shadow-sm',
+              !item.changeType && !hasCurrentMatch && hasMatch && 'bg-blue-50/60 border border-blue-200',
+              // Default styling
+              !item.changeType && !hasMatch && 'bg-background border border-border/50 hover:bg-muted/30 hover:shadow-sm',
+              // Selection: remove border, add ring (no overlap since border is gone)
+              isSelected && '!border-0 ring-2 ring-primary',
             )}
             onClick={() => actions.toggleRowSelection(item.rowKey)}
           >
