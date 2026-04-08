@@ -10,7 +10,7 @@ import type { editor } from 'monaco-editor';
 import type * as Monaco from 'monaco-editor';
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useRawExecuteLazyQuery, useGetStorageUnitsLazyQuery, useGetColumnsBatchLazyQuery } from '@graphql';
-import { getEditorLanguage, isReadOperation, resolveSchemaParam, supportsSchema } from "@/utils/database-features";
+import { getEditorLanguage, getUnsupportedRedisCommand, isReadOperation, resolveSchemaParam, supportsSchema } from "@/utils/database-features";
 import { registerSQLCompletionProvider } from './sql-completion';
 import type { SQLCompletionData, ColumnInfo } from './sql-completion';
 import { splitRedisCommands, splitSQLStatements } from '@/utils/sql-split';
@@ -165,6 +165,15 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
 
         for (let idx = 0; idx < statements.length; idx++) {
             const sql = statements[idx];
+
+            // Block unsupported Redis commands with a clear message
+            if (connectionType.toUpperCase() === 'REDIS') {
+                const unsupportedKey = getUnsupportedRedisCommand(sql);
+                if (unsupportedKey) {
+                    results.push({ columns: [], rows: [], info: t(unsupportedKey as import('@/i18n/messages').MessageKey), isError: true, sql });
+                    break;
+                }
+            }
 
             try {
                 const { data, error } = await rawExecute({

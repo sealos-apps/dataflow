@@ -59,4 +59,8 @@ export const enRedisMessages = {
   'redis.export.rowLimitHint': 'Leave empty to export all rows',
   'redis.export.failed': 'Export failed',
   'redis.export.noData': 'No data to export',
+  'redis.unsupported.transaction': 'Transaction commands (MULTI/EXEC/DISCARD) are not available in the editor — each command runs on a separate connection',
+  'redis.unsupported.watch': 'WATCH/UNWATCH are not available in the editor — each command runs on a separate connection',
+  'redis.unsupported.pubsub': 'Pub/sub commands are not available in the editor — they block the connection',
+  'redis.unsupported.blocking': 'This command is blocking and not available in the editor',
 } satisfies MessageShape<typeof zhRedisMessages>

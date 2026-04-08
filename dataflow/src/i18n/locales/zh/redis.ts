@@ -53,4 +53,8 @@ export const zhRedisMessages = {
   'redis.export.rowLimitHint': '留空将导出所有行',
   'redis.export.failed': '导出失败',
   'redis.export.noData': '无数据可导出',
+  'redis.unsupported.transaction': '事务命令（MULTI/EXEC/DISCARD）在编辑器中不可用——每条命令在独立连接上执行',
+  'redis.unsupported.watch': 'WATCH/UNWATCH 在编辑器中不可用——每条命令在独立连接上执行',
+  'redis.unsupported.pubsub': '发布/订阅命令在编辑器中不可用——这些命令会阻塞连接',
+  'redis.unsupported.blocking': '该命令是阻塞命令，在编辑器中不可用',
 } as const

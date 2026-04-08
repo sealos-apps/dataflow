@@ -106,6 +106,29 @@ export function getEditorPlaceholder(dbType: string): string {
   return 'SELECT * FROM table_name';
 }
 
+/** Redis commands that require persistent connection state or are blocking. */
+const REDIS_UNSUPPORTED_COMMANDS: Record<string, string> = {
+  MULTI:        'redis.unsupported.transaction',
+  EXEC:         'redis.unsupported.transaction',
+  DISCARD:      'redis.unsupported.transaction',
+  WATCH:        'redis.unsupported.watch',
+  UNWATCH:      'redis.unsupported.watch',
+  SUBSCRIBE:    'redis.unsupported.pubsub',
+  PSUBSCRIBE:   'redis.unsupported.pubsub',
+  UNSUBSCRIBE:  'redis.unsupported.pubsub',
+  PUNSUBSCRIBE: 'redis.unsupported.pubsub',
+  MONITOR:      'redis.unsupported.blocking',
+};
+
+/**
+ * Returns the i18n error message key for an unsupported Redis command,
+ * or null if the command is supported.
+ */
+export function getUnsupportedRedisCommand(query: string): string | null {
+  const firstToken = query.trim().split(/\s+/)[0]?.toUpperCase() ?? '';
+  return REDIS_UNSUPPORTED_COMMANDS[firstToken] ?? null;
+}
+
 const REDIS_READ_COMMANDS: ReadonlySet<string> = new Set([
   'GET', 'MGET', 'HGET', 'HGETALL', 'HMGET', 'HKEYS', 'HVALS', 'HLEN',
   'LRANGE', 'LLEN', 'LINDEX',
