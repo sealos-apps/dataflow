@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import {
   useGetStorageUnitRowsLazyQuery,
@@ -13,6 +13,7 @@ import { transformRowsResult, type TableData } from '@/utils/graphql-transforms'
 import { resolveSchemaParam } from '@/utils/database-features'
 import { useI18n } from '@/i18n/useI18n'
 import { DataView } from '@/components/database/shared/DataView'
+import { FindBar, useFindBar } from '@/components/database/shared/FindBar'
 import { Button } from '@/components/ui/Button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
@@ -28,8 +29,9 @@ import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { cn } from '@/lib/utils'
 import {
   Loader2, RefreshCw, Plus, Minus, MoreHorizontal,
-  ArrowUpAZ, ArrowDownAZ, X,
+  ArrowUpAZ, ArrowDownAZ, X, Download,
 } from 'lucide-react'
+import { ExportRedisKeyModal } from './ExportRedisKeyModal'
 
 // ---------------------------------------------------------------------------
 // Types & helpers
@@ -85,6 +87,12 @@ function buildDeleteRowValues(row: Record<string, string>, keyType: RedisKeyType
     case 'string':
       return [{ Key: 'key', Value: keyName }]
   }
+}
+
+/** Render-prop consumer for FindBar context — allows inline access to find state. */
+function FindBarConsumer({ children }: { children: (state: ReturnType<typeof useFindBar>['state']) => ReactNode }) {
+  const { state } = useFindBar()
+  return <>{children(state)}</>
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +159,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
 
   // ---- Delete confirmation ----
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showExport, setShowExport] = useState(false)
 
   // ---- Ref for race-condition prevention ----
   const latestRequestIdRef = useRef(0)
@@ -440,6 +449,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
   const canAdd = keyType !== 'string'
 
   return (
+    <FindBar.Provider rows={rows} columns={columns}>
     <div className="flex flex-col h-full bg-background">
       {/* ---- Toolbar ---- */}
       <div className="flex items-center justify-between h-12 px-2">
@@ -477,7 +487,14 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
             <TooltipContent>{t('redis.detail.deleteSelected')}</TooltipContent>
           </Tooltip>
         </div>
+
+        <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => setShowExport(true)}>
+          <Download className="h-4 w-4" />
+          {t('common.actions.export')}
+        </Button>
       </div>
+
+      <FindBar.Bar />
 
       {/* ---- Error banner ---- */}
       {error && (
@@ -590,6 +607,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
               <th className="sticky top-0 z-40 border-b border-border/50 bg-background w-full" />
             </tr>
           </thead>
+          <FindBarConsumer>{(findState) => (
           <tbody className="bg-background">
             {rows.map((row, rowIdx) => {
               const isSelected = selectedRows.has(rowIdx)
@@ -612,14 +630,24 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                     const width = columnWidths[col] || 120
                     const isActive = activeCell?.rowIdx === rowIdx && activeCell.column === col
                     const editable = canEdit && isEditableColumn(col, keyType)
+                    const highlight = findState.total
+                      ? findState.matches.findIndex((m) => m.rowIndex === rowIdx && m.columnKey === col) === findState.currentMatchIndex
+                        ? 'current'
+                        : findState.matches.some((m) => m.rowIndex === rowIdx && m.columnKey === col)
+                          ? 'match'
+                          : null
+                      : null
 
                     return (
                       <td
                         key={col}
+                        data-find-current={highlight === 'current' ? 'true' : undefined}
                         className={cn(
-                          'relative border-b border-r border-border/50 text-sm text-foreground/80',
+                          'relative border-b border-r border-border/50 text-sm text-foreground/80 scroll-mt-14',
                           isActive ? 'p-0' : 'px-6 py-2',
                           isSelected && 'bg-primary/10',
+                          highlight === 'current' && 'bg-blue-200',
+                          highlight === 'match' && 'bg-blue-100/60',
                           editable && !isActive && 'cursor-default',
                         )}
                         style={{ minWidth: `${width}px` }}
@@ -710,6 +738,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
               </tr>
             )}
           </tbody>
+          )}</FindBarConsumer>
         </table>
 
         {rows.length === 0 && !newRow && (
@@ -741,6 +770,15 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
         message={t('redis.detail.confirmDeleteMessage', { count: String(selectedRows.size) })}
         isDestructive
       />
+
+      <ExportRedisKeyModal
+        open={showExport}
+        onOpenChange={setShowExport}
+        connectionId={connectionId}
+        databaseName={databaseName}
+        keyName={keyName}
+      />
     </div>
+    </FindBar.Provider>
   )
 }

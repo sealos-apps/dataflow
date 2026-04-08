@@ -47,4 +47,10 @@ export const zhRedisMessages = {
   'redis.detail.deleteSelected': '删除所选',
   'redis.detail.confirmDeleteTitle': '删除所选条目',
   'redis.detail.confirmDeleteMessage': '确定要删除所选的 {count} 个条目吗？此操作不可撤销。',
+  'redis.export.title': '导出键',
+  'redis.export.rowLimit': '行数限制',
+  'redis.export.rowLimitPlaceholder': '所有行',
+  'redis.export.rowLimitHint': '留空将导出所有行',
+  'redis.export.failed': '导出失败',
+  'redis.export.noData': '无数据可导出',
 } as const

@@ -21,6 +21,7 @@ import { CreateCollectionModal } from '@/components/database/mongodb/CreateColle
 import { DropCollectionModal } from '@/components/database/mongodb/DropCollectionModal'
 import { RedisKeyModal } from '@/components/database/redis/RedisKeyModal'
 import { DeleteRedisKeyModal } from '@/components/database/redis/DeleteRedisKeyModal'
+import { ExportRedisKeyModal } from '@/components/database/redis/ExportRedisKeyModal'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { useTabStore } from '@/stores/useTabStore'
 
@@ -292,6 +293,17 @@ export function SidebarModals({
           onSuccess={() => {
             refreshRedisKeysFolder(activeModal.params.connectionId, activeModal.params.databaseName)
           }}
+        />
+      )}
+
+      {/* Export Redis Key */}
+      {activeModal?.type === "export_redis_key" && (
+        <ExportRedisKeyModal
+          open
+          onOpenChange={onOpenChange}
+          connectionId={activeModal.params.connectionId}
+          databaseName={activeModal.params.databaseName}
+          keyName={activeModal.params.keyName}
         />
       )}
 

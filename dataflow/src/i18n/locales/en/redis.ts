@@ -53,4 +53,10 @@ export const enRedisMessages = {
   'redis.detail.deleteSelected': 'Delete Selected',
   'redis.detail.confirmDeleteTitle': 'Delete Selected Entries',
   'redis.detail.confirmDeleteMessage': 'Are you sure you want to delete {count} selected entries? This action cannot be undone.',
+  'redis.export.title': 'Export Key',
+  'redis.export.rowLimit': 'Row Limit',
+  'redis.export.rowLimitPlaceholder': 'All rows',
+  'redis.export.rowLimitHint': 'Leave empty to export all rows',
+  'redis.export.failed': 'Export failed',
+  'redis.export.noData': 'No data to export',
 } satisfies MessageShape<typeof zhRedisMessages>

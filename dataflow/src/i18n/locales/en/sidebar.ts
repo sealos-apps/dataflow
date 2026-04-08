@@ -23,6 +23,7 @@ export const enSidebarMessages = {
   'sidebar.menu.dropCollection': 'Drop Collection',
   'sidebar.menu.newKey': 'New Key',
   'sidebar.menu.deleteKey': 'Delete Key',
+  'sidebar.menu.exportKey': 'Export Key',
   'sidebar.menu.refresh': 'Refresh',
   'sidebar.menu.showSystemObjects': 'Show System Objects',
   'sidebar.menu.hideSystemObjects': 'Hide System Objects',

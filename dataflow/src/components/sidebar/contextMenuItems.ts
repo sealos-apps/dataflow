@@ -250,6 +250,8 @@ export function getRedisKeysFolderMenuItems(callbacks: MenuCallbacks): ContextMe
 export function getRedisKeyMenuItems(callbacks: MenuCallbacks): ContextMenuItem[] {
   const { onAction, t } = callbacks;
   return [
+    { label: t("sidebar.menu.exportKey"), onClick: () => onAction("export_redis_key"), icon: React.createElement(Download, { className: "h-4 w-4" }) },
+    { separator: true },
     { label: t("sidebar.menu.deleteKey"), onClick: () => onAction("delete_redis_key"), icon: React.createElement(Trash2, { className: "h-4 w-4 text-red-500" }), danger: true },
     { separator: true },
     refreshItem(onAction, t),

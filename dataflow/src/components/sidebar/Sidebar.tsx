@@ -42,7 +42,8 @@ export type ModalState =
   | { type: "export_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
   | { type: "drop_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
   | { type: "create_redis_key"; params: { connectionId: string; databaseName: string } }
-  | { type: "delete_redis_key"; params: { connectionId: string; databaseName: string; keyName: string } };
+  | { type: "delete_redis_key"; params: { connectionId: string; databaseName: string; keyName: string } }
+  | { type: "export_redis_key"; params: { connectionId: string; databaseName: string; keyName: string } };
 
 type Action =
   | { action: "open"; modal: ModalState }
@@ -318,6 +319,16 @@ function SidebarInner() {
             params: {
               connectionId: node.connectionId,
               databaseName: node.metadata.database!,
+            },
+          });
+          break;
+        case "export_redis_key":
+          openModal({
+            type: "export_redis_key",
+            params: {
+              connectionId: node.connectionId,
+              databaseName: node.metadata.database!,
+              keyName: node.name,
             },
           });
           break;
