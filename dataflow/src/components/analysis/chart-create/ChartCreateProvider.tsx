@@ -135,7 +135,7 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
     const [selectedDashboardId, setSelectedDashboardId] = useState<string | null>(activeDashboardId)
 
     useEffect(() => {
-        if (!selectedDashboardId) {
+        if (!selectedDashboardId || (selectedDashboardId === '__new__' && dashboards.length > 0)) {
             setSelectedDashboardId(dashboards.length > 0 ? dashboards[0].id : '__new__')
         }
     }, [selectedDashboardId, dashboards])
