@@ -94,21 +94,23 @@ export function CollectionViewDocumentList() {
               />
             </div>
             <div className="flex-1 min-w-0 relative">
-              <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); actions.handleEditClick(item.rowKey) }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('mongodb.document.editAction')}</TooltipContent>
-                </Tooltip>
-              </div>
+              {!item.isDeleted && (
+                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); actions.handleEditClick(item.rowKey) }}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('mongodb.document.editAction')}</TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
               <pre className={cn(
                 'text-sm overflow-x-auto font-mono text-foreground/80',
                 item.isDeleted && 'line-through',

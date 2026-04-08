@@ -1,3 +1,4 @@
+import { buildMongoCollectionAccessor } from '@/utils/mongodb-shell'
 import type { DocumentChange, DocumentChangesetRowKey } from './types'
 
 export interface ChangesetSummary {
@@ -24,9 +25,7 @@ export function buildPreviewCommands(
   collectionName: string,
   changes: Map<DocumentChangesetRowKey, DocumentChange>,
 ): string[] {
-  const accessor = /^[A-Za-z_][\w.]*$/.test(collectionName)
-    ? `db.${collectionName}`
-    : `db.getCollection(${JSON.stringify(collectionName)})`
+  const accessor = buildMongoCollectionAccessor(collectionName)
 
   return [...changes.values()].map((change) => {
     if (change.type === 'insert') {

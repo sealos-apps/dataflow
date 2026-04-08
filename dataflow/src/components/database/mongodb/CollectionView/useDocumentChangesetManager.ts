@@ -410,7 +410,7 @@ export function useDocumentChangesetManager({
 
     if (!doc) return
 
-    const { _id, ...rest } = doc
+    const { _id: _, ...rest } = doc
     dispatch({ type: 'open-edit-modal', rowKey, content: JSON.stringify(rest, null, 2) })
   }, [documents, pageOffset, state.changes])
 
