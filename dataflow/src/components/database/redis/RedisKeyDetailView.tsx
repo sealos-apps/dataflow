@@ -238,15 +238,21 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return
       const { column, startX, startWidth } = resizingRef.current
-      setColumnWidths((prev) => ({ ...prev, [column]: Math.max(60, startWidth + (e.clientX - startX)) }))
+      const newWidth = Math.max(60, startWidth + (e.clientX - startX))
+      document.querySelectorAll<HTMLElement>(`[data-col="${column}"]`).forEach(el => {
+        el.style.minWidth = `${newWidth}px`
+        el.style.maxWidth = `${newWidth}px`
+      })
     }
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (!resizingRef.current) return
-      const col = resizingRef.current.column
+      const { column, startX, startWidth } = resizingRef.current
+      const finalWidth = Math.max(60, startWidth + (e.clientX - startX))
+      setColumnWidths(prev => ({ ...prev, [column]: finalWidth }))
       setResizedColumns(prev => {
-        if (prev.has(col)) return prev
+        if (prev.has(column)) return prev
         const next = new Set(prev)
-        next.add(col)
+        next.add(column)
         return next
       })
       resizingRef.current = null
@@ -561,6 +567,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                 return (
                   <th
                     key={col}
+                    data-col={col}
                     style={{ minWidth: `${width}px`, ...(resizedColumns.has(col) && { maxWidth: `${width}px` }) }}
                     className="px-6 py-2 text-left font-medium text-sm text-muted-foreground whitespace-nowrap group/header relative overflow-hidden border-r border-border/50 select-none sticky top-0 bg-background z-40"
                   >
@@ -675,6 +682,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                     return (
                       <td
                         key={col}
+                        data-col={col}
                         data-find-current={highlight === 'current' ? 'true' : undefined}
                         className={cn(
                           'relative overflow-hidden border-b border-r border-border/50 text-sm text-foreground/80 scroll-mt-14',
@@ -746,6 +754,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                   return (
                     <td
                       key={col}
+                      data-col={col}
                       className="border-b border-r border-border/50 p-0"
                       style={{ minWidth: `${width}px`, ...(resizedColumns.has(col) && { maxWidth: `${width}px` }) }}
                     >
