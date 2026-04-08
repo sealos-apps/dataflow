@@ -49,6 +49,17 @@ export function CollectionViewToolbar({ connectionId, databaseName, collectionNa
 
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={actions.handleAddClick}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('mongodb.collection.addData')}</TooltipContent>
+        </Tooltip>
+
+        <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={() => setIsChartModalOpen(true)}>
               <BarChart3 className="h-4 w-4" />
             </Button>
@@ -61,10 +72,6 @@ export function CollectionViewToolbar({ connectionId, databaseName, collectionNa
           onClick={() => actions.setIsFilterModalOpen(true)}
           count={Object.keys(state.activeFilter).length}
         />
-        <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={actions.handleAddClick}>
-          <Plus className="h-4 w-4" />
-          {t('mongodb.collection.addData')}
-        </Button>
         <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => actions.setShowExportModal(true)}>
           <Download className="h-4 w-4" />
           {t('common.actions.export')}

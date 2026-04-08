@@ -114,8 +114,9 @@ export function useDataQuery(params: UseDataQueryParams): { state: DataQueryStat
     const currentFilters = filterConditionsRef.current
     let filterWhere: WhereCondition | undefined
     if (currentFilters.length > 0) {
+      const noValueOperators = ['IS NULL', 'IS NOT NULL']
       const atomicConditions: WhereCondition[] = currentFilters
-        .filter((fc) => fc.column && fc.operator)
+        .filter((fc) => fc.column && fc.operator && (noValueOperators.includes(fc.operator) || fc.value !== ''))
         .map((fc) => ({
           Type: WhereConditionType.Atomic,
           Atomic: {

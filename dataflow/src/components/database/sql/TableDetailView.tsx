@@ -11,7 +11,6 @@ import { AlertModal } from '@/components/ui/AlertModal'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useI18n } from '@/i18n/useI18n'
-import type { FilterChip } from '@/components/database/shared/types'
 
 interface TableDetailViewProps {
   connectionId: string
@@ -32,39 +31,24 @@ function TableDetailViewContent({ connectionId, databaseName, tableName, schema 
   const { t } = useI18n()
   const { state, actions } = useTableView()
 
-  if (state.error) {
-    return <DataView.Error message={state.error} onRetry={() => actions.handleSubmitRequest()} />
-  }
-
-  const filterChips: FilterChip[] = state.filterConditions.map((condition, idx) => ({
-    id: condition.id,
-    label: `${condition.column} ${condition.operator}`,
-    value: ['IS NULL', 'IS NOT NULL'].includes(condition.operator) ? '' : condition.value,
-    onRemove: () => {
-      const remaining = state.filterConditions.filter((_, i) => i !== idx)
-      actions.handleFilterApply(state.visibleColumns, remaining)
-    },
-  }))
-
   const previewStatements = buildPreviewSql(tableName, state.changes)
   const summary = summarizeChanges(state.changes)
 
   return (
     <div className="flex h-full flex-col">
-      <DataView.FilterBar
-        filters={filterChips}
-        onClearAll={() => actions.handleFilterApply(state.visibleColumns, [])}
-      />
-
       <TableViewToolbar connectionId={connectionId} databaseName={databaseName} tableName={tableName} schema={schema} />
 
-      <FindBar.Provider
-        rows={state.renderedRows.map((row) => row.values)}
-        columns={state.visibleColumns}
-      >
-        <FindBar.Bar />
-        <TableViewDataGrid />
-      </FindBar.Provider>
+      {state.error ? (
+        <DataView.Error message={state.error} onRetry={() => actions.handleSubmitRequest()} />
+      ) : (
+        <FindBar.Provider
+          rows={state.renderedRows.map((row) => row.values)}
+          columns={state.visibleColumns}
+        >
+          <FindBar.Bar />
+          <TableViewDataGrid />
+        </FindBar.Provider>
+      )}
 
       {state.total > 0 && (
         <DataView.Pagination

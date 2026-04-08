@@ -35,7 +35,7 @@ export function CollectionViewDocumentList() {
         <div
           key={idx}
           data-find-current={hasCurrentMatch ? 'true' : undefined}
-          onClick={() => actions.setSelectedDocIndex(idx)}
+          onClick={(e) => { e.stopPropagation(); actions.setSelectedDocIndex(idx) }}
           className={cn(
             'rounded-xl border p-4 group relative transition-all duration-200 cursor-pointer',
             hasCurrentMatch
