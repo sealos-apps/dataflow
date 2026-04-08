@@ -58,7 +58,7 @@ export const zhSqlMessages = {
   'sql.editor.queryExecutedSuccessfully': '查询执行成功',
   'sql.editor.affectedRowsWithTime': '影响行数：{count}。耗时：{time}s',
   'sql.editor.noQueryExecuted': '尚未执行查询。',
-  'sql.editor.actionExecuted': '���作已执行',
+  'sql.editor.actionExecuted': '操作已执行',
   'sql.editor.success': '成功',
   'sql.editor.executionSummary': '共 {total} 条语句，{success} 条成功，{failed} 条失败，耗时 {time}s',
   'sql.export.title': '导出数据',
