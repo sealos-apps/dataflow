@@ -69,11 +69,7 @@ export function TreeNode({ node, depth }: TreeNodeProps) {
   const nodeIsLoading = !!loadingItems[node.id];
   const children = treeData[node.id];
 
-  // Redis database nodes get a different icon color
-  const iconColor =
-    node.type === "database" && connectionDbType === "REDIS"
-      ? "text-destructive"
-      : NODE_ICON_COLORS[node.type];
+  const iconColor = NODE_ICON_COLORS[node.type];
 
   const Icon = node.type === "redis_key" && node.metadata.redisKeyType
     ? (REDIS_TYPE_ICONS[node.metadata.redisKeyType] ?? NODE_ICONS[node.type])

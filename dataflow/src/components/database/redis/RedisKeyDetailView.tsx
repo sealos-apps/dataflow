@@ -93,28 +93,38 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b sticky top-0 z-10 bg-background">
+        <table className="min-w-full border-collapse text-sm">
+          <thead className="border-b border-border bg-background">
             <tr>
+              <th
+                className="sticky top-0 left-0 z-50 border-b border-r border-border/50 bg-background px-2 py-2 text-center text-xs font-semibold text-muted-foreground"
+                style={{ width: 64, minWidth: 64, maxWidth: 64 }}
+              > </th>
               {columns.map((col) => (
                 <th
                   key={col}
-                  className="text-left font-medium text-muted-foreground px-4 py-2 h-10 border-r border-border/50 last:border-r-0"
+                  className="px-6 py-2 text-left font-medium text-sm text-muted-foreground whitespace-nowrap relative border-r border-border/50 select-none sticky top-0 bg-background z-40"
                 >
                   {col}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-background">
             {rows.map((row, rowIdx) => (
-              <tr key={rowIdx} className="hover:bg-muted/50 transition-colors">
+              <tr key={rowIdx} className="group transition-colors hover:bg-muted/50">
+                <td
+                  className="sticky left-0 z-30 border-b border-r border-border/50 bg-background px-2 py-2 text-center text-xs font-medium"
+                  style={{ width: 64, minWidth: 64, maxWidth: 64 }}
+                >
+                  {rowIdx + 1}
+                </td>
                 {row.map((cell, cellIdx) => (
                   <td
                     key={cellIdx}
-                    className="px-4 py-2 border-b border-border/50 border-r border-r-border/50 last:border-r-0 font-mono text-xs"
+                    className="relative border-b border-r border-border/50 px-6 py-2 text-sm text-foreground/80"
                   >
-                    <span className="block truncate max-w-[500px]" title={cell}>
+                    <span className="block truncate" title={cell}>
                       {cell}
                     </span>
                   </td>

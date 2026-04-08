@@ -86,7 +86,7 @@ function RedisKeyIdentityFields() {
           {t('redis.key.type')}
         </label>
         <Select value={draft.type} onValueChange={(value) => setType(value as RedisKeyType)} disabled={state.isSubmitting || !canEditType}>
-          <SelectTrigger className={!canEditType ? 'border-primary/20 bg-primary/5' : undefined}>
+          <SelectTrigger className={!canEditType ? 'w-full border-primary/20 bg-primary/5' : 'w-full'}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
