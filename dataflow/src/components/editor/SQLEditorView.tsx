@@ -94,8 +94,10 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
         let disposable: Monaco.IDisposable | null = null;
 
         (async () => {
+            const database = selectedDatabase || context?.databaseName;
             const { data: storageData } = await fetchStorageUnits({
                 variables: { schema: schemaParam },
+                context: { database },
             });
             if (disposed || !storageData?.StorageUnit) return;
 
@@ -104,6 +106,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
 
             const { data: columnsData } = await fetchColumnsBatch({
                 variables: { schema: schemaParam, storageUnits: tableNames },
+                context: { database },
             });
             if (disposed) return;
 
