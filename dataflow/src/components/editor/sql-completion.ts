@@ -57,14 +57,18 @@ function getPrecedingKeyword(textBeforeCursor: string): string {
 
 /**
  * Check if the cursor is after "tablename." and return the table name.
+ * Handles: tablename.  "tablename".  "schema"."tablename".  schema.tablename.
  */
 function getDotTableName(
   textBeforeCursor: string,
   knownTables: Set<string>,
 ): string | null {
-  const match = textBeforeCursor.match(/(\w+)\.\w*$/);
+  // Match: optional_schema_part. then tablename (quoted or unquoted) then dot then optional partial word
+  // We want the last identifier before the final dot.
+  // Patterns: word.\w*$  |  "word".\w*$  |  word.word.\w*$  |  "word"."word".\w*$
+  const match = textBeforeCursor.match(/(?:"([^"]+)"|(\w+))\.(?:"[^"]*"?|\w*)$/);
   if (!match) return null;
-  const candidate = match[1];
+  const candidate = match[1] ?? match[2]; // match[1] = quoted, match[2] = unquoted
   for (const table of knownTables) {
     if (table.toLowerCase() === candidate.toLowerCase()) return table;
   }
@@ -73,16 +77,18 @@ function getDotTableName(
 
 /**
  * Scan the full query text for tables referenced after FROM/JOIN keywords.
+ * Handles: FROM tablename  |  FROM "tablename"  |  FROM "schema"."tablename"  |  FROM schema.tablename
  */
 function getReferencedTables(
   fullText: string,
   knownTables: Set<string>,
 ): Set<string> {
   const referenced = new Set<string>();
-  const pattern = /\b(?:FROM|JOIN)\s+(\w+)/gi;
+  // Match the last identifier (quoted or unquoted) in a potentially schema-qualified name after FROM/JOIN
+  const pattern = /\b(?:FROM|JOIN)\s+(?:(?:"[^"]+"|[\w]+)\.)*(?:"([^"]+)"|(\w+))/gi;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(fullText)) !== null) {
-    const candidate = match[1];
+    const candidate = match[1] ?? match[2]; // match[1] = quoted, match[2] = unquoted
     for (const table of knownTables) {
       if (table.toLowerCase() === candidate.toLowerCase()) {
         referenced.add(table);
