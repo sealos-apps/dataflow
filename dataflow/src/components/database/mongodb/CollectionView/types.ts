@@ -96,10 +96,10 @@ export interface CollectionViewActions {
   // Document editing (modal-based add/edit)
   handleAddClick: () => void
   setAddContent: (content: string) => void
-  handleAddSave: () => void
+  handleAddSave: () => Promise<void>
   setShowAddModal: (open: boolean) => void
   handleEditClick: (rowKey: DocumentChangesetRowKey) => void
   setEditContent: (content: string) => void
-  handleEditSave: () => void
+  handleEditSave: () => Promise<void>
   cancelEdit: () => void
 }

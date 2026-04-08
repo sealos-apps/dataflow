@@ -369,7 +369,7 @@ export function useDocumentChangesetManager({
     dispatch({ type: 'set-add-content', content })
   }, [])
 
-  const handleAddSave = useCallback(() => {
+  const handleAddSave = useCallback(async () => {
     try {
       const newDoc = parseMongoDocumentInput(state.addContent)
       if (Object.keys(newDoc).length === 0) {
@@ -418,7 +418,7 @@ export function useDocumentChangesetManager({
     dispatch({ type: 'set-edit-content', content })
   }, [])
 
-  const handleEditSave = useCallback(() => {
+  const handleEditSave = useCallback(async () => {
     if (!state.editingRowKey) return
 
     try {
