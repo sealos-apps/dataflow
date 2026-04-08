@@ -29,9 +29,11 @@ import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { cn } from '@/lib/utils'
 import {
   Loader2, RefreshCw, Plus, Minus, MoreHorizontal,
-  ArrowUpAZ, ArrowDownAZ, X, Download,
+  ArrowUpAZ, ArrowDownAZ, X, Download, TerminalSquare, BarChart3,
 } from 'lucide-react'
 import { ExportRedisKeyModal } from './ExportRedisKeyModal'
+import { useTabStore } from '@/stores/useTabStore'
+import { ChartCreateModal } from '@/components/analysis/chart-create'
 
 // ---------------------------------------------------------------------------
 // Types & helpers
@@ -109,6 +111,7 @@ interface RedisKeyDetailViewProps {
 export function RedisKeyDetailView({ connectionId, databaseName, keyName }: RedisKeyDetailViewProps) {
   const { connections, tableRefreshKey } = useConnectionStore()
   const { t } = useI18n()
+  const openTab = useTabStore((s) => s.openTab)
 
   // ---- GraphQL hooks ----
   const [getRows] = useGetStorageUnitRowsLazyQuery({ fetchPolicy: 'no-cache' })
@@ -160,6 +163,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
   // ---- Delete confirmation ----
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showExport, setShowExport] = useState(false)
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false)
 
   // ---- Ref for race-condition prevention ----
   const latestRequestIdRef = useRef(0)
@@ -486,12 +490,34 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
             </TooltipTrigger>
             <TooltipContent>{t('redis.detail.deleteSelected')}</TooltipContent>
           </Tooltip>
+
+          <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => setIsChartModalOpen(true)}>
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('analysis.chart.create')}</TooltipContent>
+          </Tooltip>
         </div>
 
-        <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => setShowExport(true)}>
-          <Download className="h-4 w-4" />
-          {t('common.actions.export')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => setShowExport(true)}>
+            <Download className="h-4 w-4" />
+            {t('common.actions.export')}
+          </Button>
+          <Button className="rounded-lg gap-2.5 min-w-[86px]" onClick={() => openTab({
+            type: 'query',
+            title: t('sidebar.tab.queryWithDatabase', { database: databaseName }),
+            connectionId,
+            databaseName,
+          })}>
+            <TerminalSquare className="h-4 w-4" />
+            {t('common.actions.query')}
+          </Button>
+        </div>
       </div>
 
       <FindBar.Bar />
@@ -777,6 +803,22 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
         connectionId={connectionId}
         databaseName={databaseName}
         keyName={keyName}
+      />
+
+      <ChartCreateModal
+        open={isChartModalOpen}
+        onOpenChange={setIsChartModalOpen}
+        initialData={data ? {
+          connectionId,
+          databaseName,
+          query: keyType === 'hash' ? `HGETALL ${keyName}`
+            : keyType === 'list' ? `LRANGE ${keyName} 0 -1`
+            : keyType === 'set' ? `SMEMBERS ${keyName}`
+            : keyType === 'zset' ? `ZRANGE ${keyName} 0 -1 WITHSCORES`
+            : `GET ${keyName}`,
+          columns,
+          rows,
+        } : undefined}
       />
     </div>
     </FindBar.Provider>
