@@ -30,7 +30,7 @@ export function EditTableForeignKeysTab() {
       <div className="flex items-center justify-end">
         <Button
           variant="link"
-          size="xs"
+          size="sm"
           onClick={addForeignKey}
           className="gap-1 text-primary"
         >
@@ -63,7 +63,7 @@ export function EditTableForeignKeysTab() {
                 <tr
                   key={fk.id}
                   className={cn(
-                    'group hover:bg-muted/30',
+                    'group hover:bg-muted/30 relative',
                     fk.isNew && !fk.isMarkedForDeletion && 'bg-primary/5',
                     fk.isMarkedForDeletion && 'bg-destructive/5 opacity-60',
                   )}
@@ -87,7 +87,7 @@ export function EditTableForeignKeysTab() {
                       disabled={isExecuting || fk.isMarkedForDeletion}
                     >
                       <SelectTrigger size="sm" className={cn(
-                        'w-full border-transparent bg-transparent text-xs',
+                        'w-full bg-transparent text-sm',
                         fk.isMarkedForDeletion && 'line-through text-muted-foreground',
                       )}>
                         <SelectValue placeholder={t('sql.editTable.foreignKeys.columnPlaceholder')} />
@@ -130,7 +130,7 @@ export function EditTableForeignKeysTab() {
                       disabled={isExecuting || fk.isMarkedForDeletion}
                     >
                       <SelectTrigger size="sm" className={cn(
-                        'w-full border-transparent bg-transparent text-xs',
+                        'w-full bg-transparent text-sm',
                         fk.isMarkedForDeletion && 'line-through text-muted-foreground',
                       )}>
                         <SelectValue />
@@ -149,7 +149,7 @@ export function EditTableForeignKeysTab() {
                       disabled={isExecuting || fk.isMarkedForDeletion}
                     >
                       <SelectTrigger size="sm" className={cn(
-                        'w-full border-transparent bg-transparent text-xs',
+                        'w-full bg-transparent text-sm',
                         fk.isMarkedForDeletion && 'line-through text-muted-foreground',
                       )}>
                         <SelectValue />
@@ -164,7 +164,7 @@ export function EditTableForeignKeysTab() {
                   <td className="p-1">
                     <Button
                       variant="ghost"
-                      size="icon-xs"
+                      size="sm"
                       onClick={() => toggleForeignKeyDeletion(fk)}
                       disabled={isExecuting}
                       className={cn(

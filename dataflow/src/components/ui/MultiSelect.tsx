@@ -38,7 +38,7 @@ export function MultiSelect({
         <button
           type="button"
           className={cn(
-            'flex w-full items-center justify-between rounded border border-transparent bg-transparent px-2 py-1 text-xs cursor-pointer hover:border-border min-h-[26px]',
+            'flex w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs cursor-pointer outline-none h-8',
             disabled && 'pointer-events-none opacity-50',
             className,
           )}
@@ -48,18 +48,18 @@ export function MultiSelect({
               ? <span className="text-muted-foreground">{placeholder}</span>
               : selected.join(', ')}
           </span>
-          <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          <ChevronDown className="size-4 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-2">
         {options.length === 0 ? (
-          <div className="p-2 text-center text-xs text-muted-foreground">No options available</div>
+          <div className="p-2 text-center text-sm text-muted-foreground">No options available</div>
         ) : (
           <div className="max-h-48 overflow-y-auto">
             {options.map(opt => (
               <label
                 key={opt}
-                className="flex cursor-pointer items-center gap-2 rounded p-1.5 text-xs hover:bg-muted"
+                className="flex cursor-pointer items-center gap-2 rounded-sm py-1.5 px-2 text-sm hover:bg-accent hover:text-accent-foreground"
               >
                 <Checkbox
                   className="h-3.5 w-3.5"

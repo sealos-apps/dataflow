@@ -23,7 +23,7 @@ export function EditTableIndexesTab() {
       <div className="flex items-center justify-end">
         <Button
           variant="link"
-          size="xs"
+          size="sm"
           onClick={addIndex}
           className="gap-1 text-primary"
         >
@@ -53,7 +53,7 @@ export function EditTableIndexesTab() {
                 <tr
                   key={idx.id}
                   className={cn(
-                    'group hover:bg-muted/30',
+                    'group hover:bg-muted/30 relative',
                     idx.isNew && !idx.isMarkedForDeletion && 'bg-primary/5',
                     idx.isMarkedForDeletion && 'bg-destructive/5 opacity-60',
                   )}
@@ -77,9 +77,13 @@ export function EditTableIndexesTab() {
                       onChange={(newCols) => updateIndex(idx.id, 'columns', newCols)}
                       placeholder={t('sql.editTable.indexes.columnsPlaceholder')}
                       disabled={isExecuting || idx.isMarkedForDeletion}
+                      className={cn(
+                        'w-full bg-transparent text-sm',
+                        idx.isMarkedForDeletion && 'line-through text-muted-foreground',
+                      )}
                     />
                   </td>
-                  <td className="p-2">
+                  <td className="p-2 text-center">
                     <Checkbox
                       checked={idx.isUnique}
                       onCheckedChange={(checked) => updateIndex(idx.id, 'isUnique', checked === true)}
@@ -89,7 +93,7 @@ export function EditTableIndexesTab() {
                   <td className="p-1">
                     <Button
                       variant="ghost"
-                      size="icon-xs"
+                      size="sm"
                       onClick={() => toggleIndexDeletion(idx)}
                       disabled={isExecuting}
                       className={cn(

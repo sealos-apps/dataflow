@@ -39,7 +39,7 @@ export function EditTableColumnsTab() {
       <div className="flex items-center justify-end">
         <Button
           variant="link"
-          size="xs"
+          size="sm"
           onClick={addColumn}
           className="gap-1 text-primary"
         >
@@ -87,7 +87,7 @@ export function EditTableColumnsTab() {
                     disabled={isExecuting || col.isMarkedForDeletion}
                   >
                     <SelectTrigger size="sm" className={cn(
-                      'w-full bg-transparent text-xs',
+                      'w-full bg-transparent text-sm',
                       col.isMarkedForDeletion && 'line-through text-muted-foreground',
                     )}>
                       <SelectValue />
@@ -112,7 +112,7 @@ export function EditTableColumnsTab() {
                 <td className="p-1">
                   <Button
                     variant="ghost"
-                    size="icon-xs"
+                    size="sm"
                     onClick={() => toggleColumnDeletion(col)}
                     disabled={isExecuting}
                     className={cn(
