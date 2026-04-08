@@ -1,4 +1,5 @@
-import { Plus, Minus, Download, RefreshCw, Undo2, Eye, SendHorizontal, TerminalSquare } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, Minus, Download, RefreshCw, Undo2, Eye, SendHorizontal, TerminalSquare, BarChart3 } from 'lucide-react'
 import { useTableView } from './TableViewProvider'
 import { DataView } from '@/components/database/shared/DataView'
 import { Button } from '@/components/ui/Button'
@@ -9,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { useTabStore } from '@/stores/useTabStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { buildStorageUnitReference } from '@/utils/ddl-sql'
+import { ChartCreateModal } from '@/components/analysis/chart-create'
 
 interface TableViewToolbarProps {
   connectionId: string
@@ -22,6 +24,7 @@ export function TableViewToolbar({ connectionId, databaseName, tableName, schema
   const { state, actions } = useTableView()
   const openTab = useTabStore((s) => s.openTab)
   const connections = useConnectionStore((s) => s.connections)
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false)
 
   const handleOpenQuery = () => {
     const connectionType = connections.find((connection) => connection.id === connectionId)?.type
@@ -125,6 +128,17 @@ export function TableViewToolbar({ connectionId, databaseName, tableName, schema
             </Tooltip>
           </>
         )}
+
+        <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => setIsChartModalOpen(true)}>
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('analysis.chart.create')}</TooltipContent>
+        </Tooltip>
       </div>
       <div className="flex items-center gap-2">
         <DataView.FilterButton
@@ -140,6 +154,7 @@ export function TableViewToolbar({ connectionId, databaseName, tableName, schema
           {t('common.actions.query')}
         </Button>
       </div>
+      <ChartCreateModal open={isChartModalOpen} onOpenChange={setIsChartModalOpen} />
     </div>
   )
 }
