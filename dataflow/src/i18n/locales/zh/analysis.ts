@@ -36,6 +36,7 @@ export const zhAnalysisMessages = {
   'analysis.chart.selectXAxis': '选择 X 轴',
   'analysis.chart.selectYAxis': '选择 Y 轴',
   'analysis.chart.dataConfiguration': '数据配置',
+  'analysis.chart.dataStatus': '{columns} 列 · {rows} 行',
   'analysis.chart.options': '图表选项',
   'analysis.chart.options.legend': '图例',
   'analysis.chart.options.gridLines': '网格线',

@@ -42,6 +42,7 @@ export const enAnalysisMessages = {
   'analysis.chart.selectXAxis': 'Select X-Axis',
   'analysis.chart.selectYAxis': 'Select Y-Axis',
   'analysis.chart.dataConfiguration': 'Data Configuration',
+  'analysis.chart.dataStatus': '{columns} columns · {rows} rows',
   'analysis.chart.options': 'Chart Options',
   'analysis.chart.options.legend': 'Legend',
   'analysis.chart.options.gridLines': 'Grid Lines',

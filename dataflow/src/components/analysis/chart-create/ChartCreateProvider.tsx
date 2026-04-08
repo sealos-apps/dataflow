@@ -111,11 +111,17 @@ export function ChartCreateProvider({ editComponent, onClose, children }: ChartC
     }, [])
 
     const handleConfigChange = useCallback((updates: Partial<ChartConfig>) => {
-        setChartConfig(prev => ({
-            ...prev,
-            ...updates,
-            options: updates.options ? { ...prev.options, ...updates.options } : prev.options,
-        }))
+        setChartConfig(prev => {
+            const next = {
+                ...prev,
+                ...updates,
+                options: updates.options ? { ...prev.options, ...updates.options } : prev.options,
+            }
+            if (updates.xAxisColumn && updates.xAxisColumn !== prev.xAxisColumn) {
+                next.yAxisColumns = prev.yAxisColumns.filter(col => col !== updates.xAxisColumn)
+            }
+            return next
+        })
     }, [])
 
     const handleQueryResults = useCallback((

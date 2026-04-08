@@ -40,12 +40,22 @@ export function ChartConfigPanel() {
         <div className="flex flex-col gap-4 p-6 overflow-y-auto h-full">
 
             {/* 1. Data Configuration button */}
-            <Button
-                onClick={() => setActiveView('data-config')}
-                className="w-full"
-            >
-                {t('analysis.chart.dataConfiguration')}
-            </Button>
+            <div className="flex flex-col gap-1.5">
+                <Button
+                    onClick={() => setActiveView('data-config')}
+                    className="w-full"
+                >
+                    {t('analysis.chart.dataConfiguration')}
+                </Button>
+                {queryData && (
+                    <p className="text-xs text-muted-foreground">
+                        {t('analysis.chart.dataStatus', {
+                            columns: queryData.columns.length,
+                            rows: queryData.rows.length,
+                        })}
+                    </p>
+                )}
+            </div>
 
             {/* 2. Chart Type selector */}
             <div className="flex flex-col gap-1.5">
@@ -73,6 +83,7 @@ export function ChartConfigPanel() {
                 <Select
                     value={config.xAxisColumn || undefined}
                     onValueChange={(value) => onConfigChange({ xAxisColumn: value })}
+                    disabled={columns.length === 0}
                 >
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder={t('analysis.chart.selectXAxis')} />
@@ -92,8 +103,15 @@ export function ChartConfigPanel() {
                 <label className="text-sm font-medium">{t('analysis.chart.yAxis')}</label>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between font-normal">
-                            <span className={cn(!config.yAxisColumns.length && 'text-muted-foreground')}>
+                        <Button
+                            variant="outline"
+                            className="w-full justify-between font-normal"
+                            disabled={columns.length === 0}
+                        >
+                            <span className={cn(
+                                'truncate',
+                                !config.yAxisColumns.length && 'text-muted-foreground',
+                            )}>
                                 {config.yAxisColumns.length ? config.yAxisColumns.join(', ') : t('analysis.chart.selectYAxis')}
                             </span>
                             <ChevronDown className="h-4 w-4 text-muted-foreground" />

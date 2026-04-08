@@ -66,7 +66,7 @@ function ChartConfigView() {
                         {isEditing ? t('analysis.chart.edit') : t('analysis.chart.create')}
                     </h2>
                 </div>
-                <DialogClose className="p-2 hover:bg-muted rounded-full transition-colors">
+                <DialogClose className="p-2 hover:bg-muted rounded-full transition-colors" aria-label={t('common.actions.close')}>
                     <X className="w-5 h-5 text-muted-foreground" />
                 </DialogClose>
             </div>
@@ -77,6 +77,7 @@ function ChartConfigView() {
                 <div className="flex-1 flex flex-col p-6 gap-4 overflow-hidden border-r">
                     <input
                         type="text"
+                        autoFocus
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder={t('analysis.chart.titlePlaceholder')}
@@ -131,7 +132,7 @@ function DataConfigView() {
                     <ChevronLeft className="w-4 h-4" />
                     {t('analysis.chart.backToChart')}
                 </Button>
-                <DialogClose className="p-2 hover:bg-muted rounded-full transition-colors">
+                <DialogClose className="p-2 hover:bg-muted rounded-full transition-colors" aria-label={t('common.actions.close')}>
                     <X className="w-5 h-5 text-muted-foreground" />
                 </DialogClose>
             </div>
