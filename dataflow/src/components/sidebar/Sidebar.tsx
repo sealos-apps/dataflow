@@ -17,6 +17,8 @@ import {
   getTableMenuItems,
   getCollectionMenuItems,
   getViewMenuItems,
+  getRedisKeysFolderMenuItems,
+  getRedisKeyMenuItems,
 } from "./contextMenuItems";
 import { SidebarModals } from "./SidebarModals";
 import { useI18n } from "@/i18n/useI18n";
@@ -38,7 +40,9 @@ export type ModalState =
   | { type: "copy_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
   | { type: "rename_table"; params: { connectionId: string; databaseName: string; schema?: string; tableName: string } }
   | { type: "export_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
-  | { type: "drop_collection"; params: { connectionId: string; databaseName: string; collectionName: string } };
+  | { type: "drop_collection"; params: { connectionId: string; databaseName: string; collectionName: string } }
+  | { type: "create_redis_key"; params: { connectionId: string; databaseName: string } }
+  | { type: "delete_redis_key"; params: { connectionId: string; databaseName: string; keyName: string } };
 
 type Action =
   | { action: "open"; modal: ModalState }
@@ -308,6 +312,25 @@ function SidebarInner() {
             },
           });
           break;
+        case "new_redis_key":
+          openModal({
+            type: "create_redis_key",
+            params: {
+              connectionId: node.connectionId,
+              databaseName: node.metadata.database!,
+            },
+          });
+          break;
+        case "delete_redis_key":
+          openModal({
+            type: "delete_redis_key",
+            params: {
+              connectionId: node.connectionId,
+              databaseName: node.metadata.database!,
+              keyName: node.name,
+            },
+          });
+          break;
         case "refresh":
           if (expandedItems.has(node.id)) {
             fetchNodeChildren(node);
@@ -373,6 +396,10 @@ function SidebarInner() {
         return getViewMenuItems(callbacks);
       case "collection":
         return getCollectionMenuItems(callbacks);
+      case "redis_keys_folder":
+        return getRedisKeysFolderMenuItems(callbacks);
+      case "redis_key":
+        return getRedisKeyMenuItems(callbacks);
       default:
         return [];
     }
