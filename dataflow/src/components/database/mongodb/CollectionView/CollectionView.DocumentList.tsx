@@ -80,8 +80,8 @@ export function CollectionViewDocumentList() {
               !item.changeType && !hasCurrentMatch && hasMatch && 'bg-blue-50/60 border border-blue-200',
               // Default styling
               !item.changeType && !hasMatch && 'bg-background border border-border/50 hover:bg-muted/30 hover:shadow-sm',
-              // Selection: remove border, add ring (no overlap since border is gone)
-              isSelected && '!border-0 ring-2 ring-primary',
+              // Selection: outline sits outside border, no layout shift
+              isSelected && 'outline-2 outline-primary',
             )}
             onClick={() => actions.toggleRowSelection(item.rowKey)}
           >
