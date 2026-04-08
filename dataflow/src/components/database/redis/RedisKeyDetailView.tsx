@@ -145,6 +145,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
   // ---- Column resize ----
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [resizingColumn, setResizingColumn] = useState<string | null>(null)
+  const [resizedColumns, setResizedColumns] = useState<Set<string>>(new Set())
   const resizingRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null)
 
   // ---- Inline editing ----
@@ -241,6 +242,13 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
     }
     const handleMouseUp = () => {
       if (!resizingRef.current) return
+      const col = resizingRef.current.column
+      setResizedColumns(prev => {
+        if (prev.has(col)) return prev
+        const next = new Set(prev)
+        next.add(col)
+        return next
+      })
       resizingRef.current = null
       setResizingColumn(null)
       document.body.style.cursor = 'default'
@@ -553,8 +561,8 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                 return (
                   <th
                     key={col}
-                    style={{ minWidth: `${width}px` }}
-                    className="px-6 py-2 text-left font-medium text-sm text-muted-foreground whitespace-nowrap group/header relative border-r border-border/50 select-none sticky top-0 bg-background z-40"
+                    style={{ minWidth: `${width}px`, ...(resizedColumns.has(col) && { maxWidth: `${width}px` }) }}
+                    className="px-6 py-2 text-left font-medium text-sm text-muted-foreground whitespace-nowrap group/header relative overflow-hidden border-r border-border/50 select-none sticky top-0 bg-background z-40"
                   >
                     <div className="flex items-center justify-between h-full">
                       <div className="flex items-center gap-1 overflow-hidden mr-6">
@@ -669,14 +677,14 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                         key={col}
                         data-find-current={highlight === 'current' ? 'true' : undefined}
                         className={cn(
-                          'relative border-b border-r border-border/50 text-sm text-foreground/80 scroll-mt-14',
+                          'relative overflow-hidden border-b border-r border-border/50 text-sm text-foreground/80 scroll-mt-14',
                           isActive ? 'p-0' : 'px-6 py-2',
                           isSelected && 'bg-primary/10',
                           highlight === 'current' && 'bg-blue-200',
                           highlight === 'match' && 'bg-blue-100/60',
                           editable && !isActive && 'cursor-default',
                         )}
-                        style={{ minWidth: `${width}px` }}
+                        style={{ minWidth: `${width}px`, ...(resizedColumns.has(col) && { maxWidth: `${width}px` }) }}
                         onDoubleClick={() => { if (editable && !mutating) activateCell(rowIdx, col) }}
                       >
                         {isActive ? (
@@ -739,7 +747,7 @@ export function RedisKeyDetailView({ connectionId, databaseName, keyName }: Redi
                     <td
                       key={col}
                       className="border-b border-r border-border/50 p-0"
-                      style={{ minWidth: `${width}px` }}
+                      style={{ minWidth: `${width}px`, ...(resizedColumns.has(col) && { maxWidth: `${width}px` }) }}
                     >
                       {isInput ? (
                         <input
