@@ -3,6 +3,7 @@ import { createContext, use, useRef, useState, useEffect, useCallback, type Reac
 import { useAnalysisDefinitionStore, type DashboardDefinition, type ChartWidgetDefinition, type WidgetLayout } from '@/stores/analysisDefinitionStore'
 import { useAnalysisRuntimeStore } from '@/stores/analysisRuntimeStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
+import { useLayoutStore } from '@/stores/useLayoutStore'
 import {
     DEFAULT_CHART_CONFIG,
     buildEChartsOption,
@@ -104,6 +105,7 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
     const activeDashboardId = useAnalysisDefinitionStore(state => state.activeDashboardId)
     const isInitialized = useAnalysisDefinitionStore(state => state.isInitialized)
     const initializeFromAPI = useAnalysisDefinitionStore(state => state.initializeFromAPI)
+    const openDashboard = useAnalysisDefinitionStore(state => state.openDashboard)
     const { connections } = useConnectionStore()
 
     useEffect(() => {
@@ -208,6 +210,7 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
         }
 
         let widgetId = editComponent?.id
+        let targetId: string | undefined
         if (editComponent) {
             await updateWidget(editComponent.id, {
                 ...payload,
@@ -215,7 +218,7 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
                 sortOrder: editComponent.sortOrder,
             })
         } else if (selectedDashboardId) {
-            let targetId = selectedDashboardId
+            targetId = selectedDashboardId
             let targetWidgets: ChartWidgetDefinition[] = []
             if (targetId === '__new__') {
                 const created = await createDashboard(title.trim())
@@ -247,7 +250,12 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
         }
 
         onClose()
-    }, [queryData, title, chartConfig, addWidget, updateWidget, editComponent, selectedDashboardId, dashboards, onClose])
+
+        if (!editComponent && initialData && targetId) {
+            openDashboard(targetId)
+            useLayoutStore.getState().setActiveTab('analysis')
+        }
+    }, [queryData, title, chartConfig, addWidget, updateWidget, editComponent, selectedDashboardId, dashboards, onClose, initialData, openDashboard])
 
     return (
         <ChartCreateCtx value={{

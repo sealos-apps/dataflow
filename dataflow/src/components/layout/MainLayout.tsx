@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { useLayoutStore } from "@/stores/useLayoutStore";
 
-import { ActivityBar, ActivityTab } from "./ActivityBar";
+import { ActivityBar } from "./ActivityBar";
 import { AnalysisView } from "../analysis/AnalysisView";
 import { TabBar } from "./TabBar";
 import { TabContent } from "./TabContent";
@@ -12,7 +13,8 @@ const SIDEBAR_MAX_WIDTH = 480;
 const SIDEBAR_DEFAULT_WIDTH = 256;
 
 export function MainLayout() {
-    const [activeTab, setActiveTab] = useState<ActivityTab>('connections');
+    const activeTab = useLayoutStore(state => state.activeTab);
+    const setActiveTab = useLayoutStore(state => state.setActiveTab);
     const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
     const isResizing = useRef(false);
 

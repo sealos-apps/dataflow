@@ -3,8 +3,7 @@ import { Database, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/useI18n";
-
-export type ActivityTab = 'connections' | 'analysis';
+import type { ActivityTab } from "@/stores/useLayoutStore";
 
 interface ActivityBarProps {
     activeTab: ActivityTab;

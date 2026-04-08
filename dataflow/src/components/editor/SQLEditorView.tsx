@@ -17,6 +17,8 @@ import { splitRedisCommands, splitSQLStatements } from '@/utils/sql-split';
 import { useTabStore } from "@/stores/useTabStore";
 import { useI18n } from "@/i18n/useI18n";
 
+const IS_MAC = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
+
 interface SQLEditorViewProps {
     tabId: string;
     context?: {
@@ -237,6 +239,14 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
         }
     };
 
+    // Keep refs in sync so Monaco keybindings always call the latest handlers
+    const handleRunRef = useRef(handleRun);
+    handleRunRef.current = handleRun;
+    const handleFormatRef = useRef(handleFormat);
+    handleFormatRef.current = handleFormat;
+    const isExecutingRef = useRef(isExecuting);
+    isExecutingRef.current = isExecuting;
+
     const [resultsHeight, setResultsHeight] = useState(400);
     const isResizing = useRef(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -290,7 +300,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                 {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{t('sql.actions.run')}</TooltipContent>
+                        <TooltipContent>{t('sql.actions.run')} ({IS_MAC ? '⌘↩' : 'Ctrl+Enter'})</TooltipContent>
                     </Tooltip>
                     {getEditorLanguage(connectionType) === 'sql' && (
                         <Tooltip>
@@ -304,7 +314,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                     <AlignLeft className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>{t('sql.actions.format')}</TooltipContent>
+                            <TooltipContent>{t('sql.actions.format')} ({IS_MAC ? '⇧⌥F' : 'Shift+Alt+F'})</TooltipContent>
                         </Tooltip>
                     )}
                 </div>
@@ -388,6 +398,20 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                         onMount={(editorInstance: editor.IStandaloneCodeEditor, monacoInstance: typeof Monaco) => {
                             editorRef.current = editorInstance;
                             setMonacoInstance(monacoInstance);
+
+                            editorInstance.addAction({
+                                id: 'run-query',
+                                label: 'Run Query',
+                                keybindings: [monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter],
+                                run: () => { if (!isExecutingRef.current) handleRunRef.current(); },
+                            });
+
+                            editorInstance.addAction({
+                                id: 'format-sql',
+                                label: 'Format SQL',
+                                keybindings: [monacoInstance.KeyMod.Shift | monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.KeyF],
+                                run: () => { handleFormatRef.current(); },
+                            });
                         }}
                     />
                 </div>

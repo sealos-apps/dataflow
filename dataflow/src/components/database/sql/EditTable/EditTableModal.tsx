@@ -26,7 +26,7 @@ function EditTableContent() {
     >
       <TabsList
         variant="line"
-        className="w-full shrink-0 justify-start px-6 pt-4"
+        className="w-full shrink-0 justify-start px-6"
       >
         <TabsTrigger value="fields">
           <Table />
