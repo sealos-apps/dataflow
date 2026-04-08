@@ -46,13 +46,22 @@ const COLUMN_CONTEXT_KEYWORDS = new Set([
 ]);
 
 /**
- * Get the keyword token immediately before the cursor position,
- * skipping over the current partial word being typed.
+ * Scan backwards from cursor to find the nearest SQL context keyword,
+ * skipping over identifiers, commas, operators, literals, etc.
+ * This handles cases like `SELECT col1, col2, |` where the nearest
+ * keyword is SELECT, not col2.
  */
 function getPrecedingKeyword(textBeforeCursor: string): string {
   const withoutPartial = textBeforeCursor.replace(/\w+$/, '').trimEnd();
-  const match = withoutPartial.match(/(\w+)\s*$/);
-  return match ? match[1].toUpperCase() : '';
+  const tokens = withoutPartial.match(/\w+/g);
+  if (!tokens) return '';
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const upper = tokens[i].toUpperCase();
+    if (TABLE_CONTEXT_KEYWORDS.has(upper) || COLUMN_CONTEXT_KEYWORDS.has(upper)) {
+      return upper;
+    }
+  }
+  return '';
 }
 
 /**
@@ -77,24 +86,46 @@ function getDotTableName(
 
 /**
  * Scan the full query text for tables referenced after FROM/JOIN keywords.
- * Handles: FROM tablename  |  FROM "tablename"  |  FROM "schema"."tablename"  |  FROM schema.tablename
+ * Handles: FROM t1, t2  |  FROM "t1"  |  FROM "schema"."t1"  |  JOIN t2
  */
 function getReferencedTables(
   fullText: string,
   knownTables: Set<string>,
 ): Set<string> {
   const referenced = new Set<string>();
-  // Match the last identifier (quoted or unquoted) in a potentially schema-qualified name after FROM/JOIN
-  const pattern = /\b(?:FROM|JOIN)\s+(?:(?:"[^"]+"|[\w]+)\.)*(?:"([^"]+)"|(\w+))/gi;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(fullText)) !== null) {
-    const candidate = match[1] ?? match[2]; // match[1] = quoted, match[2] = unquoted
+
+  const addIfKnown = (candidate: string) => {
     for (const table of knownTables) {
       if (table.toLowerCase() === candidate.toLowerCase()) {
         referenced.add(table);
       }
     }
+  };
+
+  // Extract the last identifier (table name) from a possibly schema-qualified reference
+  const extractTableName = (ref: string): string | null => {
+    const m = ref.trim().match(/(?:(?:"[^"]+"|[\w]+)\.)*(?:"([^"]+)"|(\w+))/);
+    return m ? (m[1] ?? m[2]) : null;
+  };
+
+  // 1. FROM clauses — capture everything up to the next clause keyword, then split by comma
+  const fromPattern = /\bFROM\s+([\s\S]+?)(?=\b(?:WHERE|JOIN|INNER|LEFT|RIGHT|FULL|CROSS|ORDER|GROUP|HAVING|LIMIT|UNION|ON|SET|VALUES|INTO)\b|;|$)/gi;
+  let fromMatch;
+  while ((fromMatch = fromPattern.exec(fullText)) !== null) {
+    for (const part of fromMatch[1].split(',')) {
+      const name = extractTableName(part);
+      if (name) addIfKnown(name);
+    }
   }
+
+  // 2. JOIN clauses — single table per JOIN
+  const joinPattern = /\bJOIN\s+(?:(?:"[^"]+"|[\w]+)\.)*(?:"([^"]+)"|(\w+))/gi;
+  let joinMatch;
+  while ((joinMatch = joinPattern.exec(fullText)) !== null) {
+    const candidate = joinMatch[1] ?? joinMatch[2];
+    addIfKnown(candidate);
+  }
+
   return referenced;
 }
 
