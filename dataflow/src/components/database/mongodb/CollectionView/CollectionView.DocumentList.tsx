@@ -70,7 +70,8 @@ export function CollectionViewDocumentList() {
             key={item.rowKey}
             data-find-current={hasCurrentMatch ? 'true' : undefined}
             className={cn(
-              'rounded-xl border p-4 group relative transition-all duration-200 flex gap-3',
+              'rounded-xl border p-4 group relative transition-all duration-200 cursor-pointer',
+              isSelected && 'ring-2 ring-primary/50',
               item.changeType === 'insert'
                 ? 'bg-blue-50 border-blue-200'
                 : item.isDeleted
@@ -83,17 +84,9 @@ export function CollectionViewDocumentList() {
                         ? 'bg-blue-50/60 border-blue-200'
                         : 'bg-background border-border/50 hover:bg-muted/30 hover:shadow-sm',
             )}
+            onClick={() => actions.toggleRowSelection(item.rowKey)}
           >
-            <div className="flex-shrink-0 pt-0.5">
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => actions.toggleRowSelection(item.rowKey)}
-                className="h-4 w-4 rounded border-border cursor-pointer accent-primary"
-                aria-label={t('mongodb.document.selectRow')}
-              />
-            </div>
-            <div className="flex-1 min-w-0 relative">
+            <div className="relative">
               {!item.isDeleted && (
                 <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Tooltip>
