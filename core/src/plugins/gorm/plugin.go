@@ -17,6 +17,7 @@
 package gorm_plugin
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"slices"
@@ -599,8 +600,23 @@ func (p *GormPlugin) ExecuteRawSQL(config *engine.PluginConfig, openMultiStateme
 			}, nil
 		}
 
-		rows, err := db.Raw(query, params...).Rows()
+		sqlDB, err := db.DB()
 		if err != nil {
+			return nil, err
+		}
+
+		conn, err := sqlDB.Conn(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+
+		rows, err := conn.QueryContext(context.Background(), query, params...)
+		if err != nil {
+			// Clean up any aborted transaction on this connection.
+			// ROLLBACK is a no-op when no transaction is active (PostgreSQL
+			// issues a WARNING, MySQL/SQLite/ClickHouse silently ignore it).
+			_, _ = conn.ExecContext(context.Background(), "ROLLBACK")
 			return nil, err
 		}
 		defer rows.Close()
