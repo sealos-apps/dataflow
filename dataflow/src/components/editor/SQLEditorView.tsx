@@ -13,7 +13,13 @@ import { useRawExecuteLazyQuery, useGetStorageUnitsLazyQuery, useGetColumnsBatch
 import { getEditorLanguage, getUnsupportedRedisCommand, isReadOperation, resolveSchemaParam, supportsSchema } from "@/utils/database-features";
 import { registerSQLCompletionProvider } from './sql-completion';
 import type { SQLCompletionData, ColumnInfo } from './sql-completion';
-import { splitRedisCommands, splitSQLStatements, isStandaloneTransactionStatement } from '@/utils/sql-split';
+import {
+    splitRedisCommands,
+    splitSQLStatements,
+    splitMongoStatements,
+    isLikelyMongoCommand,
+    isStandaloneTransactionStatement,
+} from '@/utils/sql-split';
 import { useTabStore } from "@/stores/useTabStore";
 import { useI18n } from "@/i18n/useI18n";
 
@@ -153,9 +159,12 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
     };
 
     const handleRun = async () => {
-        const statements = connectionType.toUpperCase() === 'REDIS'
+        const upperType = connectionType.toUpperCase();
+        const statements = upperType === 'REDIS'
             ? splitRedisCommands(query)
-            : splitSQLStatements(query);
+            : upperType === 'MONGODB'
+                ? splitMongoStatements(query)
+                : splitSQLStatements(query);
         if (statements.length === 0) return;
 
         setIsExecuting(true);
@@ -167,7 +176,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
             const sql = statements[idx];
 
             // Block unsupported Redis commands with a clear message
-            if (connectionType.toUpperCase() === 'REDIS') {
+            if (upperType === 'REDIS') {
                 const unsupportedKey = getUnsupportedRedisCommand(sql);
                 if (unsupportedKey) {
                     results.push({ columns: [], rows: [], info: t(unsupportedKey as import('@/i18n/messages').MessageKey), isError: true, sql });
@@ -175,8 +184,20 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                 }
             }
 
+            // Reject non-command MongoDB statements early with a localized, targeted error
+            if (upperType === 'MONGODB' && !isLikelyMongoCommand(sql)) {
+                results.push({
+                    columns: [],
+                    rows: [],
+                    info: t('mongodb.editor.unsupportedStatement', { statement: sql }),
+                    isError: true,
+                    sql,
+                });
+                continue;
+            }
+
             // Block standalone transaction statements with a warning
-            if (connectionType.toUpperCase() !== 'REDIS' && isStandaloneTransactionStatement(sql)) {
+            if (upperType !== 'REDIS' && upperType !== 'MONGODB' && isStandaloneTransactionStatement(sql)) {
                 results.push({ columns: [], rows: [], info: t('sql.editor.transactionWarning'), isError: true, sql });
                 continue;
             }

@@ -77,7 +77,10 @@ func parseShellCommand(input string) (*shellCommand, error) {
 		}, nil
 	}
 
-	return nil, fmt.Errorf("not a valid MongoDB shell command: %s", truncate(strings.TrimSpace(input), 80))
+	return nil, fmt.Errorf(
+		"only single db.collection.method(...) calls are supported; JavaScript constructs such as variables, functions, and loops are not — use mongosh for full scripts. Received: %s",
+		truncate(strings.TrimSpace(input), 120),
+	)
 }
 
 // stripComments removes single-line (//) and block (/* */) comments from s.

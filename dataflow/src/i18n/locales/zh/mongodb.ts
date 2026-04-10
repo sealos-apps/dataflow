@@ -91,4 +91,6 @@ export const zhMongodbMessages = {
   'mongodb.filter.operator.gte': '大于等于 (>=)',
   'mongodb.filter.operator.lte': '小于等于 (<=)',
   'mongodb.filter.operator.in': '包含（逗号分隔）',
+  'mongodb.editor.unsupportedStatement':
+    'MongoDB 编辑器只支持单条 db.collection.method(...) 调用。不支持变量声明、函数、循环等 JavaScript 构造，如需运行完整脚本请使用 mongosh。\n出错语句：{statement}',
 } as const

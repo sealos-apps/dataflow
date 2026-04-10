@@ -100,4 +100,6 @@ export const enMongodbMessages = {
   'mongodb.filter.operator.gte': 'Greater/Equal (>=)',
   'mongodb.filter.operator.lte': 'Less/Equal (<=)',
   'mongodb.filter.operator.in': 'In (comma separated)',
+  'mongodb.editor.unsupportedStatement':
+    'The MongoDB editor only supports single db.collection.method(...) calls. JavaScript constructs such as variables, functions, and loops are not supported — use mongosh for full scripts.\nOffending statement: {statement}',
 } satisfies MessageShape<typeof zhMongodbMessages>

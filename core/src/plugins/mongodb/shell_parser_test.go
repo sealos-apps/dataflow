@@ -99,6 +99,20 @@ func TestParseShellCommand_InvalidFormat(t *testing.T) {
 	}
 }
 
+func TestParseShellCommand_InvalidFormat_ErrorMessageExplainsLimitation(t *testing.T) {
+	_, err := parseShellCommand(`const users = [1, 2, 3]`)
+	if err == nil {
+		t.Fatal("expected error for JS variable declaration, got nil")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "db.collection.method") {
+		t.Errorf("expected error message to reference db.collection.method(...), got: %q", msg)
+	}
+	if !strings.Contains(msg, "mongosh") {
+		t.Errorf("expected error message to suggest mongosh, got: %q", msg)
+	}
+}
+
 func TestParseShellCommand_WithComments(t *testing.T) {
 	input := `// find all adult users
 db.users.find({ /* filter */ "age": { "$gt": 18 } })`

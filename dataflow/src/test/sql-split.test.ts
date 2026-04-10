@@ -1,4 +1,10 @@
-import { splitRedisCommands, splitSQLStatements, isStandaloneTransactionStatement } from '@/utils/sql-split';
+import {
+  splitRedisCommands,
+  splitSQLStatements,
+  splitMongoStatements,
+  isLikelyMongoCommand,
+  isStandaloneTransactionStatement,
+} from '@/utils/sql-split';
 
 describe('splitRedisCommands', () => {
   it('splits commands by newline', () => {
@@ -20,6 +26,23 @@ describe('splitRedisCommands', () => {
 
   it('trims whitespace from each command', () => {
     expect(splitRedisCommands('  GET key1  \n  HGETALL myhash  ')).toEqual(['GET key1', 'HGETALL myhash']);
+  });
+
+  it('skips # comment lines', () => {
+    expect(splitRedisCommands('# set a key\nSET foo bar\n# another comment\nGET foo'))
+      .toEqual(['SET foo bar', 'GET foo']);
+  });
+
+  it('skips // comment lines', () => {
+    expect(splitRedisCommands('// header\nSET foo bar\n// trailing')).toEqual(['SET foo bar']);
+  });
+
+  it('skips comment lines with leading whitespace', () => {
+    expect(splitRedisCommands('   # indented\nSET foo bar')).toEqual(['SET foo bar']);
+  });
+
+  it('does not strip # inside a command payload', () => {
+    expect(splitRedisCommands('SET foo "bar#baz"')).toEqual(['SET foo "bar#baz"']);
   });
 });
 
@@ -100,6 +123,23 @@ describe('splitSQLStatements', () => {
       'SELECT 1',
       '/* unclosed comment ; SELECT 2',
     ]);
+  });
+
+  it('drops pure line-comment statements', () => {
+    expect(splitSQLStatements('-- just a comment')).toEqual([]);
+    expect(splitSQLStatements('-- one\n-- two')).toEqual([]);
+  });
+
+  it('drops pure block-comment statements', () => {
+    expect(splitSQLStatements('/* just a comment */')).toEqual([]);
+  });
+
+  it('drops comment-only statements between real statements', () => {
+    expect(splitSQLStatements('SELECT 1; -- noise\n; SELECT 2')).toEqual(['SELECT 1', 'SELECT 2']);
+  });
+
+  it('keeps strings that happen to contain comment markers', () => {
+    expect(splitSQLStatements("SELECT '--' AS x")).toEqual(["SELECT '--' AS x"]);
   });
 
   it('merges BEGIN...COMMIT into a single statement', () => {
@@ -213,6 +253,160 @@ COMMIT;`;
     const sql = 'BEGIN; -- start\nSELECT 1; COMMIT;';
     const result = splitSQLStatements(sql);
     expect(result).toHaveLength(1);
+  });
+});
+
+describe('splitMongoStatements', () => {
+  it('returns single command as-is when no semicolons', () => {
+    expect(splitMongoStatements('db.users.find({})')).toEqual(['db.users.find({})']);
+  });
+
+  it('strips trailing semicolon from a single command', () => {
+    expect(splitMongoStatements('db.users.find({});')).toEqual(['db.users.find({})']);
+  });
+
+  it('splits multiple commands on top-level semicolons', () => {
+    const input = 'db.users.find({}); db.orders.find({})';
+    expect(splitMongoStatements(input)).toEqual(['db.users.find({})', 'db.orders.find({})']);
+  });
+
+  it('preserves semicolons inside object literals', () => {
+    const input = 'db.users.insertOne({ note: "a;b" }); db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual([
+      'db.users.insertOne({ note: "a;b" })',
+      'db.users.find({})',
+    ]);
+  });
+
+  it('preserves semicolons inside single-quoted strings', () => {
+    const input = "db.users.insertOne({ note: 'a;b' }); db.users.find({})";
+    expect(splitMongoStatements(input)).toEqual([
+      "db.users.insertOne({ note: 'a;b' })",
+      'db.users.find({})',
+    ]);
+  });
+
+  it('preserves semicolons inside template literals', () => {
+    const input = 'db.users.insertOne({ note: `a;b` }); db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual([
+      'db.users.insertOne({ note: `a;b` })',
+      'db.users.find({})',
+    ]);
+  });
+
+  it('handles escaped quotes inside strings', () => {
+    const input = 'db.users.insertOne({ note: "a\\"b;c" }); db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual([
+      'db.users.insertOne({ note: "a\\"b;c" })',
+      'db.users.find({})',
+    ]);
+  });
+
+  it('preserves semicolons inside line comments', () => {
+    const input = 'db.users.find({}) // a;b\n; db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual([
+      'db.users.find({}) // a;b',
+      'db.users.find({})',
+    ]);
+  });
+
+  it('preserves semicolons inside block comments', () => {
+    const input = 'db.users.find({}) /* a;b */; db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual([
+      'db.users.find({}) /* a;b */',
+      'db.users.find({})',
+    ]);
+  });
+
+  it('handles multi-line commands with nested objects', () => {
+    const input = `db.users.insertMany([
+  { name: "Alice", age: 30 },
+  { name: "Bob", age: 25 }
+]);
+db.users.createIndex({ email: 1 }, { unique: true });`;
+    const result = splitMongoStatements(input);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toContain('insertMany');
+    expect(result[1]).toContain('createIndex');
+  });
+
+  it('returns only non-empty statements', () => {
+    expect(splitMongoStatements('db.users.find({});;')).toEqual(['db.users.find({})']);
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(splitMongoStatements('')).toEqual([]);
+    expect(splitMongoStatements('   ')).toEqual([]);
+  });
+
+  it('skips pure-comment statements', () => {
+    const input = '// a comment\n; db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual(['db.users.find({})']);
+  });
+
+  it('keeps non-command statements so caller can show a clear error', () => {
+    const input = 'const x = 1; db.users.find({})';
+    expect(splitMongoStatements(input)).toEqual(['const x = 1', 'db.users.find({})']);
+  });
+
+  it('handles leading file-level comment block before a single command', () => {
+    const input = `// =====\n// Header\n// =====\ndb.users.find({})`;
+    expect(splitMongoStatements(input)).toEqual([input.trim()]);
+  });
+});
+
+describe('isLikelyMongoCommand', () => {
+  it('accepts db.collection.method() form', () => {
+    expect(isLikelyMongoCommand('db.users.find({})')).toBe(true);
+  });
+
+  it('accepts db.getCollection("name").method() form', () => {
+    expect(isLikelyMongoCommand('db.getCollection("weird name").find({})')).toBe(true);
+  });
+
+  it('accepts db.method() form (e.g., dropDatabase)', () => {
+    expect(isLikelyMongoCommand('db.dropDatabase()')).toBe(true);
+  });
+
+  it('accepts commands preceded by comments', () => {
+    expect(isLikelyMongoCommand('// header\ndb.users.find({})')).toBe(true);
+    expect(isLikelyMongoCommand('/* block */ db.users.find({})')).toBe(true);
+  });
+
+  it('rejects variable declarations', () => {
+    expect(isLikelyMongoCommand('const x = 1')).toBe(false);
+    expect(isLikelyMongoCommand('let y = 2')).toBe(false);
+    expect(isLikelyMongoCommand('var z = 3')).toBe(false);
+  });
+
+  it('rejects function definitions', () => {
+    expect(isLikelyMongoCommand('function foo() { return 1 }')).toBe(false);
+  });
+
+  it('rejects for loops', () => {
+    expect(isLikelyMongoCommand('for (let i = 0; i < 10; i++) {}')).toBe(false);
+  });
+
+  it('rejects print calls', () => {
+    expect(isLikelyMongoCommand('print("hello")')).toBe(false);
+  });
+
+  it('rejects empty input', () => {
+    expect(isLikelyMongoCommand('')).toBe(false);
+    expect(isLikelyMongoCommand('   ')).toBe(false);
+  });
+
+  it('rejects pure comment input', () => {
+    expect(isLikelyMongoCommand('// just a comment')).toBe(false);
+    expect(isLikelyMongoCommand('/* block */')).toBe(false);
+  });
+
+  it('does not misread comment markers inside string literals', () => {
+    // Leading comment is fine, but the // inside the double-quoted string
+    // must not be treated as a line comment when determining whether this is
+    // a valid command.
+    expect(isLikelyMongoCommand('db.users.insertOne({ note: "use // syntax" })')).toBe(true);
+    expect(isLikelyMongoCommand('db.users.insertOne({ note: "/* block */ inside" })')).toBe(true);
   });
 });
 
