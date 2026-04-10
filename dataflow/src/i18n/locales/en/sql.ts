@@ -68,6 +68,7 @@ export const enSqlMessages = {
   'sql.editor.actionExecuted': 'Action Executed',
   'sql.editor.success': 'Success',
   'sql.editor.executionSummary': '{total} statements — {success} succeeded, {failed} failed in {time}s',
+  'sql.editor.transactionWarning': 'Transaction statements (BEGIN/COMMIT) must be part of a complete script block to work correctly. Write your full transaction as one script and execute it together.',
   'sql.export.title': 'Export Data',
   'sql.export.rowLimit': 'Row Limit',
   'sql.export.rowLimitPlaceholder': 'Leave empty for all rows',

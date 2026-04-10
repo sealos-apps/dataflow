@@ -61,6 +61,7 @@ export const zhSqlMessages = {
   'sql.editor.actionExecuted': '操作已执行',
   'sql.editor.success': '成功',
   'sql.editor.executionSummary': '共 {total} 条语句，{success} 条成功，{failed} 条失败，耗时 {time}s',
+  'sql.editor.transactionWarning': '事务控制语句（BEGIN/COMMIT）需要写在完整的脚本块中才能正确执行。请将完整的事务作为一段脚本一起运行。',
   'sql.export.title': '导出数据',
   'sql.export.rowLimit': '行数限制',
   'sql.export.rowLimitPlaceholder': '留空则导出全部行',
