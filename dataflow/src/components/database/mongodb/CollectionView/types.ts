@@ -1,5 +1,10 @@
 import type { Alert } from '@/components/database/shared/types'
 import type { FlatMongoFilter } from '@/components/database/mongodb/filter-collection.types'
+import type { StagedSessionAction } from '@/components/database/shared/staged-session/reducer'
+import type {
+  StagedSessionNewRowOrderState,
+  StagedSessionPublicState,
+} from '@/components/database/shared/staged-session/types'
 
 // ---- Document changeset types ----
 
@@ -30,6 +35,59 @@ export interface DocumentUndoEntryDelete {
 
 export type DocumentUndoEntry = DocumentUndoEntryEdit | DocumentUndoEntryAdd | DocumentUndoEntryDelete
 
+export interface DocumentChangesetEditorState {
+  showAddModal: boolean
+  addContent: string
+  editingRowKey: DocumentChangesetRowKey | null
+  editContent: string
+  /**
+   * Local monotonic counter used to generate stable "new-*" row keys for inserted documents.
+   * This stays Mongo-local because it is an editor implementation detail.
+   */
+  newRowCounter: number
+}
+
+export type DocumentChangesetSessionAction = StagedSessionAction<DocumentChange, DocumentUndoEntry>
+
+export type DocumentChangesetAction =
+  | {
+      type: 'stage-add'
+      rowKey: DocumentChangesetRowKey
+      document: Record<string, unknown>
+    }
+  | {
+      type: 'stage-edit'
+      rowKey: DocumentChangesetRowKey
+      originalDocument: Record<string, unknown>
+      document: Record<string, unknown>
+      isInsert: boolean
+    }
+  | {
+      type: 'delete-selected'
+      rows: Array<{
+        rowKey: DocumentChangesetRowKey
+        originalDocument: Record<string, unknown>
+        isInserted: boolean
+      }>
+    }
+  | { type: 'undo' }
+  | { type: 'open-add-modal'; content: string }
+  | { type: 'set-add-content'; content: string }
+  | { type: 'close-add-modal' }
+  | { type: 'open-edit-modal'; rowKey: DocumentChangesetRowKey; content: string }
+  | { type: 'set-edit-content'; content: string }
+  | { type: 'close-edit-modal' }
+  | DocumentChangesetSessionAction
+
+export type DocumentChangesetSessionPublicState =
+  & StagedSessionPublicState<DocumentChangesetRowKey, DocumentChange, DocumentUndoEntry>
+  & StagedSessionNewRowOrderState<DocumentChangesetRowKey>
+
+export type DocumentChangesetEditorPublicState = Pick<
+  DocumentChangesetEditorState,
+  'showAddModal' | 'addContent' | 'editingRowKey' | 'editContent'
+>
+
 /** Context value exposed by CollectionViewProvider. */
 export interface CollectionViewContextValue {
   state: CollectionViewState
@@ -37,7 +95,7 @@ export interface CollectionViewContextValue {
 }
 
 /** All state managed by the CollectionView provider. */
-export interface CollectionViewState {
+export interface CollectionViewState extends DocumentChangesetSessionPublicState, DocumentChangesetEditorPublicState {
   loading: boolean
   documents: any[]
   error: string | null
@@ -51,23 +109,6 @@ export interface CollectionViewState {
   showExportModal: boolean
   isFilterModalOpen: boolean
   alert: Alert | null
-
-  // Changeset state
-  changes: Map<DocumentChangesetRowKey, DocumentChange>
-  undoStack: DocumentUndoEntry[]
-  selectedRowKeys: Set<DocumentChangesetRowKey>
-  newRowOrder: DocumentChangesetRowKey[]
-  pendingChangeCount: number
-  hasPendingChanges: boolean
-  showPreviewModal: boolean
-  showSubmitModal: boolean
-  showDiscardModal: boolean
-
-  // Document editing (modal-based add/edit)
-  showAddModal: boolean
-  addContent: string
-  editingRowKey: DocumentChangesetRowKey | null
-  editContent: string
 }
 
 /** All actions exposed by the CollectionView provider. */

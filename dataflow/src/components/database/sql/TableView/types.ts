@@ -1,8 +1,20 @@
 import type { TableData } from '@/utils/graphql-transforms'
 import type { Alert } from '@/components/database/shared/types'
+import type { StagedSessionAction } from '@/components/database/shared/staged-session/reducer'
+import type { StagedSessionModalState, StagedSessionPendingChangesState, StagedSessionPublicState } from '@/components/database/shared/staged-session/types'
 
 export type ChangesetCellValue = string | null
 export type ChangesetRowKey = string
+
+export interface SqlChangesetEditorState {
+  activeCell: { rowKey: ChangesetRowKey; column: string } | null
+  activeDraftValue: string
+  /**
+   * Local monotonic counter used to generate stable "new-*" row keys for inserted rows.
+   * This stays SQL-local because it is an editor implementation detail.
+   */
+  newRowCounter: number
+}
 
 export interface UndoEntryCell {
   kind: 'cell'
@@ -43,6 +55,8 @@ export interface RenderedTableRow {
   isInserted: boolean
 }
 
+export type ChangesetSessionAction = StagedSessionAction<RowChange, UndoEntry>
+
 export type ChangesetAction =
   | { type: 'activate-cell'; rowKey: ChangesetRowKey; column: string; initialValue?: string }
   | { type: 'deactivate-cell' }
@@ -55,7 +69,6 @@ export type ChangesetAction =
       previousValue: ChangesetCellValue
       value: ChangesetCellValue
     }
-  | { type: 'toggle-selection'; rowKey: ChangesetRowKey }
   | {
       type: 'add-row'
       rowKey: ChangesetRowKey
@@ -70,11 +83,13 @@ export type ChangesetAction =
       }>
     }
   | { type: 'undo' }
-  | { type: 'discard-all' }
-  | { type: 'prune-successes'; rowKeys: ChangesetRowKey[] }
-  | { type: 'set-show-preview-modal'; open: boolean }
-  | { type: 'set-show-submit-modal'; open: boolean }
-  | { type: 'set-show-discard-modal'; open: boolean }
+  | ChangesetSessionAction
+
+export type SqlChangesetSessionPublicState = StagedSessionPublicState<ChangesetRowKey, RowChange, UndoEntry>
+
+export type SqlChangesetModalState = StagedSessionModalState
+
+export type SqlChangesetPendingChangesState = StagedSessionPendingChangesState
 
 /** Context value exposed by TableViewProvider. */
 export interface TableViewContextValue {
@@ -83,7 +98,7 @@ export interface TableViewContextValue {
 }
 
 /** All state managed by the TableView provider. */
-export interface TableViewState {
+export interface TableViewState extends SqlChangesetSessionPublicState {
   loading: boolean
   data: TableData | null
   error: string | null
@@ -101,15 +116,7 @@ export interface TableViewState {
   activeColumnMenu: string | null
   activeCell: { rowKey: ChangesetRowKey; column: string } | null
   activeDraftValue: string
-  selectedRowKeys: Set<ChangesetRowKey>
-  changes: Map<ChangesetRowKey, RowChange>
-  undoStack: UndoEntry[]
-  pendingChangeCount: number
   renderedRows: RenderedTableRow[]
-  showPreviewModal: boolean
-  showSubmitModal: boolean
-  showDiscardModal: boolean
-  hasPendingChanges: boolean
   columnWidths: Record<string, number>
   resizingColumn: string | null
   resizedColumns: Set<string>

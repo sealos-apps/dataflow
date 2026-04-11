@@ -1,6 +1,11 @@
 import { useCallback, useReducer } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useI18n } from '@/i18n/useI18n'
+import type { StagedSessionState } from '@/components/database/shared/staged-session/types'
+import {
+  createStagedSessionState,
+  stagedSessionReducer,
+} from '@/components/database/shared/staged-session/reducer'
 import {
   useDeleteRowMutation,
   useUpdateStorageUnitMutation,
@@ -12,90 +17,43 @@ import type { Alert } from '@/components/database/shared/types'
 import type {
   DocumentChangesetRowKey,
   DocumentChange,
+  DocumentChangesetAction,
+  DocumentChangesetEditorState,
   DocumentUndoEntry,
 } from './types'
 
 // ---- State ----
 
-interface ChangesetState {
-  changes: Map<DocumentChangesetRowKey, DocumentChange>
-  undoStack: DocumentUndoEntry[]
-  selectedRowKeys: Set<DocumentChangesetRowKey>
-  newRowCounter: number
-  newRowOrder: DocumentChangesetRowKey[]
-  showPreviewModal: boolean
-  showSubmitModal: boolean
-  showDiscardModal: boolean
-  showAddModal: boolean
-  addContent: string
-  editingRowKey: DocumentChangesetRowKey | null
-  editContent: string
+export interface DocumentChangesetManagerState {
+  session: StagedSessionState<DocumentChange, DocumentUndoEntry>
+  editor: DocumentChangesetEditorState
 }
 
-function createInitialState(): ChangesetState {
+export function createInitialChangesetState(): DocumentChangesetManagerState {
   return {
-    changes: new Map(),
-    undoStack: [],
-    selectedRowKeys: new Set(),
-    newRowCounter: 0,
-    newRowOrder: [],
-    showPreviewModal: false,
-    showSubmitModal: false,
-    showDiscardModal: false,
-    showAddModal: false,
-    addContent: '{\n  \n}',
-    editingRowKey: null,
-    editContent: '',
+    session: createStagedSessionState<DocumentChange, DocumentUndoEntry>(),
+    editor: {
+      showAddModal: false,
+      addContent: '{\n  \n}',
+      editingRowKey: null,
+      editContent: '',
+      newRowCounter: 0,
+    },
   }
 }
 
 // ---- Reducer ----
 
-type ChangesetAction =
-  | { type: 'toggle-selection'; rowKey: DocumentChangesetRowKey }
-  | { type: 'stage-add'; rowKey: DocumentChangesetRowKey; document: Record<string, unknown> }
-  | {
-      type: 'stage-edit'
-      rowKey: DocumentChangesetRowKey
-      originalDocument: Record<string, unknown>
-      document: Record<string, unknown>
-      isInsert: boolean
-    }
-  | {
-      type: 'delete-selected'
-      rows: Array<{
-        rowKey: DocumentChangesetRowKey
-        originalDocument: Record<string, unknown>
-        isInserted: boolean
-      }>
-    }
-  | { type: 'undo' }
-  | { type: 'discard-all' }
-  | { type: 'prune-successes'; rowKeys: DocumentChangesetRowKey[] }
-  | { type: 'set-show-preview-modal'; open: boolean }
-  | { type: 'set-show-submit-modal'; open: boolean }
-  | { type: 'set-show-discard-modal'; open: boolean }
-  | { type: 'open-add-modal'; content: string }
-  | { type: 'set-add-content'; content: string }
-  | { type: 'close-add-modal' }
-  | { type: 'open-edit-modal'; rowKey: DocumentChangesetRowKey; content: string }
-  | { type: 'set-edit-content'; content: string }
-  | { type: 'close-edit-modal' }
-
 const sortedStringify = (obj: Record<string, unknown>) =>
   JSON.stringify(obj, Object.keys(obj).sort())
 
-function changesetReducer(state: ChangesetState, action: ChangesetAction): ChangesetState {
+export function changesetReducer(
+  state: DocumentChangesetManagerState,
+  action: DocumentChangesetAction,
+): DocumentChangesetManagerState {
   switch (action.type) {
-    case 'toggle-selection': {
-      const next = new Set(state.selectedRowKeys)
-      if (next.has(action.rowKey)) next.delete(action.rowKey)
-      else next.add(action.rowKey)
-      return { ...state, selectedRowKeys: next }
-    }
-
     case 'stage-add': {
-      const nextChanges = new Map(state.changes)
+      const nextChanges = new Map(state.session.changes)
       nextChanges.set(action.rowKey, {
         type: 'insert',
         originalDocument: {},
@@ -104,16 +62,22 @@ function changesetReducer(state: ChangesetState, action: ChangesetAction): Chang
 
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: [...state.newRowOrder, action.rowKey],
-        newRowCounter: state.newRowCounter + 1,
-        undoStack: [...state.undoStack, { kind: 'add', rowKey: action.rowKey }],
-        showAddModal: false,
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          newRowOrder: [...state.session.newRowOrder, action.rowKey],
+          undoStack: [...state.session.undoStack, { kind: 'add', rowKey: action.rowKey }],
+        },
+        editor: {
+          ...state.editor,
+          newRowCounter: state.editor.newRowCounter + 1,
+          showAddModal: false,
+        },
       }
     }
 
     case 'stage-edit': {
-      const nextChanges = new Map(state.changes)
+      const nextChanges = new Map(state.session.changes)
       const previousDocument = action.isInsert
         ? (nextChanges.get(action.rowKey)!.document)
         : action.originalDocument
@@ -134,25 +98,31 @@ function changesetReducer(state: ChangesetState, action: ChangesetAction): Chang
 
       return {
         ...state,
-        changes: nextChanges,
-        undoStack: [
-          ...state.undoStack,
-          { kind: 'edit', rowKey: action.rowKey, previousDocument },
-        ],
-        editingRowKey: null,
-        editContent: '',
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          undoStack: [
+            ...state.session.undoStack,
+            { kind: 'edit', rowKey: action.rowKey, previousDocument },
+          ],
+        },
+        editor: {
+          ...state.editor,
+          editingRowKey: null,
+          editContent: '',
+        },
       }
     }
 
     case 'delete-selected': {
       if (action.rows.length === 0) return state
 
-      const nextChanges = new Map(state.changes)
+      const nextChanges = new Map(state.session.changes)
       const rowKeys = action.rows.map((r) => r.rowKey)
       const previousChanges = action.rows.map(
         (r) => [r.rowKey, nextChanges.get(r.rowKey)] as [DocumentChangesetRowKey, DocumentChange | undefined],
       )
-      const nextNewRowOrder = [...state.newRowOrder]
+      const nextNewRowOrder = [...state.session.newRowOrder]
 
       for (const row of action.rows) {
         if (row.isInserted) {
@@ -171,25 +141,28 @@ function changesetReducer(state: ChangesetState, action: ChangesetAction): Chang
 
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: nextNewRowOrder,
-        selectedRowKeys: new Set(),
-        undoStack: [
-          ...state.undoStack.filter((entry) => {
-            if (entry.kind !== 'edit') return true
-            return !rowKeys.includes(entry.rowKey)
-          }),
-          { kind: 'delete', rowKeys, previousChanges },
-        ],
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          newRowOrder: nextNewRowOrder,
+          selectedRowKeys: new Set(),
+          undoStack: [
+            ...state.session.undoStack.filter((entry) => {
+              if (entry.kind !== 'edit') return true
+              return !rowKeys.includes(entry.rowKey)
+            }),
+            { kind: 'delete', rowKeys, previousChanges },
+          ],
+        },
       }
     }
 
     case 'undo': {
-      const lastEntry = state.undoStack.at(-1)
+      const lastEntry = state.session.undoStack.at(-1)
       if (!lastEntry) return state
 
-      const nextUndoStack = state.undoStack.slice(0, -1)
-      const nextChanges = new Map(state.changes)
+      const nextUndoStack = state.session.undoStack.slice(0, -1)
+      const nextChanges = new Map(state.session.changes)
 
       if (lastEntry.kind === 'edit') {
         const current = nextChanges.get(lastEntry.rowKey)
@@ -209,16 +182,29 @@ function changesetReducer(state: ChangesetState, action: ChangesetAction): Chang
           }
         }
 
-        return { ...state, changes: nextChanges, undoStack: nextUndoStack }
+        return {
+          ...state,
+          session: {
+            ...state.session,
+            changes: nextChanges,
+            undoStack: nextUndoStack,
+          },
+        }
       }
 
       if (lastEntry.kind === 'add') {
         nextChanges.delete(lastEntry.rowKey)
         return {
           ...state,
-          changes: nextChanges,
-          undoStack: nextUndoStack,
-          newRowOrder: state.newRowOrder.filter((k) => k !== lastEntry.rowKey),
+          session: {
+            ...state.session,
+            changes: nextChanges,
+            undoStack: nextUndoStack,
+            newRowOrder: state.session.newRowOrder.filter((k) => k !== lastEntry.rowKey),
+            selectedRowKeys: new Set(
+              [...state.session.selectedRowKeys].filter((rowKey) => rowKey !== lastEntry.rowKey),
+            ),
+          },
         }
       }
 
@@ -228,7 +214,7 @@ function changesetReducer(state: ChangesetState, action: ChangesetAction): Chang
         else nextChanges.delete(rowKey)
       }
 
-      const nextNewRowOrder = [...state.newRowOrder]
+      const nextNewRowOrder = [...state.session.newRowOrder]
       for (const [rowKey, previousChange] of lastEntry.previousChanges) {
         if (previousChange?.type === 'insert' && !nextNewRowOrder.includes(rowKey)) {
           nextNewRowOrder.push(rowKey)
@@ -237,73 +223,48 @@ function changesetReducer(state: ChangesetState, action: ChangesetAction): Chang
 
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: nextNewRowOrder,
-        undoStack: nextUndoStack,
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          newRowOrder: nextNewRowOrder,
+          undoStack: nextUndoStack,
+        },
       }
     }
 
     case 'discard-all':
-      return createInitialState()
-
-    case 'prune-successes': {
-      const nextChanges = new Map(state.changes)
-      for (const rowKey of action.rowKeys) {
-        nextChanges.delete(rowKey)
-      }
-
-      const nextUndoStack: DocumentUndoEntry[] = []
-      for (const entry of state.undoStack) {
-        if (entry.kind === 'edit' || entry.kind === 'add') {
-          if (!action.rowKeys.includes(entry.rowKey)) {
-            nextUndoStack.push(entry)
-          }
-          continue
-        }
-
-        const nextRowKeys = entry.rowKeys.filter((k) => !action.rowKeys.includes(k))
-        const nextPreviousChanges = entry.previousChanges.filter(([k]) => !action.rowKeys.includes(k))
-        if (nextRowKeys.length === 0) continue
-        nextUndoStack.push({ ...entry, rowKeys: nextRowKeys, previousChanges: nextPreviousChanges })
-      }
-
-      return {
-        ...state,
-        changes: nextChanges,
-        newRowOrder: state.newRowOrder.filter((k) => !action.rowKeys.includes(k)),
-        selectedRowKeys: new Set(
-          [...state.selectedRowKeys].filter((k) => !action.rowKeys.includes(k)),
-        ),
-        undoStack: nextUndoStack,
-      }
-    }
-
-    case 'set-show-preview-modal':
-      return { ...state, showPreviewModal: action.open }
-
-    case 'set-show-submit-modal':
-      return { ...state, showSubmitModal: action.open }
-
-    case 'set-show-discard-modal':
-      return { ...state, showDiscardModal: action.open }
+      return createInitialChangesetState()
 
     case 'open-add-modal':
-      return { ...state, showAddModal: true, addContent: action.content }
+      return { ...state, editor: { ...state.editor, showAddModal: true, addContent: action.content } }
 
     case 'set-add-content':
-      return { ...state, addContent: action.content }
+      return { ...state, editor: { ...state.editor, addContent: action.content } }
 
     case 'close-add-modal':
-      return { ...state, showAddModal: false }
+      return { ...state, editor: { ...state.editor, showAddModal: false } }
 
     case 'open-edit-modal':
-      return { ...state, editingRowKey: action.rowKey, editContent: action.content }
+      return {
+        ...state,
+        editor: { ...state.editor, editingRowKey: action.rowKey, editContent: action.content },
+      }
 
     case 'set-edit-content':
-      return { ...state, editContent: action.content }
+      return { ...state, editor: { ...state.editor, editContent: action.content } }
 
     case 'close-edit-modal':
-      return { ...state, editingRowKey: null, editContent: '' }
+      return { ...state, editor: { ...state.editor, editingRowKey: null, editContent: '' } }
+
+    case 'toggle-selection':
+    case 'prune-successes':
+    case 'set-show-preview-modal':
+    case 'set-show-submit-modal':
+    case 'set-show-discard-modal':
+      return {
+        ...state,
+        session: stagedSessionReducer(state.session, action),
+      }
   }
 }
 
@@ -343,7 +304,7 @@ export function useDocumentChangesetManager({
   const [deleteRowMutation] = useDeleteRowMutation()
   const [updateStorageUnitMutation] = useUpdateStorageUnitMutation()
   const [rawExecute] = useRawExecuteLazyQuery({ fetchPolicy: 'no-cache' })
-  const [state, dispatch] = useReducer(changesetReducer, undefined, createInitialState)
+  const [state, dispatch] = useReducer(changesetReducer, undefined, createInitialChangesetState)
 
   // ---- Selection ----
 
@@ -371,28 +332,28 @@ export function useDocumentChangesetManager({
 
   const handleAddSave = useCallback(async () => {
     try {
-      const newDoc = parseMongoDocumentInput(state.addContent)
+      const newDoc = parseMongoDocumentInput(state.editor.addContent)
       if (Object.keys(newDoc).length === 0) {
         showAlert(t('common.alert.error'), t('mongodb.error.emptyDocument'), 'error')
         return
       }
 
-      const rowKey = buildInsertedRowKey(state.newRowCounter)
+      const rowKey = buildInsertedRowKey(state.editor.newRowCounter)
       dispatch({ type: 'stage-add', rowKey, document: newDoc })
     } catch (e: any) {
       showAlert(t('common.alert.error'), t('mongodb.alert.invalidJsonAdd', { error: e.message }), 'error')
     }
-  }, [showAlert, state.addContent, state.newRowCounter, t])
+  }, [showAlert, state.editor.addContent, state.editor.newRowCounter, t])
 
   const setShowAddModal = useCallback((open: boolean) => {
-    if (open) dispatch({ type: 'open-add-modal', content: state.addContent })
+    if (open) dispatch({ type: 'open-add-modal', content: state.editor.addContent })
     else dispatch({ type: 'close-add-modal' })
-  }, [state.addContent])
+  }, [state.editor.addContent])
 
   // ---- Edit document ----
 
   const handleEditClick = useCallback((rowKey: DocumentChangesetRowKey) => {
-    const change = state.changes.get(rowKey)
+    const change = state.session.changes.get(rowKey)
     let doc: Record<string, unknown> | undefined
 
     if (change) {
@@ -412,18 +373,18 @@ export function useDocumentChangesetManager({
 
     const { _id: _, ...rest } = doc
     dispatch({ type: 'open-edit-modal', rowKey, content: JSON.stringify(rest, null, 2) })
-  }, [documents, pageOffset, state.changes])
+  }, [documents, pageOffset, state.session.changes])
 
   const setEditContent = useCallback((content: string) => {
     dispatch({ type: 'set-edit-content', content })
   }, [])
 
   const handleEditSave = useCallback(async () => {
-    if (!state.editingRowKey) return
+    if (!state.editor.editingRowKey) return
 
     try {
-      const parsed = parseMongoDocumentInput(state.editContent)
-      const change = state.changes.get(state.editingRowKey)
+      const parsed = parseMongoDocumentInput(state.editor.editContent)
+      const change = state.session.changes.get(state.editor.editingRowKey)
       const isInsert = change?.type === 'insert'
 
       let originalDocument: Record<string, unknown>
@@ -432,7 +393,7 @@ export function useDocumentChangesetManager({
       } else if (change) {
         originalDocument = change.originalDocument
       } else {
-        const match = state.editingRowKey.match(/^existing-(\d+)$/)
+        const match = state.editor.editingRowKey.match(/^existing-(\d+)$/)
         if (!match) return
         const localIndex = parseInt(match[1], 10) - pageOffset
         originalDocument = documents[localIndex]
@@ -444,7 +405,7 @@ export function useDocumentChangesetManager({
 
       dispatch({
         type: 'stage-edit',
-        rowKey: state.editingRowKey,
+        rowKey: state.editor.editingRowKey,
         originalDocument,
         document,
         isInsert,
@@ -452,7 +413,15 @@ export function useDocumentChangesetManager({
     } catch (e: any) {
       showAlert(t('common.alert.error'), t('mongodb.alert.invalidJsonUpdate', { error: e.message }), 'error')
     }
-  }, [documents, pageOffset, showAlert, state.changes, state.editContent, state.editingRowKey, t])
+  }, [
+    documents,
+    pageOffset,
+    showAlert,
+    state.editor.editContent,
+    state.editor.editingRowKey,
+    state.session.changes,
+    t,
+  ])
 
   const cancelEdit = useCallback(() => {
     dispatch({ type: 'close-edit-modal' })
@@ -461,8 +430,8 @@ export function useDocumentChangesetManager({
   // ---- Delete ----
 
   const markSelectedForDelete = useCallback(() => {
-    const rows = [...state.selectedRowKeys].map((rowKey) => {
-      const change = state.changes.get(rowKey)
+    const rows = [...state.session.selectedRowKeys].map((rowKey) => {
+      const change = state.session.changes.get(rowKey)
       const isInserted = change?.type === 'insert'
 
       let originalDocument: Record<string, unknown>
@@ -478,7 +447,7 @@ export function useDocumentChangesetManager({
     })
 
     dispatch({ type: 'delete-selected', rows })
-  }, [documents, pageOffset, state.changes, state.selectedRowKeys])
+  }, [documents, pageOffset, state.session.changes, state.session.selectedRowKeys])
 
   // ---- Undo / Discard ----
 
@@ -508,13 +477,13 @@ export function useDocumentChangesetManager({
 
   const submitChanges = useCallback(async () => {
     const conn = connections.find((c) => c.id === connectionId)
-    if (!conn || state.changes.size === 0) return
+    if (!conn || state.session.changes.size === 0) return
 
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName)
     const successfulRowKeys: DocumentChangesetRowKey[] = []
     const failedMessages: string[] = []
 
-    const orderedEntries = [...state.changes.entries()].sort(([, left], [, right]) => {
+    const orderedEntries = [...state.session.changes.entries()].sort(([, left], [, right]) => {
       const rank = { delete: 0, update: 1, insert: 2 } as const
       return rank[left.type] - rank[right.type]
     })
@@ -588,26 +557,26 @@ export function useDocumentChangesetManager({
     rawExecute,
     refresh,
     showAlert,
-    state.changes,
+    state.session.changes,
     t,
     updateStorageUnitMutation,
   ])
 
   return {
     state: {
-      changes: state.changes,
-      undoStack: state.undoStack,
-      selectedRowKeys: state.selectedRowKeys,
-      newRowOrder: state.newRowOrder,
-      pendingChangeCount: state.changes.size,
-      hasPendingChanges: state.changes.size > 0,
-      showPreviewModal: state.showPreviewModal,
-      showSubmitModal: state.showSubmitModal,
-      showDiscardModal: state.showDiscardModal,
-      showAddModal: state.showAddModal,
-      addContent: state.addContent,
-      editingRowKey: state.editingRowKey,
-      editContent: state.editContent,
+      changes: state.session.changes,
+      undoStack: state.session.undoStack,
+      selectedRowKeys: state.session.selectedRowKeys,
+      newRowOrder: state.session.newRowOrder,
+      pendingChangeCount: state.session.changes.size,
+      hasPendingChanges: state.session.changes.size > 0,
+      showPreviewModal: state.session.showPreviewModal,
+      showSubmitModal: state.session.showSubmitModal,
+      showDiscardModal: state.session.showDiscardModal,
+      showAddModal: state.editor.showAddModal,
+      addContent: state.editor.addContent,
+      editingRowKey: state.editor.editingRowKey,
+      editContent: state.editor.editContent,
     },
     actions: {
       toggleRowSelection,

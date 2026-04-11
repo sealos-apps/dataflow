@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useReducer } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useI18n } from '@/i18n/useI18n'
+import type { StagedSessionState } from '@/components/database/shared/staged-session/types'
+import {
+  createStagedSessionState,
+  stagedSessionReducer,
+} from '@/components/database/shared/staged-session/reducer'
 import {
   useAddRowMutation,
   useDeleteRowMutation,
@@ -15,6 +20,7 @@ import type {
   ChangesetRowKey,
   RenderedTableRow,
   RowChange,
+  SqlChangesetEditorState,
   UndoEntry,
 } from './types'
 
@@ -32,16 +38,8 @@ interface UseChangesetManagerParams {
 }
 
 export interface ChangesetManagerState {
-  changes: Map<ChangesetRowKey, RowChange>
-  undoStack: UndoEntry[]
-  activeCell: { rowKey: ChangesetRowKey; column: string } | null
-  activeDraftValue: string
-  selectedRowKeys: Set<ChangesetRowKey>
-  newRowOrder: ChangesetRowKey[]
-  newRowCounter: number
-  showPreviewModal: boolean
-  showSubmitModal: boolean
-  showDiscardModal: boolean
+  session: StagedSessionState<RowChange, UndoEntry>
+  editor: SqlChangesetEditorState
 }
 
 export function buildExistingRowKey(pageOffset: number, sourceRowIndex: number) {
@@ -54,16 +52,12 @@ export function normalizeCellValue(value: unknown): ChangesetCellValue {
 
 export function createInitialChangesetState(): ChangesetManagerState {
   return {
-    changes: new Map(),
-    undoStack: [],
-    activeCell: null,
-    activeDraftValue: '',
-    selectedRowKeys: new Set(),
-    newRowOrder: [],
-    newRowCounter: 0,
-    showPreviewModal: false,
-    showSubmitModal: false,
-    showDiscardModal: false,
+    session: createStagedSessionState<RowChange, UndoEntry>(),
+    editor: {
+      activeCell: null,
+      activeDraftValue: '',
+      newRowCounter: 0,
+    },
   }
 }
 
@@ -128,21 +122,30 @@ export function changesetReducer(
     case 'activate-cell':
       return {
         ...state,
-        activeCell: { rowKey: action.rowKey, column: action.column },
-        activeDraftValue: action.initialValue ?? '',
+        editor: {
+          ...state.editor,
+          activeCell: { rowKey: action.rowKey, column: action.column },
+          activeDraftValue: action.initialValue ?? '',
+        },
       }
 
     case 'deactivate-cell':
       return {
         ...state,
-        activeCell: null,
-        activeDraftValue: '',
+        editor: {
+          ...state.editor,
+          activeCell: null,
+          activeDraftValue: '',
+        },
       }
 
     case 'update-active-draft':
       return {
         ...state,
-        activeDraftValue: action.value,
+        editor: {
+          ...state.editor,
+          activeDraftValue: action.value,
+        },
       }
 
     case 'commit-active-cell': {
@@ -150,7 +153,7 @@ export function changesetReducer(
         return state
       }
 
-      const nextChanges = new Map(state.changes)
+      const nextChanges = new Map(state.session.changes)
       const current = nextChanges.get(action.rowKey)
 
       if (current?.type === 'insert') {
@@ -166,33 +169,25 @@ export function changesetReducer(
 
       return {
         ...state,
-        changes: nextChanges,
-        undoStack: [
-          ...state.undoStack,
-          {
-            kind: 'cell',
-            rowKey: action.rowKey,
-            column: action.column,
-            oldValue: action.previousValue,
-            newValue: action.value,
-          },
-        ],
-      }
-    }
-
-    case 'toggle-selection': {
-      const nextSelected = new Set(state.selectedRowKeys)
-      if (nextSelected.has(action.rowKey)) nextSelected.delete(action.rowKey)
-      else nextSelected.add(action.rowKey)
-
-      return {
-        ...state,
-        selectedRowKeys: nextSelected,
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          undoStack: [
+            ...state.session.undoStack,
+            {
+              kind: 'cell',
+              rowKey: action.rowKey,
+              column: action.column,
+              oldValue: action.previousValue,
+              newValue: action.value,
+            },
+          ],
+        },
       }
     }
 
     case 'add-row': {
-      const nextChanges = new Map(state.changes)
+      const nextChanges = new Map(state.session.changes)
       nextChanges.set(action.rowKey, {
         type: 'insert',
         originalRow: {},
@@ -202,20 +197,26 @@ export function changesetReducer(
 
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: [...state.newRowOrder, action.rowKey],
-        newRowCounter: state.newRowCounter + 1,
-        undoStack: [...state.undoStack, { kind: 'add-row', rowKey: action.rowKey }],
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          newRowOrder: [...state.session.newRowOrder, action.rowKey],
+          undoStack: [...state.session.undoStack, { kind: 'add-row', rowKey: action.rowKey }],
+        },
+        editor: {
+          ...state.editor,
+          newRowCounter: state.editor.newRowCounter + 1,
+        },
       }
     }
 
     case 'delete-selected': {
       if (action.rows.length === 0) return state
 
-      const nextChanges = new Map(state.changes)
+      const nextChanges = new Map(state.session.changes)
       const rowKeys = action.rows.map((row) => row.rowKey)
       const previousChanges = action.rows.map((row) => [row.rowKey, nextChanges.get(row.rowKey)] as const)
-      const nextNewRowOrder = [...state.newRowOrder]
+      const nextNewRowOrder = [...state.session.newRowOrder]
 
       for (const row of action.rows) {
         if (row.isInserted) {
@@ -235,25 +236,32 @@ export function changesetReducer(
 
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: nextNewRowOrder,
-        selectedRowKeys: new Set(),
-        undoStack: [
-          ...state.undoStack.filter((entry) => {
-            if (entry.kind !== 'cell') return true
-            return !rowKeys.includes(entry.rowKey)
-          }),
-          { kind: 'delete-rows', rowKeys, previousChanges: previousChanges.map((entry) => [entry[0], entry[1]]) },
-        ],
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          newRowOrder: nextNewRowOrder,
+          selectedRowKeys: new Set(),
+          undoStack: [
+            ...state.session.undoStack.filter((entry) => {
+              if (entry.kind !== 'cell') return true
+              return !rowKeys.includes(entry.rowKey)
+            }),
+            {
+              kind: 'delete-rows',
+              rowKeys,
+              previousChanges: previousChanges.map((entry) => [entry[0], entry[1]]),
+            },
+          ],
+        },
       }
     }
 
     case 'undo': {
-      const lastEntry = state.undoStack.at(-1)
+      const lastEntry = state.session.undoStack.at(-1)
       if (!lastEntry) return state
 
-      const nextUndoStack = state.undoStack.slice(0, -1)
-      const nextChanges = new Map(state.changes)
+      const nextUndoStack = state.session.undoStack.slice(0, -1)
+      const nextChanges = new Map(state.session.changes)
 
       if (lastEntry.kind === 'cell') {
         const reverted = revertCellUndo(nextChanges.get(lastEntry.rowKey), lastEntry)
@@ -262,8 +270,11 @@ export function changesetReducer(
 
         return {
           ...state,
-          changes: nextChanges,
-          undoStack: nextUndoStack,
+          session: {
+            ...state.session,
+            changes: nextChanges,
+            undoStack: nextUndoStack,
+          },
         }
       }
 
@@ -272,10 +283,15 @@ export function changesetReducer(
 
         return {
           ...state,
-          changes: nextChanges,
-          undoStack: nextUndoStack,
-          newRowOrder: state.newRowOrder.filter((rowKey) => rowKey !== lastEntry.rowKey),
-          selectedRowKeys: new Set([...state.selectedRowKeys].filter((rowKey) => rowKey !== lastEntry.rowKey)),
+          session: {
+            ...state.session,
+            changes: nextChanges,
+            undoStack: nextUndoStack,
+            newRowOrder: state.session.newRowOrder.filter((rowKey) => rowKey !== lastEntry.rowKey),
+            selectedRowKeys: new Set(
+              [...state.session.selectedRowKeys].filter((rowKey) => rowKey !== lastEntry.rowKey),
+            ),
+          },
         }
       }
 
@@ -284,7 +300,7 @@ export function changesetReducer(
         else nextChanges.delete(rowKey)
       }
 
-      const nextNewRowOrder = [...state.newRowOrder]
+      const nextNewRowOrder = [...state.session.newRowOrder]
       for (const [rowKey, previousChange] of lastEntry.previousChanges) {
         if (previousChange?.type === 'insert' && !nextNewRowOrder.includes(rowKey)) {
           nextNewRowOrder.push(rowKey)
@@ -293,59 +309,27 @@ export function changesetReducer(
 
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: nextNewRowOrder,
-        undoStack: nextUndoStack,
+        session: {
+          ...state.session,
+          changes: nextChanges,
+          newRowOrder: nextNewRowOrder,
+          undoStack: nextUndoStack,
+        },
       }
     }
 
     case 'discard-all':
       return createInitialChangesetState()
 
-    case 'prune-successes': {
-      const nextChanges = new Map(state.changes)
-      for (const rowKey of action.rowKeys) {
-        nextChanges.delete(rowKey)
-      }
-
-      const nextUndoStack: UndoEntry[] = []
-      for (const entry of state.undoStack) {
-        if (entry.kind === 'cell' || entry.kind === 'add-row') {
-          if (!action.rowKeys.includes(entry.rowKey)) {
-            nextUndoStack.push(entry)
-          }
-          continue
-        }
-
-        const nextRowKeys = entry.rowKeys.filter((rowKey) => !action.rowKeys.includes(rowKey))
-        const nextPreviousChanges = entry.previousChanges.filter(([rowKey]) => !action.rowKeys.includes(rowKey))
-        if (nextRowKeys.length === 0) continue
-        nextUndoStack.push({
-          ...entry,
-          rowKeys: nextRowKeys,
-          previousChanges: nextPreviousChanges,
-        })
-      }
-
+    case 'toggle-selection':
+    case 'prune-successes':
+    case 'set-show-preview-modal':
+    case 'set-show-submit-modal':
+    case 'set-show-discard-modal':
       return {
         ...state,
-        changes: nextChanges,
-        newRowOrder: state.newRowOrder.filter((rowKey) => !action.rowKeys.includes(rowKey)),
-        selectedRowKeys: new Set(
-          [...state.selectedRowKeys].filter((rowKey) => !action.rowKeys.includes(rowKey)),
-        ),
-        undoStack: nextUndoStack,
+        session: stagedSessionReducer(state.session, action),
       }
-    }
-
-    case 'set-show-preview-modal':
-      return { ...state, showPreviewModal: action.open }
-
-    case 'set-show-submit-modal':
-      return { ...state, showSubmitModal: action.open }
-
-    case 'set-show-discard-modal':
-      return { ...state, showDiscardModal: action.open }
 
     default:
       return state
@@ -404,7 +388,7 @@ export function useChangesetManager({
       const originalRow = Object.fromEntries(
         Object.entries(row).map(([column, value]) => [column, normalizeCellValue(value)]),
       ) as Record<string, ChangesetCellValue>
-      const change = state.changes.get(rowKey)
+      const change = state.session.changes.get(rowKey)
 
       return {
         rowKey,
@@ -419,8 +403,8 @@ export function useChangesetManager({
     })
 
     const insertedRows: RenderedTableRow[] = []
-    for (const rowKey of state.newRowOrder) {
-      const change = state.changes.get(rowKey)
+    for (const rowKey of state.session.newRowOrder) {
+      const change = state.session.changes.get(rowKey)
       if (!change) continue
 
       insertedRows.push({
@@ -436,7 +420,7 @@ export function useChangesetManager({
     }
 
     return [...insertedRows, ...existingRows]
-  }, [data?.rows, pageOffset, state.changes, state.newRowOrder])
+  }, [data?.rows, pageOffset, state.session.changes, state.session.newRowOrder])
 
   const getRowByKey = useCallback((rowKey: ChangesetRowKey) => {
     return renderedRows.find((row) => row.rowKey === rowKey) ?? null
@@ -458,10 +442,14 @@ export function useChangesetManager({
 
   const activateCell = useCallback((rowKey: ChangesetRowKey, column: string) => {
     if (
-      state.activeCell &&
-      (state.activeCell.rowKey !== rowKey || state.activeCell.column !== column)
+      state.editor.activeCell &&
+      (state.editor.activeCell.rowKey !== rowKey || state.editor.activeCell.column !== column)
     ) {
-      commitCellValue(state.activeCell.rowKey, state.activeCell.column, state.activeDraftValue)
+      commitCellValue(
+        state.editor.activeCell.rowKey,
+        state.editor.activeCell.column,
+        state.editor.activeDraftValue,
+      )
     }
 
     const row = getRowByKey(rowKey)
@@ -471,14 +459,18 @@ export function useChangesetManager({
       column,
       initialValue: row?.values[column] ?? '',
     })
-  }, [commitCellValue, getRowByKey, state.activeCell, state.activeDraftValue])
+  }, [commitCellValue, getRowByKey, state.editor.activeCell, state.editor.activeDraftValue])
 
   const deactivateCell = useCallback(() => {
-    if (state.activeCell) {
-      commitCellValue(state.activeCell.rowKey, state.activeCell.column, state.activeDraftValue)
+    if (state.editor.activeCell) {
+      commitCellValue(
+        state.editor.activeCell.rowKey,
+        state.editor.activeCell.column,
+        state.editor.activeDraftValue,
+      )
     }
     dispatch({ type: 'deactivate-cell' })
-  }, [commitCellValue, state.activeCell, state.activeDraftValue])
+  }, [commitCellValue, state.editor.activeCell, state.editor.activeDraftValue])
 
   const updateActiveCellValue = useCallback((value: string) => {
     dispatch({ type: 'update-active-draft', value })
@@ -489,7 +481,7 @@ export function useChangesetManager({
   }, [])
 
   const addPendingRow = useCallback(() => {
-    const rowKey = buildInsertedRowKey(state.newRowCounter)
+    const rowKey = buildInsertedRowKey(state.editor.newRowCounter)
     const columns = data?.columns ?? visibleColumns
 
     dispatch({
@@ -507,11 +499,11 @@ export function useChangesetManager({
         initialValue: '',
       })
     }
-  }, [data?.columns, state.newRowCounter, visibleColumns])
+  }, [data?.columns, state.editor.newRowCounter, visibleColumns])
 
   const markSelectedRowsForDelete = useCallback(() => {
     const rows = renderedRows
-      .filter((row) => state.selectedRowKeys.has(row.rowKey))
+      .filter((row) => state.session.selectedRowKeys.has(row.rowKey))
       .map((row) => ({
         rowKey: row.rowKey,
         originalRow: row.originalRow,
@@ -519,7 +511,7 @@ export function useChangesetManager({
       }))
 
     dispatch({ type: 'delete-selected', rows })
-  }, [renderedRows, state.selectedRowKeys])
+  }, [renderedRows, state.session.selectedRowKeys])
 
   const undoLastChange = useCallback(() => {
     dispatch({ type: 'undo' })
@@ -530,10 +522,12 @@ export function useChangesetManager({
   }, [])
 
   const moveActiveCell = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
-    if (!state.activeCell) return
+    if (!state.editor.activeCell) return
 
-    const currentRowIndex = renderedRows.findIndex((row) => row.rowKey === state.activeCell?.rowKey)
-    const currentColumnIndex = visibleColumns.indexOf(state.activeCell.column)
+    const currentRowIndex = renderedRows.findIndex(
+      (row) => row.rowKey === state.editor.activeCell?.rowKey,
+    )
+    const currentColumnIndex = visibleColumns.indexOf(state.editor.activeCell.column)
 
     if (currentRowIndex < 0 || currentColumnIndex < 0) {
       deactivateCell()
@@ -562,7 +556,11 @@ export function useChangesetManager({
       const nextRow = renderedRows[nextRowIndex]
       const nextColumn = visibleColumns[nextColumnIndex]
       if (isEditableCell(nextRow, nextColumn, primaryKey, true)) {
-        commitCellValue(state.activeCell.rowKey, state.activeCell.column, state.activeDraftValue)
+        commitCellValue(
+          state.editor.activeCell.rowKey,
+          state.editor.activeCell.column,
+          state.editor.activeDraftValue,
+        )
         dispatch({
           type: 'activate-cell',
           rowKey: nextRow.rowKey,
@@ -583,8 +581,8 @@ export function useChangesetManager({
     deactivateCell,
     primaryKey,
     renderedRows,
-    state.activeCell,
-    state.activeDraftValue,
+    state.editor.activeCell,
+    state.editor.activeDraftValue,
     visibleColumns,
   ])
 
@@ -602,12 +600,12 @@ export function useChangesetManager({
 
   const submitChanges = useCallback(async () => {
     const conn = connections.find((connection) => connection.id === connectionId)
-    if (!conn || state.changes.size === 0) return
+    if (!conn || state.session.changes.size === 0) return
 
     const graphqlSchema = resolveSchemaParam(conn.type, databaseName, schema)
     const successfulRowKeys: ChangesetRowKey[] = []
     const failedMessages: string[] = []
-    const orderedEntries = [...state.changes.entries()].sort(([, left], [, right]) => {
+    const orderedEntries = [...state.session.changes.entries()].sort(([, left], [, right]) => {
       const rank = { delete: 0, update: 1, insert: 2 } as const
       return rank[left.type] - rank[right.type]
     })
@@ -684,7 +682,7 @@ export function useChangesetManager({
     refresh,
     schema,
     showAlert,
-    state.changes,
+    state.session.changes,
     t,
     tableName,
     updateStorageUnitMutation,
@@ -692,17 +690,17 @@ export function useChangesetManager({
 
   return {
     state: {
-      activeCell: state.activeCell,
-      activeDraftValue: state.activeDraftValue,
-      selectedRowKeys: state.selectedRowKeys,
-      changes: state.changes,
-      undoStack: state.undoStack,
+      activeCell: state.editor.activeCell,
+      activeDraftValue: state.editor.activeDraftValue,
+      selectedRowKeys: state.session.selectedRowKeys,
+      changes: state.session.changes,
+      undoStack: state.session.undoStack,
       renderedRows,
-      pendingChangeCount: state.changes.size,
-      hasPendingChanges: state.changes.size > 0,
-      showPreviewModal: state.showPreviewModal,
-      showSubmitModal: state.showSubmitModal,
-      showDiscardModal: state.showDiscardModal,
+      pendingChangeCount: state.session.changes.size,
+      hasPendingChanges: state.session.changes.size > 0,
+      showPreviewModal: state.session.showPreviewModal,
+      showSubmitModal: state.session.showSubmitModal,
+      showDiscardModal: state.session.showDiscardModal,
     },
     actions: {
       activateCell,
