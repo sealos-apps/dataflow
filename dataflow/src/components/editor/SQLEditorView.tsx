@@ -650,6 +650,10 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                             </div>
                                         ))}
                                     </div>
+                                ) : isExecuting ? (
+                                    <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                    </div>
                                 ) : (
                                     <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground flex-col gap-2">
                                         <Play className="h-8 w-8 opacity-20" />
@@ -699,6 +703,10 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                                             })}</span>
                                         </div>
                                     </>
+                                ) : isExecuting ? (
+                                    <div className="flex items-center justify-center min-h-[160px] text-muted-foreground">
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                    </div>
                                 ) : (
                                     <div className="text-muted-foreground">{t('sql.editor.noQueryExecuted')}</div>
                                 )}
