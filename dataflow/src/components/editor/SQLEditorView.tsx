@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, AlignLeft, CheckCircle, AlertCircle, FileText, Loader2, XCircle, CheckCircle2, GalleryVerticalEnd, Database, Network } from "lucide-react";
+import { Play, AlignLeft, CheckCircle, AlertCircle, FileText, Loader2, XCircle, CheckCircle2, GalleryVerticalEnd, Database, Network, BarChart3 } from "lucide-react";
 import { format } from 'sql-formatter';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { ChartCreateModal } from "@/components/analysis/chart-create";
 import MonacoEditor from "./MonacoEditorWrapper";
 import type { editor } from 'monaco-editor';
 import type * as Monaco from 'monaco-editor';
@@ -40,6 +42,8 @@ interface SQLEditorViewProps {
         rows: Record<string, any>[],
         context: { database?: string; schema?: string },
     ) => void;
+    /** When true, shows a "Create Chart" button in the toolbar that opens ChartCreateModal with the last successful read result. Defaults to true. */
+    showChartCreate?: boolean;
 }
 
 interface StatementResult {
@@ -53,7 +57,7 @@ interface StatementResult {
 }
 
 /** SQL editor with integrated database/schema selectors and query execution. */
-export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQueryResults }: SQLEditorViewProps) {
+export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQueryResults, showChartCreate = true }: SQLEditorViewProps) {
     const { t } = useI18n();
     const { connections } = useConnectionStore();
     const connectionType = connections.find((c) => c.id === context?.connectionId)?.type ?? 'POSTGRES';
@@ -73,6 +77,7 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
     const [schemas, setSchemas] = useState<string[]>([]);
     const [selectedDatabase, setSelectedDatabase] = useState(context?.databaseName ?? '');
     const [selectedSchema, setSelectedSchema] = useState(context?.schemaName ?? '');
+    const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
     // Fetch databases on mount
     useEffect(() => {
@@ -335,6 +340,9 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
         };
     }, []);
 
+    const lastReadResult = queryResults?.slice().reverse().find((r) => !r.isError && r.rows.length > 0) ?? null;
+    const canCreateChart = showChartCreate && !!lastReadResult && !!context?.connectionId;
+
     return (
         <div className="flex h-full flex-col bg-background overflow-hidden" ref={containerRef}>
             {/* Toolbar */}
@@ -368,6 +376,26 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                             </TooltipTrigger>
                             <TooltipContent>{t('sql.actions.format')} ({IS_MAC ? '⇧⌥F' : 'Shift+Alt+F'})</TooltipContent>
                         </Tooltip>
+                    )}
+                    {showChartCreate && (
+                        <>
+                            <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setIsChartModalOpen(true)}
+                                            disabled={!canCreateChart}
+                                        >
+                                            <BarChart3 className="h-4 w-4" />
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('analysis.chart.create')}</TooltipContent>
+                            </Tooltip>
+                        </>
                     )}
                 </div>
 
@@ -680,6 +708,20 @@ export function SQLEditorView({ tabId, context, initialSql, onSqlChange, onQuery
                 </div>
             </div>
 
+            {showChartCreate && lastReadResult && context?.connectionId && (
+                <ChartCreateModal
+                    open={isChartModalOpen}
+                    onOpenChange={setIsChartModalOpen}
+                    initialData={{
+                        connectionId: context.connectionId,
+                        databaseName: lastReadResult.database ?? context.databaseName ?? '',
+                        schemaName: lastReadResult.schema ?? context.schemaName,
+                        query: lastReadResult.sql,
+                        columns: lastReadResult.columns,
+                        rows: lastReadResult.rows,
+                    }}
+                />
+            )}
         </div>
     );
 }
