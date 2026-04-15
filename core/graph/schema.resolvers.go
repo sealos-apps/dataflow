@@ -31,10 +31,77 @@ import (
 	"github.com/clidey/whodb/core/src/plugins/ssl"
 	"github.com/clidey/whodb/core/src/providers"
 	awsprovider "github.com/clidey/whodb/core/src/providers/aws"
+	"github.com/clidey/whodb/core/src/sealos"
+	"github.com/clidey/whodb/core/src/session"
 	"github.com/clidey/whodb/core/src/settings"
 	"github.com/clidey/whodb/core/src/version"
 	"golang.org/x/sync/errgroup"
 )
+
+// BootstrapSealosSession is the resolver for the BootstrapSealosSession field.
+func (r *mutationResolver) BootstrapSealosSession(ctx context.Context, input model.SealosBootstrapInput) (*model.AuthSessionPayload, error) {
+	if !env.GetSealosBootstrapEnabled() {
+		return nil, errors.New("sealos bootstrap is disabled")
+	}
+
+	resolver, err := sealos.DefaultBootstrapResolverFactory(input.Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	resolved, err := resolver.ResolveBootstrap(ctx, sealos.BootstrapInput{
+		Kubeconfig:   input.Kubeconfig,
+		DBType:       input.DbType,
+		ResourceName: input.ResourceName,
+		DatabaseName: valueOrEmpty(input.DatabaseName),
+		Host:         valueOrEmpty(input.Host),
+		Port:         valueOrEmpty(input.Port),
+		Namespace:    valueOrEmpty(input.Namespace),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	plugin := src.MainEngine.Choose(engine.DatabaseType(resolved.Credentials.Type))
+	if plugin == nil || !plugin.IsAvailable(ctx, engine.NewPluginConfig(resolved.Credentials)) {
+		return nil, errors.New("unauthorized")
+	}
+
+	svc, err := session.GetDefaultService()
+	if err != nil {
+		return nil, err
+	}
+
+	record, token, err := svc.Create(ctx, session.CreateParams{
+		Source:       "sealos",
+		K8sUsername:  resolved.K8sUsername,
+		Namespace:    resolved.Namespace,
+		ResourceName: resolved.ResourceName,
+		DBType:       resolved.DBType,
+		Host:         resolved.Host,
+		Port:         resolved.Port,
+		DatabaseName: resolved.DatabaseName,
+		Credentials:  resolved.Credentials,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	displayName := resolved.ResourceName
+	if displayName == "" {
+		displayName = resolved.Host
+	}
+
+	return &model.AuthSessionPayload{
+		SessionToken: token,
+		ExpiresAt:    record.ExpiresAt.Format(time.RFC3339),
+		Type:         resolved.Credentials.Type,
+		Hostname:     resolved.Host,
+		Port:         resolved.Port,
+		Database:     resolved.DatabaseName,
+		DisplayName:  displayName,
+	}, nil
+}
 
 // Login is the resolver for the Login field.
 func (r *mutationResolver) Login(ctx context.Context, credentials model.LoginCredentials) (*model.StatusResponse, error) {

@@ -3,21 +3,53 @@ import ReactDOM from 'react-dom/client';
 import { ApolloProvider } from '@apollo/client';
 import { graphqlClient } from '@/config/graphql-client';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useI18n } from '@/i18n/useI18n';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { resolveLocaleFromSearch } from '@/i18n/locale';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useSealosStore } from '@/stores/useSealosStore';
 import './globals.css';
 
-useAuthStore.getState().initialize();
 const locale = resolveLocaleFromSearch(window.location.search);
+
+function AppBootstrap() {
+  const status = useAuthStore((state) => state.status);
+  const error = useAuthStore((state) => state.error);
+  const { t } = useI18n();
+
+  React.useEffect(() => {
+    void (async () => {
+      await useSealosStore.getState().initialize();
+      await useAuthStore.getState().initialize();
+    })();
+  }, []);
+
+  if (status === 'loading') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        {t('common.auth.loading')}
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background p-6 text-center text-sm text-destructive">
+        {t('common.auth.bootstrapFailed', { message: error ?? t('common.unknownError') })}
+      </div>
+    );
+  }
+
+  return <MainLayout />;
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <I18nProvider locale={locale}>
       <ApolloProvider client={graphqlClient}>
         <TooltipProvider>
-          <MainLayout />
+          <AppBootstrap />
         </TooltipProvider>
       </ApolloProvider>
     </I18nProvider>

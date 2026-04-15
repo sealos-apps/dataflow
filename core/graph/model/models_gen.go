@@ -85,6 +85,16 @@ type AtomicWhereCondition struct {
 	Value      string `json:"Value"`
 }
 
+type AuthSessionPayload struct {
+	SessionToken string `json:"sessionToken"`
+	ExpiresAt    string `json:"expiresAt"`
+	Type         string `json:"type"`
+	Hostname     string `json:"hostname"`
+	Port         string `json:"port"`
+	Database     string `json:"database"`
+	DisplayName  string `json:"displayName"`
+}
+
 type Capabilities struct {
 	SupportsScratchpad     bool `json:"supportsScratchpad"`
 	SupportsChat           bool `json:"supportsChat"`
@@ -347,6 +357,16 @@ type RowsResult struct {
 type SSLStatus struct {
 	IsEnabled bool   `json:"IsEnabled"`
 	Mode      string `json:"Mode"`
+}
+
+type SealosBootstrapInput struct {
+	Kubeconfig   string  `json:"kubeconfig"`
+	DbType       string  `json:"dbType"`
+	ResourceName string  `json:"resourceName"`
+	DatabaseName *string `json:"databaseName,omitempty"`
+	Host         *string `json:"host,omitempty"`
+	Port         *string `json:"port,omitempty"`
+	Namespace    *string `json:"namespace,omitempty"`
 }
 
 type SettingsConfig struct {

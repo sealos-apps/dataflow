@@ -22,6 +22,8 @@ export const zhCommonMessages = {
   'common.status.processing': '处理中...',
   'common.status.exporting': '导出中...',
   'common.status.exportComplete': '导出完成！文件已下载。',
+  'common.auth.loading': '正在加载会话...',
+  'common.auth.bootstrapFailed': '认证失败：{message}',
   'common.alert.error': '错误',
   'common.alert.success': '成功',
   'common.alert.info': '提示',

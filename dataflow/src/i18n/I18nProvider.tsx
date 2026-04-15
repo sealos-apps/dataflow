@@ -1,5 +1,5 @@
 import { createContext, use, useMemo, type ReactNode } from 'react'
-import type { Locale } from './locale'
+import { normalizeLocale, type Locale } from './locale'
 import {
   createTranslator,
   messagesByLocale,
@@ -7,6 +7,7 @@ import {
   type Messages,
   type TranslationParams,
 } from './messages'
+import { useSealosStore } from '@/stores/useSealosStore'
 
 interface I18nContextValue {
   locale: Locale
@@ -17,13 +18,16 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ locale, children }: { locale: Locale; children: ReactNode }) {
+  const liveLanguage = useSealosStore((state) => state.language)
+  const effectiveLocale = normalizeLocale(liveLanguage ?? locale)
+
   const value = useMemo<I18nContextValue>(
     () => ({
-      locale,
-      messages: messagesByLocale[locale],
-      t: createTranslator(locale),
+      locale: effectiveLocale,
+      messages: messagesByLocale[effectiveLocale],
+      t: createTranslator(effectiveLocale),
     }),
-    [locale],
+    [effectiveLocale],
   )
 
   return <I18nContext value={value}>{children}</I18nContext>

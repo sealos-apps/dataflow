@@ -72,6 +72,16 @@ type ComplexityRoot struct {
 		Partition   func(childComplexity int) int
 	}
 
+	AuthSessionPayload struct {
+		Database     func(childComplexity int) int
+		DisplayName  func(childComplexity int) int
+		ExpiresAt    func(childComplexity int) int
+		Hostname     func(childComplexity int) int
+		Port         func(childComplexity int) int
+		SessionToken func(childComplexity int) int
+		Type         func(childComplexity int) int
+	}
+
 	Capabilities struct {
 		SupportsChat           func(childComplexity int) int
 		SupportsDatabaseSwitch func(childComplexity int) int
@@ -230,35 +240,36 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddAWSProvider       func(childComplexity int, input model.AWSProviderInput) int
-		AddRow               func(childComplexity int, schema string, storageUnit string, values []*model.RecordInput) int
-		AddStorageUnit       func(childComplexity int, schema string, storageUnit string, fields []*model.RecordInput) int
-		AddWidget            func(childComplexity int, dashboardID string, input model.WidgetInput) int
-		CreateDashboard      func(childComplexity int, name string, description *string, refreshRule string) int
-		DeleteDashboard      func(childComplexity int, id string) int
-		DeleteRow            func(childComplexity int, schema string, storageUnit string, values []*model.RecordInput) int
-		DeleteWidget         func(childComplexity int, id string) int
-		ExecuteConfirmedSQL  func(childComplexity int, query string, operationType string) int
-		GenerateChatTitle    func(childComplexity int, input model.GenerateChatTitleInput) int
-		GenerateMockData     func(childComplexity int, input model.MockDataGenerationInput) int
-		GenerateRDSAuthToken func(childComplexity int, providerID string, endpoint string, port int, region string, username string) int
-		ImportPreview        func(childComplexity int, file graphql.Upload, options model.ImportFileOptions, schema *string, storageUnit *string, useHeaderMapping *bool) int
-		ImportSQL            func(childComplexity int, input model.ImportSQLInput) int
-		ImportTableFile      func(childComplexity int, input model.ImportFileInput) int
-		Login                func(childComplexity int, credentials model.LoginCredentials) int
-		LoginWithProfile     func(childComplexity int, profile model.LoginProfileInput) int
-		Logout               func(childComplexity int) int
-		RefreshCloudProvider func(childComplexity int, id string) int
-		RemoveCloudProvider  func(childComplexity int, id string) int
-		TestAWSCredentials   func(childComplexity int, input model.AWSProviderInput) int
-		TestCloudProvider    func(childComplexity int, id string) int
-		UpdateAWSProvider    func(childComplexity int, id string, input model.AWSProviderInput) int
-		UpdateDashboard      func(childComplexity int, id string, name *string, description *string, refreshRule *string) int
-		UpdateSettings       func(childComplexity int, newSettings model.SettingsConfigInput) int
-		UpdateStorageUnit    func(childComplexity int, schema string, storageUnit string, values []*model.RecordInput, updatedColumns []string) int
-		UpdateWidget         func(childComplexity int, id string, input model.UpdateWidgetInput) int
-		UpdateWidgetLayouts  func(childComplexity int, dashboardID string, layouts []*model.LayoutInput) int
-		UpdateWidgetSnapshot func(childComplexity int, id string, snapshot model.SnapshotInput) int
+		AddAWSProvider         func(childComplexity int, input model.AWSProviderInput) int
+		AddRow                 func(childComplexity int, schema string, storageUnit string, values []*model.RecordInput) int
+		AddStorageUnit         func(childComplexity int, schema string, storageUnit string, fields []*model.RecordInput) int
+		AddWidget              func(childComplexity int, dashboardID string, input model.WidgetInput) int
+		BootstrapSealosSession func(childComplexity int, input model.SealosBootstrapInput) int
+		CreateDashboard        func(childComplexity int, name string, description *string, refreshRule string) int
+		DeleteDashboard        func(childComplexity int, id string) int
+		DeleteRow              func(childComplexity int, schema string, storageUnit string, values []*model.RecordInput) int
+		DeleteWidget           func(childComplexity int, id string) int
+		ExecuteConfirmedSQL    func(childComplexity int, query string, operationType string) int
+		GenerateChatTitle      func(childComplexity int, input model.GenerateChatTitleInput) int
+		GenerateMockData       func(childComplexity int, input model.MockDataGenerationInput) int
+		GenerateRDSAuthToken   func(childComplexity int, providerID string, endpoint string, port int, region string, username string) int
+		ImportPreview          func(childComplexity int, file graphql.Upload, options model.ImportFileOptions, schema *string, storageUnit *string, useHeaderMapping *bool) int
+		ImportSQL              func(childComplexity int, input model.ImportSQLInput) int
+		ImportTableFile        func(childComplexity int, input model.ImportFileInput) int
+		Login                  func(childComplexity int, credentials model.LoginCredentials) int
+		LoginWithProfile       func(childComplexity int, profile model.LoginProfileInput) int
+		Logout                 func(childComplexity int) int
+		RefreshCloudProvider   func(childComplexity int, id string) int
+		RemoveCloudProvider    func(childComplexity int, id string) int
+		TestAWSCredentials     func(childComplexity int, input model.AWSProviderInput) int
+		TestCloudProvider      func(childComplexity int, id string) int
+		UpdateAWSProvider      func(childComplexity int, id string, input model.AWSProviderInput) int
+		UpdateDashboard        func(childComplexity int, id string, name *string, description *string, refreshRule *string) int
+		UpdateSettings         func(childComplexity int, newSettings model.SettingsConfigInput) int
+		UpdateStorageUnit      func(childComplexity int, schema string, storageUnit string, values []*model.RecordInput, updatedColumns []string) int
+		UpdateWidget           func(childComplexity int, id string, input model.UpdateWidgetInput) int
+		UpdateWidgetLayouts    func(childComplexity int, dashboardID string, layouts []*model.LayoutInput) int
+		UpdateWidgetSnapshot   func(childComplexity int, id string, snapshot model.SnapshotInput) int
 	}
 
 	Query struct {
@@ -350,6 +361,7 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
+	BootstrapSealosSession(ctx context.Context, input model.SealosBootstrapInput) (*model.AuthSessionPayload, error)
 	Login(ctx context.Context, credentials model.LoginCredentials) (*model.StatusResponse, error)
 	LoginWithProfile(ctx context.Context, profile model.LoginProfileInput) (*model.StatusResponse, error)
 	Logout(ctx context.Context) (*model.StatusResponse, error)
@@ -572,6 +584,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AWSRegion.Partition(childComplexity), true
+
+	case "AuthSessionPayload.database":
+		if e.ComplexityRoot.AuthSessionPayload.Database == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.Database(childComplexity), true
+	case "AuthSessionPayload.displayName":
+		if e.ComplexityRoot.AuthSessionPayload.DisplayName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.DisplayName(childComplexity), true
+	case "AuthSessionPayload.expiresAt":
+		if e.ComplexityRoot.AuthSessionPayload.ExpiresAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.ExpiresAt(childComplexity), true
+	case "AuthSessionPayload.hostname":
+		if e.ComplexityRoot.AuthSessionPayload.Hostname == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.Hostname(childComplexity), true
+	case "AuthSessionPayload.port":
+		if e.ComplexityRoot.AuthSessionPayload.Port == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.Port(childComplexity), true
+	case "AuthSessionPayload.sessionToken":
+		if e.ComplexityRoot.AuthSessionPayload.SessionToken == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.SessionToken(childComplexity), true
+	case "AuthSessionPayload.type":
+		if e.ComplexityRoot.AuthSessionPayload.Type == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthSessionPayload.Type(childComplexity), true
 
 	case "Capabilities.supportsChat":
 		if e.ComplexityRoot.Capabilities.SupportsChat == nil {
@@ -1219,6 +1274,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.AddWidget(childComplexity, args["dashboardId"].(string), args["input"].(model.WidgetInput)), true
+	case "Mutation.BootstrapSealosSession":
+		if e.ComplexityRoot.Mutation.BootstrapSealosSession == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_BootstrapSealosSession_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.BootstrapSealosSession(childComplexity, args["input"].(model.SealosBootstrapInput)), true
 	case "Mutation.CreateDashboard":
 		if e.ComplexityRoot.Mutation.CreateDashboard == nil {
 			break
@@ -1930,6 +1996,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputMockDataGenerationInput,
 		ec.unmarshalInputOperationWhereCondition,
 		ec.unmarshalInputRecordInput,
+		ec.unmarshalInputSealosBootstrapInput,
 		ec.unmarshalInputSettingsConfigInput,
 		ec.unmarshalInputSnapshotInput,
 		ec.unmarshalInputSortCondition,
@@ -2096,6 +2163,17 @@ func (ec *executionContext) field_Mutation_AddWidget_args(ctx context.Context, r
 		return nil, err
 	}
 	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_BootstrapSealosSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNSealosBootstrapInput2githubᚗcomᚋclideyᚋwhodbᚋcoreᚋgraphᚋmodelᚐSealosBootstrapInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -3460,6 +3538,209 @@ func (ec *executionContext) _AWSRegion_Partition(ctx context.Context, field grap
 func (ec *executionContext) fieldContext_AWSRegion_Partition(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AWSRegion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_sessionToken(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_sessionToken,
+		func(ctx context.Context) (any, error) {
+			return obj.SessionToken, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_sessionToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_expiresAt,
+		func(ctx context.Context) (any, error) {
+			return obj.ExpiresAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_type(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_type,
+		func(ctx context.Context) (any, error) {
+			return obj.Type, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_hostname(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_hostname,
+		func(ctx context.Context) (any, error) {
+			return obj.Hostname, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_hostname(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_port(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_port,
+		func(ctx context.Context) (any, error) {
+			return obj.Port, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_port(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_database(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_database,
+		func(ctx context.Context) (any, error) {
+			return obj.Database, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_database(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthSessionPayload_displayName(ctx context.Context, field graphql.CollectedField, obj *model.AuthSessionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthSessionPayload_displayName,
+		func(ctx context.Context) (any, error) {
+			return obj.DisplayName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthSessionPayload_displayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthSessionPayload",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -6385,6 +6666,63 @@ func (ec *executionContext) fieldContext_MockDataTableInfo_UsesExistingData(_ co
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_BootstrapSealosSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_BootstrapSealosSession,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().BootstrapSealosSession(ctx, fc.Args["input"].(model.SealosBootstrapInput))
+		},
+		nil,
+		ec.marshalNAuthSessionPayload2ᚖgithubᚗcomᚋclideyᚋwhodbᚋcoreᚋgraphᚋmodelᚐAuthSessionPayload,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_BootstrapSealosSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "sessionToken":
+				return ec.fieldContext_AuthSessionPayload_sessionToken(ctx, field)
+			case "expiresAt":
+				return ec.fieldContext_AuthSessionPayload_expiresAt(ctx, field)
+			case "type":
+				return ec.fieldContext_AuthSessionPayload_type(ctx, field)
+			case "hostname":
+				return ec.fieldContext_AuthSessionPayload_hostname(ctx, field)
+			case "port":
+				return ec.fieldContext_AuthSessionPayload_port(ctx, field)
+			case "database":
+				return ec.fieldContext_AuthSessionPayload_database(ctx, field)
+			case "displayName":
+				return ec.fieldContext_AuthSessionPayload_displayName(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuthSessionPayload", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_BootstrapSealosSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -12251,6 +12589,78 @@ func (ec *executionContext) unmarshalInputRecordInput(ctx context.Context, obj a
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSealosBootstrapInput(ctx context.Context, obj any) (model.SealosBootstrapInput, error) {
+	var it model.SealosBootstrapInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"kubeconfig", "dbType", "resourceName", "databaseName", "host", "port", "namespace"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "kubeconfig":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("kubeconfig"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Kubeconfig = data
+		case "dbType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dbType"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DbType = data
+		case "resourceName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceName = data
+		case "databaseName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("databaseName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DatabaseName = data
+		case "host":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("host"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Host = data
+		case "port":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("port"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Port = data
+		case "namespace":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("namespace"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Namespace = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputSettingsConfigInput(ctx context.Context, obj any) (model.SettingsConfigInput, error) {
 	var it model.SettingsConfigInput
 	if obj == nil {
@@ -12824,6 +13234,75 @@ func (ec *executionContext) _AWSRegion(ctx context.Context, sel ast.SelectionSet
 			}
 		case "Partition":
 			out.Values[i] = ec._AWSRegion_Partition(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var authSessionPayloadImplementors = []string{"AuthSessionPayload"}
+
+func (ec *executionContext) _AuthSessionPayload(ctx context.Context, sel ast.SelectionSet, obj *model.AuthSessionPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, authSessionPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AuthSessionPayload")
+		case "sessionToken":
+			out.Values[i] = ec._AuthSessionPayload_sessionToken(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "expiresAt":
+			out.Values[i] = ec._AuthSessionPayload_expiresAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "type":
+			out.Values[i] = ec._AuthSessionPayload_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hostname":
+			out.Values[i] = ec._AuthSessionPayload_hostname(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "port":
+			out.Values[i] = ec._AuthSessionPayload_port(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "database":
+			out.Values[i] = ec._AuthSessionPayload_database(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "displayName":
+			out.Values[i] = ec._AuthSessionPayload_displayName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -13962,6 +14441,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "BootstrapSealosSession":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_BootstrapSealosSession(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "Login":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_Login(ctx, field)
@@ -15739,6 +16225,20 @@ func (ec *executionContext) marshalNAWSRegion2ᚖgithubᚗcomᚋclideyᚋwhodb�
 	return ec._AWSRegion(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNAuthSessionPayload2githubᚗcomᚋclideyᚋwhodbᚋcoreᚋgraphᚋmodelᚐAuthSessionPayload(ctx context.Context, sel ast.SelectionSet, v model.AuthSessionPayload) graphql.Marshaler {
+	return ec._AuthSessionPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAuthSessionPayload2ᚖgithubᚗcomᚋclideyᚋwhodbᚋcoreᚋgraphᚋmodelᚐAuthSessionPayload(ctx context.Context, sel ast.SelectionSet, v *model.AuthSessionPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AuthSessionPayload(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -16382,6 +16882,11 @@ func (ec *executionContext) marshalNRowsResult2ᚖgithubᚗcomᚋclideyᚋwhodb�
 		return graphql.Null
 	}
 	return ec._RowsResult(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSealosBootstrapInput2githubᚗcomᚋclideyᚋwhodbᚋcoreᚋgraphᚋmodelᚐSealosBootstrapInput(ctx context.Context, v any) (model.SealosBootstrapInput, error) {
+	res, err := ec.unmarshalInputSealosBootstrapInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNSettingsConfig2githubᚗcomᚋclideyᚋwhodbᚋcoreᚋgraphᚋmodelᚐSettingsConfig(ctx context.Context, sel ast.SelectionSet, v model.SettingsConfig) graphql.Marshaler {

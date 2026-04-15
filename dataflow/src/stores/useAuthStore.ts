@@ -1,128 +1,197 @@
-import { create } from 'zustand';
+import { create } from 'zustand'
 import {
-  LoginDocument,
-  type LoginMutation,
-  type LoginMutationVariables,
-  type LoginCredentials,
-} from '@graphql';
-import { graphqlClient } from '@/config/graphql-client';
+  BootstrapSealosSessionDocument,
+  type BootstrapSealosSessionMutation,
+  type BootstrapSealosSessionMutationVariables,
+} from '@graphql'
+import { graphqlClient } from '@/config/graphql-client'
 import {
-  type AuthCredentials,
-  setAuthCredentials,
-  clearAuth,
+  type AuthSessionSummary,
+  type BootstrapDescriptor,
+  getBootstrapDescriptor,
+  registerRebootstrapHandler,
   restoreFromStorage,
-} from '@/config/auth-store';
+  setPersistedAuthState,
+  clearAuth,
+} from '@/config/auth-store'
 import {
-  isSealosContext,
-  mapSealosDbType,
   getDefaultDatabase,
-  decryptSealosCredential,
-} from '@/config/sealos';
-import { replaceBootstrapUrl } from '@/i18n/url-params';
+  isSealosContext,
+} from '@/config/sealos'
+import { replaceBootstrapUrl } from '@/i18n/url-params'
+import { useSealosStore } from '@/stores/useSealosStore'
 
-type AuthStatus = 'loading' | 'authenticated' | 'error';
+type AuthStatus = 'loading' | 'authenticated' | 'error'
 
 interface AuthState {
-  status: AuthStatus;
-  credentials: AuthCredentials | null;
-  error: string | null;
-  /** Call once on app mount to bootstrap auth. */
-  initialize: () => Promise<void>;
+  status: AuthStatus
+  session: AuthSessionSummary | null
+  bootstrapDescriptor: BootstrapDescriptor | null
+  error: string | null
+  initialize: () => Promise<void>
+  rebootstrap: () => Promise<boolean>
 }
 
-/** Execute a Login mutation via the Apollo client (no hook required). */
-async function loginMutate(credentials: LoginCredentials): Promise<boolean> {
-  const result = await graphqlClient.mutate<LoginMutation, LoginMutationVariables>({
-    mutation: LoginDocument,
-    variables: { credentials },
-  });
-  return result.data?.Login.Status ?? false;
+interface AuthStoreState extends AuthState {
+  rebootstrapWithDescriptor: (descriptor: BootstrapDescriptor) => Promise<boolean>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+async function bootstrapSealosSession(
+  descriptor: BootstrapDescriptor,
+  kubeconfig: string,
+): Promise<AuthSessionSummary> {
+  const result = await graphqlClient.mutate<
+    BootstrapSealosSessionMutation,
+    BootstrapSealosSessionMutationVariables
+  >({
+    mutation: BootstrapSealosSessionDocument,
+    variables: {
+      input: {
+        kubeconfig,
+        dbType: descriptor.dbType,
+        resourceName: descriptor.resourceName,
+        databaseName: descriptor.databaseName || undefined,
+        host: descriptor.host,
+        port: descriptor.port,
+        namespace: descriptor.namespace,
+      },
+    },
+  })
+
+  const payload = result.data?.BootstrapSealosSession
+  if (!payload) {
+    throw new Error('Missing bootstrap payload')
+  }
+
+  return {
+    sessionToken: payload.sessionToken,
+    type: payload.type,
+    hostname: payload.hostname,
+    port: payload.port,
+    database: payload.database,
+    displayName: payload.displayName,
+    expiresAt: payload.expiresAt,
+  }
+}
+
+function buildBootstrapDescriptor(params: URLSearchParams): BootstrapDescriptor {
+  const dbType = params.get('dbType') ?? ''
+  const resourceName = params.get('resourceName') ?? ''
+  const databaseName = params.get('databaseName') ?? params.get('dbName') ?? getDefaultDatabase(dbType)
+  const host = params.get('host') ?? undefined
+  const port = params.get('port') ?? undefined
+  const namespace = params.get('namespace') ?? undefined
+  const fingerprint = [
+    dbType,
+    resourceName,
+    host ?? '',
+    port ?? '',
+    databaseName,
+  ].join(':')
+
+  return {
+    dbType,
+    resourceName,
+    databaseName,
+    host,
+    port,
+    namespace,
+    fingerprint,
+  }
+}
+
+export const useAuthStore = create<AuthStoreState>((set, get) => ({
   status: 'loading',
-  credentials: null,
+  session: null,
+  bootstrapDescriptor: null,
   error: null,
 
   initialize: async () => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search)
 
     if (isSealosContext(params)) {
-      await handleSealosLogin(params, set);
-    } else {
-      const restored = restoreFromStorage();
-      if (restored) {
-        set({ credentials: restored, status: 'authenticated' });
-      } else {
-        set({ error: 'No credentials available', status: 'error' });
+      await useSealosStore.getState().initialize()
+      const descriptor = buildBootstrapDescriptor(params)
+      const restored = restoreFromStorage()
+
+      if (restored?.session && restored.bootstrap?.fingerprint === descriptor.fingerprint) {
+        replaceBootstrapUrl(window.location.search)
+        set({
+          session: restored.session,
+          bootstrapDescriptor: restored.bootstrap,
+          status: 'authenticated',
+          error: null,
+        })
+        return
       }
+
+      const ok = await get().rebootstrapWithDescriptor(descriptor)
+      if (ok) {
+        replaceBootstrapUrl(window.location.search)
+      }
+      return
+    }
+
+    const restored = restoreFromStorage()
+    if (restored?.session) {
+      set({
+        session: restored.session,
+        bootstrapDescriptor: restored.bootstrap,
+        status: 'authenticated',
+        error: null,
+      })
+      return
+    }
+
+    set({ error: 'No auth session available', status: 'error' })
+  },
+
+  rebootstrap: async () => {
+    const descriptor = get().bootstrapDescriptor ?? getBootstrapDescriptor()
+    if (!descriptor) return false
+    return get().rebootstrapWithDescriptor(descriptor)
+  },
+
+  rebootstrapWithDescriptor: async (descriptor: BootstrapDescriptor) => {
+    clearAuth()
+    set({
+      status: 'loading',
+      error: null,
+      session: null,
+      bootstrapDescriptor: descriptor,
+    })
+
+    const sealosSession = useSealosStore.getState().session
+    const kubeconfig = sealosSession?.kubeconfig ?? ''
+    if (!kubeconfig) {
+      set({
+        status: 'error',
+        error: 'Missing Sealos kubeconfig',
+      })
+      return false
+    }
+
+    try {
+      const session = await bootstrapSealosSession(descriptor, kubeconfig)
+      setPersistedAuthState({ session, bootstrap: descriptor })
+      set({
+        session,
+        bootstrapDescriptor: descriptor,
+        status: 'authenticated',
+        error: null,
+      })
+      return true
+    } catch (error) {
+      clearAuth()
+      set({
+        session: null,
+        bootstrapDescriptor: descriptor,
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
     }
   },
-}));
+}))
 
-async function handleSealosLogin(
-  params: URLSearchParams,
-  set: (state: Partial<AuthState>) => void,
-): Promise<void> {
-  clearAuth();
-
-  const dbType = params.get('dbType')!;
-  const credential = params.get('credential')!;
-  const host = params.get('host') ?? '';
-  const port = params.get('port') ?? '';
-  const dbName = params.get('dbName') ?? undefined;
-
-  replaceBootstrapUrl(window.location.search);
-
-  const whodbType = mapSealosDbType(dbType);
-  if (!whodbType) {
-    set({ error: `Unsupported database type: ${dbType}`, status: 'error' });
-    return;
-  }
-
-  const aesKey = import.meta.env.VITE_WHODB_AES_KEY;
-  let username: string;
-  let password: string;
-  try {
-    ({ username, password } = await decryptSealosCredential(credential, aesKey));
-  } catch (err) {
-    console.error('[useAuthStore] decryption failed:', err);
-    set({ error: 'Failed to decrypt credentials', status: 'error' });
-    return;
-  }
-
-  const database = dbName || getDefaultDatabase(dbType);
-  const advanced = port ? [{ Key: 'Port', Value: port }] : [];
-
-  const loginInput: LoginCredentials = {
-    Type: whodbType,
-    Hostname: host,
-    Username: username,
-    Password: password,
-    Database: database,
-    Advanced: advanced,
-  };
-
-  try {
-    const ok = await loginMutate(loginInput);
-    if (!ok) {
-      set({ error: 'Login failed: server rejected credentials', status: 'error' });
-      return;
-    }
-  } catch (err) {
-    console.error('[useAuthStore] login failed:', err);
-    set({ error: `Login failed: ${err instanceof Error ? err.message : String(err)}`, status: 'error' });
-    return;
-  }
-
-  const creds: AuthCredentials = {
-    Type: whodbType,
-    Hostname: host,
-    Username: username,
-    Password: password,
-    Database: database,
-    Advanced: advanced,
-  };
-  setAuthCredentials(creds);
-  set({ credentials: creds, status: 'authenticated' });
-}
+registerRebootstrapHandler(() => useAuthStore.getState().rebootstrap())

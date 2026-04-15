@@ -19,15 +19,12 @@ package main
 import (
 	"context"
 	"embed"
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"testing"
 	"time"
 
-	"errors"
 	"github.com/clidey/whodb/core/src"
 	"github.com/clidey/whodb/core/src/log"
 	"github.com/clidey/whodb/core/src/router"
@@ -36,23 +33,14 @@ import (
 //go:embed build/*
 var staticFilesTest embed.FS
 
-const defaultPortTest = "8080"
-
-var srv *http.Server
-
 func TestMain(m *testing.M) {
-	log.Info("Starting WhoDB in test mode (Ctrl+C to exit)...")
+	log.Info("Starting WhoDB in test mode...")
 
 	src.InitializeEngine()
 	r := router.InitializeRouter(staticFilesTest)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPortTest
-	}
-
-	srv = &http.Server{
-		Addr:              fmt.Sprintf(":%s", port),
+	srv := &http.Server{
+		Addr:              ":0",
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
@@ -64,17 +52,12 @@ func TestMain(m *testing.M) {
 		log.Info("Server starting...")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("listen: %s", err)
-			os.Exit(1)
 		}
 	}()
 
-	log.Infof("🎉 WhoDB test server running at http://localhost:%s 🎉", port)
+	log.Info("WhoDB test server running")
 
-	// Wait for SIGINT (Ctrl+C) or SIGTERM
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Info("Received shutdown signal (Ctrl+C). Shutting down...")
+	code := m.Run()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -83,5 +66,5 @@ func TestMain(m *testing.M) {
 	}
 
 	log.Info("Test server shut down. Exiting and writing coverage.")
-	os.Exit(m.Run())
+	os.Exit(code)
 }

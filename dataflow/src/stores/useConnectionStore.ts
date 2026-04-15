@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { graphqlClient } from '@/config/graphql-client';
 import { useAuthStore } from '@/stores/useAuthStore';
-import type { AuthCredentials } from '@/config/auth-store';
-import { getAuth } from '@/config/auth-store';
+import type { AuthSessionSummary } from '@/config/auth-store';
+import { getAuthSession } from '@/config/auth-store';
 import {
   GetDatabaseDocument,
   type GetDatabaseQuery,
@@ -95,7 +95,7 @@ export interface DDLResult {
 
 /** Map auth store Type (e.g. "Postgres") to SqlDialect. */
 function getDialect(): SqlDialect {
-  const dbType = getAuth()?.Type;
+  const dbType = getAuthSession()?.type;
   const map: Record<string, SqlDialect> = {
     Postgres: 'POSTGRES', MySQL: 'MYSQL',
     SQLite3: 'SQLITE3', ClickHouse: 'CLICKHOUSE',
@@ -135,16 +135,16 @@ const connectionTypeMap: Record<string, Connection['type']> = {
   ClickHouse: 'CLICKHOUSE',
 };
 
-function deriveConnection(creds: AuthCredentials, createdAt: string): Connection {
+function deriveConnection(session: AuthSessionSummary, createdAt: string): Connection {
   return {
     id: 'sealos',
-    name: `${creds.Type} @ ${creds.Hostname}`,
-    type: connectionTypeMap[creds.Type] ?? 'POSTGRES',
-    host: creds.Hostname,
-    port: creds.Advanced?.find((a) => a.Key === 'Port')?.Value ?? '',
-    user: creds.Username,
-    password: creds.Password,
-    database: creds.Database,
+    name: session.displayName || `${session.type} @ ${session.hostname}`,
+    type: connectionTypeMap[session.type] ?? 'POSTGRES',
+    host: session.hostname,
+    port: session.port,
+    user: '',
+    password: '',
+    database: session.database,
     createdAt,
   };
 }
@@ -181,11 +181,11 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   selectItem: (item) => set({ selectedItem: item }),
 
   fetchDatabases: async (_connectionId) => {
-    const creds = useAuthStore.getState().credentials;
-    if (!creds) return [];
+    const session = useAuthStore.getState().session;
+    if (!session) return [];
     const { data, error } = await graphqlClient.query<GetDatabaseQuery, GetDatabaseQueryVariables>({
       query: GetDatabaseDocument,
-      variables: { type: creds.Type },
+      variables: { type: session.type },
     });
     if (error) {
       console.error('[useConnectionStore] fetchDatabases failed:', error);
@@ -195,8 +195,8 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   fetchSchemas: async (_connectionId, database) => {
-    const creds = useAuthStore.getState().credentials;
-    if (!creds) return [];
+    const session = useAuthStore.getState().session;
+    if (!session) return [];
     const { data, error } = await graphqlClient.query<GetSchemaQuery>({
       query: GetSchemaDocument,
       context: { database },
@@ -209,8 +209,8 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   fetchTables: async (_connectionId, database, schema?) => {
-    const creds = useAuthStore.getState().credentials;
-    if (!creds) return [];
+    const session = useAuthStore.getState().session;
+    if (!session) return [];
     const schemaParam = schema ?? database;
     const { data, error } = await graphqlClient.query<GetStorageUnitsQuery, GetStorageUnitsQueryVariables>({
       query: GetStorageUnitsDocument,
@@ -228,7 +228,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   createDatabase: async (databaseName) => {
-    if (getAuth()?.Type === 'MongoDB') {
+    if (getAuthSession()?.type === 'MongoDB') {
       return { success: false, message: 'MongoDB database creation requires creating the first collection' };
     }
     const sql = createDatabaseSQL(getDialect(), databaseName);
@@ -236,7 +236,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   renameDatabase: async (oldName, newName) => {
-    if (getAuth()?.Type === 'MongoDB') {
+    if (getAuthSession()?.type === 'MongoDB') {
       return { success: false, message: 'Rename database is not supported for MongoDB' };
     }
     const sql = renameDatabaseSQL(getDialect(), oldName, newName);
@@ -247,7 +247,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   deleteDatabase: async (databaseName) => {
-    if (getAuth()?.Type === 'MongoDB') {
+    if (getAuthSession()?.type === 'MongoDB') {
       try {
         const { data, errors } = await graphqlClient.query<
           RawExecuteQuery,
@@ -347,8 +347,8 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
 // Keep `connections` in sync with auth credentials.
 // The original ConnectionContext used useMemo(credentials) — this subscription is the Zustand equivalent.
 useAuthStore.subscribe((s) => {
-  const creds = s.credentials;
+  const session = s.session;
   useConnectionStore.setState({
-    connections: creds ? [deriveConnection(creds, createdAt)] : [],
+    connections: session ? [deriveConnection(session, createdAt)] : [],
   });
 });

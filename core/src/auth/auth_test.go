@@ -18,15 +18,21 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/clidey/whodb/core/src/engine"
 	"github.com/clidey/whodb/core/src/env"
+	"github.com/clidey/whodb/core/src/session"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestIsPublicRouteAllowsIntrospectionInDev(t *testing.T) {
@@ -253,4 +259,90 @@ func TestIsAllowedPermitsWhitelistedOperations(t *testing.T) {
 	if isAllowed(req, []byte(denied)) {
 		t.Fatalf("expected GetDatabase for non-sqlite to be rejected")
 	}
+
+	bootstrap := `{"operationName":"BootstrapSealosSession","variables":{}}`
+	req = httptest.NewRequest(http.MethodPost, "/api/query", strings.NewReader(bootstrap))
+	if !isAllowed(req, []byte(bootstrap)) {
+		t.Fatalf("expected BootstrapSealosSession to be allowed without auth")
+	}
+}
+
+func TestAuthMiddlewareExtractsCredentialsFromSessionToken(t *testing.T) {
+	service := newAuthSessionServiceForTest(t)
+	record, token, err := service.Create(context.Background(), session.CreateParams{
+		Source:       "sealos",
+		Namespace:    "ns-demo",
+		ResourceName: "my-db",
+		DBType:       "Postgres",
+		Host:         "db.ns.svc",
+		Port:         "5432",
+		DatabaseName: "postgres",
+		Credentials: &engine.Credentials{
+			Type:     "Postgres",
+			Hostname: "db.ns.svc",
+			Username: "alice",
+			Password: "pw",
+			Database: "postgres",
+			Advanced: []engine.Record{{Key: "Port", Value: "5432"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+	if record == nil {
+		t.Fatalf("expected session metadata to be returned")
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/query", strings.NewReader(`{"operationName":"Other"}`))
+	req.Header.Set("Authorization", "Bearer session:"+token)
+	req.Header.Set("X-WhoDB-Database", "analytics")
+	rr := httptest.NewRecorder()
+
+	var captured *engine.Credentials
+	handler := AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		captured = GetCredentials(r.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected request to pass through middleware, got status %d", rr.Code)
+	}
+	if captured == nil {
+		t.Fatal("expected credentials to be set")
+	}
+	if captured.Username != "alice" || captured.Database != "analytics" {
+		t.Fatalf("expected session credentials with database override, got %+v", captured)
+	}
+}
+
+func newAuthSessionServiceForTest(t *testing.T) *session.Service {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	service, err := session.NewService(db, "12345678901234567890123456789012", 24*time.Hour)
+	if err != nil {
+		t.Fatalf("new session service: %v", err)
+	}
+
+	t.Setenv("WHODB_SESSION_ENCRYPTION_KEY", "12345678901234567890123456789012")
+	t.Setenv("WHODB_SESSION_TTL", "24h")
+	t.Setenv("WHODB_METADATA_DSN", "")
+	t.Setenv("WHODB_SESSION_DSN", "")
+	t.Setenv("WHODB_SEALOS_BOOTSTRAP_ENABLED", "true")
+
+	originalFactory := session.DefaultServiceFactory
+	session.DefaultServiceFactory = func() (*session.Service, error) { return service, nil }
+	t.Cleanup(func() {
+		session.DefaultServiceFactory = originalFactory
+		session.ResetDefaultService()
+		os.Unsetenv("WHODB_SESSION_ENCRYPTION_KEY")
+	})
+
+	return service
 }

@@ -1,0 +1,11 @@
+mutation BootstrapSealosSession($input: SealosBootstrapInput!) {
+  BootstrapSealosSession(input: $input) {
+    sessionToken
+    expiresAt
+    type
+    hostname
+    port
+    database
+    displayName
+  }
+}

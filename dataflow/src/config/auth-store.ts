@@ -12,51 +12,100 @@
 
 const STORAGE_KEY = 'dataflow_auth';
 
-export interface AuthCredentials {
-  /** Connection ID (assigned by Core on login) */
-  Id?: string;
-  /** WhoDB DatabaseType enum value (e.g. "Postgres", "MySQL") */
-  Type: string;
-  Hostname: string;
-  Username: string;
-  Password: string;
-  Database: string;
-  Advanced?: Array<{ Key: string; Value: string }>;
+export interface AuthSessionSummary {
+  sessionToken: string;
+  type: string;
+  hostname: string;
+  port: string;
+  database: string;
+  displayName: string;
+  expiresAt: string;
 }
 
-let currentAuth: AuthCredentials | null = null;
-
-/** Set credentials after a successful Login mutation. Persists to sessionStorage. */
-export function setAuthCredentials(credentials: AuthCredentials): void {
-  currentAuth = credentials;
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
+export interface BootstrapDescriptor {
+  dbType: string;
+  resourceName: string;
+  databaseName: string;
+  host?: string;
+  port?: string;
+  namespace?: string;
+  fingerprint: string;
 }
 
-/** Clear credentials. Removes from sessionStorage. */
+export interface PersistedAuthState {
+  session: AuthSessionSummary | null;
+  bootstrap: BootstrapDescriptor | null;
+}
+
+let currentAuthState: PersistedAuthState = {
+  session: null,
+  bootstrap: null,
+};
+let rebootstrapHandler: (() => Promise<boolean>) | null = null
+
+/** Set the opaque auth session after a successful bootstrap. */
+export function setAuthSession(session: AuthSessionSummary): void {
+  currentAuthState = { ...currentAuthState, session };
+  persistAuthState();
+}
+
+/** Set the current bootstrap descriptor used for Sealos rebootstrap. */
+export function setBootstrapDescriptor(bootstrap: BootstrapDescriptor | null): void {
+  currentAuthState = { ...currentAuthState, bootstrap };
+  persistAuthState();
+}
+
+/** Set both persisted auth records at once. */
+export function setPersistedAuthState(state: PersistedAuthState): void {
+  currentAuthState = state;
+  persistAuthState();
+}
+
+/** Clear auth session and bootstrap descriptor. */
 export function clearAuth(): void {
-  currentAuth = null;
+  currentAuthState = { session: null, bootstrap: null };
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
-/** Read current auth state (used by authLink). */
-export function getAuth(): AuthCredentials | null {
-  return currentAuth;
+/** Read the current auth session (used by request plumbing). */
+export function getAuthSession(): AuthSessionSummary | null {
+  return currentAuthState.session;
 }
 
-/**
- * Restore credentials from sessionStorage into in-memory store.
- * Called by useAuthStore.initialize() on mount when no Sealos URL params are present.
- * Returns the restored credentials, or null if none were found.
- */
-export function restoreFromStorage(): AuthCredentials | null {
+/** Read the current Sealos bootstrap descriptor. */
+export function getBootstrapDescriptor(): BootstrapDescriptor | null {
+  return currentAuthState.bootstrap;
+}
+
+/** Register the shared rebootstrap handler used by request plumbing. */
+export function registerRebootstrapHandler(handler: (() => Promise<boolean>) | null): void {
+  rebootstrapHandler = handler
+}
+
+/** Trigger a single shared rebootstrap attempt when a session expires. */
+export async function triggerRebootstrap(): Promise<boolean> {
+  if (!rebootstrapHandler) return false
+  return rebootstrapHandler()
+}
+
+/** Restore persisted auth state from sessionStorage. */
+export function restoreFromStorage(): PersistedAuthState | null {
   const stored = sessionStorage.getItem(STORAGE_KEY);
   if (!stored) return null;
+
   try {
-    const credentials: AuthCredentials = JSON.parse(stored);
-    currentAuth = credentials;
-    return credentials;
+    const state = JSON.parse(stored) as PersistedAuthState;
+    currentAuthState = {
+      session: state.session ?? null,
+      bootstrap: state.bootstrap ?? null,
+    };
+    return currentAuthState;
   } catch {
     sessionStorage.removeItem(STORAGE_KEY);
     return null;
   }
+}
+
+function persistAuthState(): void {
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(currentAuthState));
 }

@@ -22,9 +22,7 @@ COPY ./dataflow/ ./
 
 ARG VERSION=dev
 ENV VITE_APP_VERSION=${VERSION}
-ARG WHODB_AES_KEY
-RUN if [ -n "$WHODB_AES_KEY" ]; then echo "VITE_WHODB_AES_KEY=$WHODB_AES_KEY" >> .env; fi && \
-    pnpm run build
+RUN pnpm run build
 ARG TARGETARCH
 ARG PLATFORM=docker
 

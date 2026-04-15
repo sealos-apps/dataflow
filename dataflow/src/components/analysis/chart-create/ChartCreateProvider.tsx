@@ -120,6 +120,7 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
     const [chartConfig, setChartConfig] = useState<ChartConfig>(
         editComponent?.visualization?.chartConfig ?? DEFAULT_CHART_CONFIG,
     )
+    const chartConfigRef = useRef<ChartConfig>(editComponent?.visualization?.chartConfig ?? DEFAULT_CHART_CONFIG)
     const [queryData, setQueryData] = useState<QueryData | null>(
         initialQueryData ?? (initialData ? {
             columns: initialData.columns,
@@ -148,17 +149,17 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
     }, [])
 
     const handleConfigChange = useCallback((updates: Partial<ChartConfig>) => {
-        setChartConfig(prev => {
-            const next = {
-                ...prev,
-                ...updates,
-                options: updates.options ? { ...prev.options, ...updates.options } : prev.options,
-            }
-            if (updates.xAxisColumn && updates.xAxisColumn !== prev.xAxisColumn) {
-                next.yAxisColumns = prev.yAxisColumns.filter(col => col !== updates.xAxisColumn)
-            }
-            return next
-        })
+        const prev = chartConfigRef.current
+        const next = {
+            ...prev,
+            ...updates,
+            options: updates.options ? { ...prev.options, ...updates.options } : prev.options,
+        }
+        if (updates.xAxisColumn && updates.xAxisColumn !== prev.xAxisColumn) {
+            next.yAxisColumns = next.yAxisColumns.filter(col => col !== updates.xAxisColumn)
+        }
+        chartConfigRef.current = next
+        setChartConfig(next)
     }, [])
 
     const handleQueryResults = useCallback((
@@ -175,11 +176,15 @@ export function ChartCreateProvider({ editComponent, initialQuery, initialData, 
         })
         setChartConfig(prev => {
             const colSet = new Set(columns)
-            return {
+            const base = chartConfigRef.current
+            const next = {
                 ...prev,
-                xAxisColumn: colSet.has(prev.xAxisColumn) ? prev.xAxisColumn : '',
-                yAxisColumns: prev.yAxisColumns.filter(column => colSet.has(column)),
+                ...base,
+                xAxisColumn: colSet.has(base.xAxisColumn) ? base.xAxisColumn : '',
+                yAxisColumns: base.yAxisColumns.filter(column => colSet.has(column)),
             }
+            chartConfigRef.current = next
+            return next
         })
     }, [])
 

@@ -28,6 +28,8 @@ export const enCommonMessages = {
   'common.status.processing': 'Processing...',
   'common.status.exporting': 'Exporting...',
   'common.status.exportComplete': 'Export complete! File downloaded.',
+  'common.auth.loading': 'Loading session...',
+  'common.auth.bootstrapFailed': 'Authentication failed: {message}',
   'common.alert.error': 'Error',
   'common.alert.success': 'Success',
   'common.alert.info': 'Info',

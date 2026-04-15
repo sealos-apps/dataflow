@@ -155,6 +155,26 @@ input LoginCredentials {
   Advanced: [RecordInput!]
 }
 
+input SealosBootstrapInput {
+  kubeconfig: String!
+  dbType: String!
+  resourceName: String!
+  databaseName: String
+  host: String
+  port: String
+  namespace: String
+}
+
+type AuthSessionPayload {
+  sessionToken: String!
+  expiresAt: String!
+  type: String!
+  hostname: String!
+  port: String!
+  database: String!
+  displayName: String!
+}
+
 type SettingsConfig {
   MetricsEnabled: Boolean
   CloudProvidersEnabled: Boolean!
@@ -543,6 +563,7 @@ type GenerateChatTitleResponse {
 }
 
 type Mutation {
+  BootstrapSealosSession(input: SealosBootstrapInput!): AuthSessionPayload!
   Login(credentials: LoginCredentials!): StatusResponse!
   LoginWithProfile(profile: LoginProfileInput!): StatusResponse!
   Logout: StatusResponse!

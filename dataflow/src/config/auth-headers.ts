@@ -1,14 +1,13 @@
 /**
  * Auth header utilities for WhoDB Core API.
  *
- * All requests to Core carry credentials in the Authorization header as a
- * Base64-encoded JSON payload. Headers are used instead of cookies because
- * SSL certificates in Advanced fields can exceed the 4KB cookie limit.
+ * All requests to Core carry an opaque session token in the Authorization
+ * header. Database overrides are sent separately when needed.
  *
  * Shared auth header helpers for DataFlow requests.
  */
 
-import { getAuth } from './auth-store';
+import { getAuthSession } from './auth-store';
 
 /**
  * Builds the Authorization header value for the current session.
@@ -19,26 +18,9 @@ import { getAuth } from './auth-store';
  * @returns Header value string, or null if no auth credentials are set.
  */
 export function getAuthorizationHeader(databaseOverride?: string): string | null {
-  const auth = getAuth();
+  const auth = getAuthSession();
   if (!auth) return null;
-
-  const tokenPayload = {
-    Id: auth.Id,
-    Type: auth.Type,
-    Hostname: auth.Hostname,
-    Username: auth.Username,
-    Password: auth.Password,
-    Database: databaseOverride ?? auth.Database,
-    Advanced: auth.Advanced ?? [],
-    IsProfile: false,
-  };
-
-  const jsonString = JSON.stringify(tokenPayload);
-  const utf8Bytes = encodeURIComponent(jsonString).replace(
-    /%([0-9A-F]{2})/g,
-    (_, p1) => String.fromCharCode(parseInt(p1, 16)),
-  );
-  return `Bearer ${btoa(utf8Bytes)}`;
+  return `Bearer session:${auth.sessionToken}`;
 }
 
 /**
@@ -53,8 +35,17 @@ export function addAuthHeader(
   databaseOverride?: string,
 ): Record<string, string> {
   const authHeader = getAuthorizationHeader(databaseOverride);
-  if (authHeader) {
-    return { ...headers, Authorization: authHeader };
+  if (!authHeader) {
+    return headers;
   }
-  return headers;
+
+  const nextHeaders: Record<string, string> = {
+    ...headers,
+    Authorization: authHeader,
+  };
+  if (databaseOverride) {
+    nextHeaders['X-WhoDB-Database'] = databaseOverride;
+  }
+
+  return nextHeaders;
 }

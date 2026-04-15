@@ -74,6 +74,17 @@ export type AtomicWhereCondition = {
   Value: Scalars['String']['input'];
 };
 
+export type AuthSessionPayload = {
+  __typename?: 'AuthSessionPayload';
+  database: Scalars['String']['output'];
+  displayName: Scalars['String']['output'];
+  expiresAt: Scalars['String']['output'];
+  hostname: Scalars['String']['output'];
+  port: Scalars['String']['output'];
+  sessionToken: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
 export type Capabilities = {
   __typename?: 'Capabilities';
   supportsChat: Scalars['Boolean']['output'];
@@ -392,6 +403,7 @@ export type Mutation = {
   AddRow: StatusResponse;
   AddStorageUnit: StatusResponse;
   AddWidget: DashboardWidget;
+  BootstrapSealosSession: AuthSessionPayload;
   CreateDashboard: Dashboard;
   DeleteDashboard: StatusResponse;
   DeleteRow: StatusResponse;
@@ -442,6 +454,11 @@ export type MutationAddStorageUnitArgs = {
 export type MutationAddWidgetArgs = {
   dashboardId: Scalars['ID']['input'];
   input: WidgetInput;
+};
+
+
+export type MutationBootstrapSealosSessionArgs = {
+  input: SealosBootstrapInput;
 };
 
 
@@ -730,6 +747,16 @@ export type SslStatus = {
   Mode: Scalars['String']['output'];
 };
 
+export type SealosBootstrapInput = {
+  databaseName?: InputMaybe<Scalars['String']['input']>;
+  dbType: Scalars['String']['input'];
+  host?: InputMaybe<Scalars['String']['input']>;
+  kubeconfig: Scalars['String']['input'];
+  namespace?: InputMaybe<Scalars['String']['input']>;
+  port?: InputMaybe<Scalars['String']['input']>;
+  resourceName: Scalars['String']['input'];
+};
+
 export type SettingsConfig = {
   __typename?: 'SettingsConfig';
   CloudProvidersEnabled: Scalars['Boolean']['output'];
@@ -866,6 +893,13 @@ export type AddWidgetMutationVariables = Exact<{
 
 
 export type AddWidgetMutation = { __typename?: 'Mutation', AddWidget: { __typename?: 'DashboardWidget', ID: string, Type: string, Title: string, Description?: string | null, Layout: string, Query?: string | null, QueryContext?: string | null, Visualization?: string | null, Snapshot?: string | null, SortOrder: number } };
+
+export type BootstrapSealosSessionMutationVariables = Exact<{
+  input: SealosBootstrapInput;
+}>;
+
+
+export type BootstrapSealosSessionMutation = { __typename?: 'Mutation', BootstrapSealosSession: { __typename?: 'AuthSessionPayload', sessionToken: string, expiresAt: string, type: string, hostname: string, port: string, database: string, displayName: string } };
 
 export type CreateDashboardMutationVariables = Exact<{
   name: Scalars['String']['input'];
@@ -1136,6 +1170,45 @@ export function useAddWidgetMutation(baseOptions?: Apollo.MutationHookOptions<Ad
 export type AddWidgetMutationHookResult = ReturnType<typeof useAddWidgetMutation>;
 export type AddWidgetMutationResult = Apollo.MutationResult<AddWidgetMutation>;
 export type AddWidgetMutationOptions = Apollo.BaseMutationOptions<AddWidgetMutation, AddWidgetMutationVariables>;
+export const BootstrapSealosSessionDocument = gql`
+    mutation BootstrapSealosSession($input: SealosBootstrapInput!) {
+  BootstrapSealosSession(input: $input) {
+    sessionToken
+    expiresAt
+    type
+    hostname
+    port
+    database
+    displayName
+  }
+}
+    `;
+export type BootstrapSealosSessionMutationFn = Apollo.MutationFunction<BootstrapSealosSessionMutation, BootstrapSealosSessionMutationVariables>;
+
+/**
+ * __useBootstrapSealosSessionMutation__
+ *
+ * To run a mutation, you first call `useBootstrapSealosSessionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useBootstrapSealosSessionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [bootstrapSealosSessionMutation, { data, loading, error }] = useBootstrapSealosSessionMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useBootstrapSealosSessionMutation(baseOptions?: Apollo.MutationHookOptions<BootstrapSealosSessionMutation, BootstrapSealosSessionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<BootstrapSealosSessionMutation, BootstrapSealosSessionMutationVariables>(BootstrapSealosSessionDocument, options);
+      }
+export type BootstrapSealosSessionMutationHookResult = ReturnType<typeof useBootstrapSealosSessionMutation>;
+export type BootstrapSealosSessionMutationResult = Apollo.MutationResult<BootstrapSealosSessionMutation>;
+export type BootstrapSealosSessionMutationOptions = Apollo.BaseMutationOptions<BootstrapSealosSessionMutation, BootstrapSealosSessionMutationVariables>;
 export const CreateDashboardDocument = gql`
     mutation CreateDashboard($name: String!, $description: String, $refreshRule: String!) {
   CreateDashboard(

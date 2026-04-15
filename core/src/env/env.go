@@ -181,6 +181,33 @@ func GetOpenAIEndpoint() string {
 	return "https://api.openai.com/v1"
 }
 
+// GetSessionDSN returns the configured auth session DSN, falling back to the
+// metadata DSN when a dedicated session DSN is not configured.
+func GetSessionDSN() string {
+	if dsn := strings.TrimSpace(os.Getenv("WHODB_SESSION_DSN")); dsn != "" {
+		return dsn
+	}
+	return strings.TrimSpace(os.Getenv("WHODB_METADATA_DSN"))
+}
+
+// GetSessionEncryptionKey returns the server-side auth session encryption key.
+func GetSessionEncryptionKey() string {
+	return strings.TrimSpace(os.Getenv("WHODB_SESSION_ENCRYPTION_KEY"))
+}
+
+// GetSessionTTL returns the configured auth session lifetime, defaulting to 24h.
+func GetSessionTTL() string {
+	if ttl := strings.TrimSpace(os.Getenv("WHODB_SESSION_TTL")); ttl != "" {
+		return ttl
+	}
+	return "24h"
+}
+
+// GetSealosBootstrapEnabled returns true when the Sealos bootstrap flow is enabled.
+func GetSealosBootstrapEnabled() bool {
+	return os.Getenv("WHODB_SEALOS_BOOTSTRAP_ENABLED") == "true"
+}
+
 func getMaxPageSize() int {
 	val := os.Getenv("WHODB_MAX_PAGE_SIZE")
 	if val == "" {
@@ -192,4 +219,3 @@ func getMaxPageSize() int {
 	}
 	return n
 }
-

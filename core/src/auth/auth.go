@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/clidey/whodb/core/src/engine"
 	"github.com/clidey/whodb/core/src/env"
 	"github.com/clidey/whodb/core/src/log"
+	"github.com/clidey/whodb/core/src/session"
 )
 
 type AuthKey string
@@ -80,6 +82,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	var onceKeyring sync.Once
 	var onceInline sync.Once
 	var onceProfile sync.Once
+	var onceSession sync.Once
 	const maxAuthHeaderLen = 16 * 1024
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublicRoute(r) {
@@ -128,6 +131,38 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if token == "" {
 			log.Debug("[Auth] No token found (no cookie or header), returning 401")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if strings.HasPrefix(token, "session:") {
+			rawToken := strings.TrimPrefix(token, "session:")
+			svc, err := session.GetDefaultService()
+			if err != nil {
+				log.Debugf("[Auth] Session service unavailable: %v", err)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			credentials, _, err := svc.ResolveToken(r.Context(), rawToken)
+			if err != nil {
+				if errors.Is(err, session.ErrSessionNotFound) ||
+					errors.Is(err, session.ErrSessionExpired) ||
+					errors.Is(err, session.ErrSessionRevoked) {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+				log.Debugf("[Auth] Failed to resolve session token: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			if databaseOverride := strings.TrimSpace(r.Header.Get("X-WhoDB-Database")); databaseOverride != "" {
+				credentials.Database = databaseOverride
+			}
+
+			onceSession.Do(func() { log.Info("Auth: credentials resolved via server session") })
+			ctx := context.WithValue(r.Context(), AuthKey_Credentials, credentials)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
@@ -233,7 +268,7 @@ func isAllowed(r *http.Request, body []byte) bool {
 	}
 
 	switch query.OperationName {
-	case "Login", "LoginWithProfile", "GetProfiles", "UpdateSettings", "SettingsConfig", "GetVersion",
+	case "Login", "LoginWithProfile", "BootstrapSealosSession", "GetProfiles", "UpdateSettings", "SettingsConfig", "GetVersion",
 		"GetAWSProviders", "GetDiscoveredConnections", "GetProviderConnections",
 		"GetLocalAWSProfiles", "GetAWSRegions",
 		"AddAWSProvider", "TestAWSCredentials", "TestCloudProvider",
