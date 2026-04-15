@@ -2,16 +2,21 @@
 
 Before marking any task as complete, run through this verification checklist.
 
-## Frontend (TypeScript/React)
+## DataFlow (TypeScript/React)
 
 ### Type Checking
 ```bash
-cd frontend && pnpm run typecheck
+cd dataflow && pnpm run typecheck
 ```
 
 ### Build Verification
 ```bash
-cd frontend && pnpm run build:ce
+cd dataflow && pnpm run build
+```
+
+### Unit Tests
+```bash
+cd dataflow && pnpm run test
 ```
 
 ### Dead Code Check
@@ -24,7 +29,7 @@ After adding new code, verify it's actually used:
 
 ### Build Verification
 ```bash
-cd core && go build .
+cd core && go build ./...
 ```
 
 ### Vet Check
@@ -37,23 +42,12 @@ cd core && go vet ./...
 - Check that new types are actually used
 - Remove unused imports (Go compiler will catch these)
 
-## Common Issues to Catch
-
-1. **Unused imports** - Both Go and TypeScript will flag these
-2. **Unused variables** - Especially after refactoring
-3. **Orphaned helper functions** - Functions added but never called
-4. **Stale utility code** - Code added for a purpose that changed
-5. **Commented-out code** - Remove instead of leaving commented
-
 ## Quick Verification Commands
 
 ```bash
-# Frontend full check
-cd frontend && pnpm run typecheck && pnpm run build:ce
+# DataFlow full check
+cd dataflow && pnpm run typecheck && pnpm run build && pnpm run test
 
 # Backend full check
-cd core && go build . && go vet ./...
-
-# Search for unused exports (manual)
-# Use grep to search for function/type names and verify usage
+cd core && go build ./... && go vet ./...
 ```

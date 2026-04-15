@@ -157,4 +157,4 @@ m.nameInput = textinput.New()  // NO - obvious from code
 
 For Go: See `core/src/analytics/posthog.go` - every exported function has a doc comment.
 
-For TypeScript: See `frontend/src/utils/database-operators.ts` - proper JSDoc with params and returns.
+For TypeScript: See `dataflow/src/config/auth-store.ts` - proper JSDoc with params and returns.
