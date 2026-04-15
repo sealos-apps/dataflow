@@ -5,7 +5,7 @@
 
 export type SqlDialect = 'MYSQL' | 'POSTGRES' | 'SQLITE3' | 'CLICKHOUSE';
 
-/** Resolve a frontend/backend connection type to a supported SQL dialect. */
+/** Resolve a connection type to a supported SQL dialect. */
 export function resolveSqlDialect(dbType: string | undefined): SqlDialect {
   switch (dbType?.toUpperCase()) {
     case 'MYSQL':

@@ -7,7 +7,7 @@
  * - authLink: injects Authorization Bearer header from auth-store
  * - errorLink: logs network errors
  *
- * Reference: frontend/src/config/graphql-client.ts
+ * Shared GraphQL client wiring for DataFlow.
  */
 
 import { ApolloClient, createHttpLink, InMemoryCache } from '@apollo/client';

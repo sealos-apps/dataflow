@@ -5,7 +5,7 @@
  * Base64-encoded JSON payload. Headers are used instead of cookies because
  * SSL certificates in Advanced fields can exceed the 4KB cookie limit.
  *
- * Reference: frontend/src/utils/auth-headers.ts
+ * Shared auth header helpers for DataFlow requests.
  */
 
 import { getAuth } from './auth-store';

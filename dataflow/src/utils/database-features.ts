@@ -1,7 +1,6 @@
 /**
  * Database type feature detection utilities.
  *
- * Ported from frontend/src/utils/database-features.ts.
  * Accepts both DataFlow uppercase types ('POSTGRES', 'MYSQL', ...)
  * and WhoDB mixed-case types ('Postgres', 'MySQL', ...).
  */
