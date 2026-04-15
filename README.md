@@ -1,36 +1,27 @@
-<p align="center">
-  <img src="docs/logo/logo.png" alt="DataFlow" width="100" />
-</p>
-
-<h1 align="center">DataFlow</h1>
-
-<p align="center">
-  A browser-based database workspace for exploring schemas, editing data, running queries, and building lightweight analysis views.
-</p>
-
----
-
 ## Overview
 
-DataFlow is the web workspace in this repository. It runs on top of the Go backend in [`core/`](./core) and provides a single interface for day-to-day database inspection and analysis.
+DataFlow is the web database workspace in this repository. It runs on top of the Go backend in [`core/`](./core) and is positioned as a Sealos-native database GUI plus a lightweight BI panel.
+
+In the current version, the product is centered on three primary jobs:
+
+- Browse and maintain database objects and records
+- Write SQL, MongoDB, or Redis queries and commands
+- Turn query results into charts and reusable dashboards
 
 ### Supported Databases
 
-| SQL | Document / Key-Value | Analytics |
-|-----|----------------------|-----------|
+| Relational | Document / Key-Value | Analytics |
+|------------|----------------------|-----------|
 | PostgreSQL | MongoDB | ClickHouse |
-| MySQL | Redis | Elasticsearch |
-| MariaDB | | |
-| SQLite | | |
+| MySQL | Redis | |
 
 ### Core Workflows
 
 - Browse databases, schemas, tables, collections, and keys
-- View, edit, insert, and delete records
-- Run SQL and raw database queries
-- Import and export data
+- View, edit, insert, delete, and export data
+- Run SQL, Mongo shell-style, and Redis commands in editors
 - Build charts and dashboard widgets from query results
-- Work across SQL, MongoDB, and Redis in one workspace
+- Work across PostgreSQL, MySQL, MongoDB, Redis, and ClickHouse in one workspace
 
 ## Local Development
 
