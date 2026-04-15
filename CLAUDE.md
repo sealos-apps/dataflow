@@ -29,10 +29,18 @@ core/                   # CE backend (Go)
   graph/*.resolvers.go  # GraphQL resolvers
 
 dataflow/               # DataFlow analysis platform (React 19/TypeScript/Vite)
-  src/main.tsx         # Entry point
-  src/stores/          # Zustand state (auth, connection, tab, analysis)
-  src/generated/       # GraphQL codegen output (@/* alias)
-  src/components/      # layout, database views, analysis dashboard, editor, ui
+  src/main.tsx         # Entry point (@/* alias maps to src/)
+  src/stores/          # Zustand state (auth, connection, tab, layout, analysis*)
+  src/config/          # Apollo client, auth headers, sealos runtime config
+  src/graphql/         # .graphql operation files (queries/, mutations/)
+  src/generated/       # GraphQL codegen output (graphql.tsx)
+  src/i18n/            # I18nProvider + locales/{en,zh}
+  src/components/      # layout, sidebar, dashboard-sidebar, database (sql/mongodb/redis/shared),
+                       #   analysis (chart-create, editor), editor (Monaco/SQL), ui (shadcn-style)
+  src/utils/           # database-export, ddl-sql, mongodb-shell, sql-split, search-parser
+  src/lib/utils.ts     # cn() — clsx + tailwind-merge
+  src/test/            # Vitest tests + renderWithI18n helper
+  docs/PRD.md          # Product requirements
 
 dev/                    # Docker compose, test scripts, sample data
 docs/                   # Integration plan and analysis
@@ -77,8 +85,7 @@ bash dev/run-backend-tests.sh all           # Unit + integration
 - Path alias: `@/*` maps to `src/` (configured in `vite.config.ts` and `tsconfig.json`)
 - Styling: `cn()` utility (clsx + tailwind-merge), CSS variables in `src/globals.css`
 - GraphQL codegen: define operations in `.graphql` files, run `pnpm run generate`
-- Key libraries: Monaco Editor, ECharts, react-grid-layout, xlsx
-- See `dataflow/CLAUDE.md` for full architecture details
+- Key libraries: Apollo Client, Monaco Editor, ECharts, react-grid-layout, xlsx, jszip
 
 ## When Updating Dependencies
 
