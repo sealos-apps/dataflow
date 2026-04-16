@@ -21,6 +21,11 @@
       "sourceType": "github",
       "computedHash": "1f3e1f005fc40fda85d250ae906c8ee4f7e8e833e23adfeca6542c19609fd7cd"
     },
+    "sealos-app-builder": {
+      "source": "labring/seakills",
+      "sourceType": "github",
+      "computedHash": "bbd18bd50ae60ae823f56ea40dfa091f20f074d8603a2adc6c435d93f9fc224a"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
