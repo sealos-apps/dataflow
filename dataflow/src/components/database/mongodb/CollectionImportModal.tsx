@@ -96,6 +96,7 @@ export function CollectionImportModal({
   const [upsertKeys, setUpsertKeys] = useState('_id')
   const [delimiter, setDelimiter] = useState('')
   const [sheet, setSheet] = useState('')
+  const [sheetOptions, setSheetOptions] = useState<string[]>([])
   const [skippedColumns, setSkippedColumns] = useState<Set<string>>(new Set())
   const [preview, setPreview] = useState<CollectionImportPreview | null>(null)
   const [result, setResult] = useState<CollectionImportResult | null>(null)
@@ -125,6 +126,7 @@ export function CollectionImportModal({
     setUpsertKeys('_id')
     setDelimiter('')
     setSheet('')
+    setSheetOptions([])
     setSkippedColumns(new Set())
     setPreview(null)
     setResult(null)
@@ -137,6 +139,12 @@ export function CollectionImportModal({
 
   const loadPreview = useCallback(
     async (nextFile: File, nextFormat: CollectionImportFormat) => {
+      setResult(null)
+      setPreview(null)
+      if (nextFormat !== CollectionImportFormat.Excel) {
+        setSheetOptions([])
+      }
+
       const response = await runPreview({
         variables: {
           input: {
@@ -150,6 +158,7 @@ export function CollectionImportModal({
       })
       const nextPreview = response.data?.ImportCollectionPreview ?? null
       setPreview(nextPreview)
+      setSheetOptions(nextPreview?.Sheets ?? [])
       setSkippedColumns(new Set())
     },
     [runPreview, delimiter, sheet, databaseName],
@@ -163,22 +172,32 @@ export function CollectionImportModal({
       if (!selected) {
         setFile(null)
         setFormat(null)
+        setSheet('')
+        setSheetOptions([])
         return
       }
       const inferred = inferCollectionFormat(selected.name)
       if (!inferred) {
         setFile(null)
         setFormat(null)
+        setSheet('')
+        setSheetOptions([])
         setFileError(t('database.import.collection.invalidFile'))
         return
       }
       setFileError(null)
+      setSheet('')
+      setSheetOptions([])
       setFile(selected)
       setFormat(inferred)
-      void loadPreview(selected, inferred)
     },
-    [loadPreview, t],
+    [t],
   )
+
+  useEffect(() => {
+    if (!file || !format) return
+    void loadPreview(file, format)
+  }, [delimiter, file, format, loadPreview, sheet])
 
   const toggleColumn = useCallback((column: string) => {
     setSkippedColumns((current) => {
@@ -195,8 +214,10 @@ export function CollectionImportModal({
   const canRun =
     file != null &&
     format != null &&
+    preview != null &&
     targetCollection.length > 0 &&
     !preview?.ValidationError &&
+    !previewLoading &&
     !importing
 
   const executeImport = useCallback(async () => {
@@ -231,12 +252,8 @@ export function CollectionImportModal({
   ])
 
   const showDelimiter = format === CollectionImportFormat.Csv
-  const showSheet = format === CollectionImportFormat.Excel
-  const refreshButton = (showDelimiter || showSheet) && file && format ? (
-    <Button type="button" variant="outline" onClick={() => void loadPreview(file, format)} disabled={previewLoading || importing}>
-      {t('database.import.collection.refreshPreview')}
-    </Button>
-  ) : undefined
+  const showSheet = format === CollectionImportFormat.Excel && sheetOptions.length > 0
+  const selectedSheet = sheet || preview?.Sheet || sheetOptions[0] || ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -335,10 +352,10 @@ export function CollectionImportModal({
             onDelimiterChange={setDelimiter}
             sheetLabel={t('database.import.collection.excelSheet')}
             sheetPlaceholder={t('database.import.collection.excelSheetPlaceholder')}
-            sheet={sheet}
+            sheetOptions={sheetOptions}
+            sheet={selectedSheet}
             onSheetChange={setSheet}
             disabled={importing}
-            trailing={refreshButton}
           />
 
           {previewLoading && (
