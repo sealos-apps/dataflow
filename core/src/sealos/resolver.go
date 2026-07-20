@@ -14,6 +14,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -43,8 +46,23 @@ type ResolvedBootstrap struct {
 	Credentials  *engine.Credentials
 }
 
+// InstanceIdentityInput identifies the Sealos database instance whose lifecycle identity must be resolved.
+type InstanceIdentityInput struct {
+	ResourceName string
+	Namespace    string
+}
+
+// ResolvedInstanceIdentity is the authoritative Kubernetes identity of a Sealos database instance.
+type ResolvedInstanceIdentity struct {
+	UID          string
+	Namespace    string
+	ResourceName string
+}
+
 // BootstrapResolver resolves Sealos bootstrap metadata into database credentials.
 type BootstrapResolver interface {
+	// ResolveInstanceIdentity resolves the authoritative Database Instance Identity.
+	ResolveInstanceIdentity(context.Context, InstanceIdentityInput) (*ResolvedInstanceIdentity, error)
 	ResolveBootstrap(context.Context, BootstrapInput) (*ResolvedBootstrap, error)
 }
 
@@ -118,8 +136,10 @@ func NamespaceFromKubeconfig(raw string) (string, error) {
 }
 
 type resolver struct {
-	kubeconfig string
-	clientset  kubernetes.Interface
+	kubeconfig      string
+	clientset       kubernetes.Interface
+	discoveryClient discovery.DiscoveryInterface
+	dynamicClient   dynamic.Interface
 }
 
 // NewBootstrapResolver creates the production Sealos bootstrap resolver.
@@ -137,11 +157,100 @@ func NewBootstrapResolver(kubeconfig string) (BootstrapResolver, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create kubernetes client: %w", err)
 	}
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("create kubernetes dynamic client: %w", err)
+	}
 
 	return &resolver{
-		kubeconfig: kubeconfig,
-		clientset:  clientset,
+		kubeconfig:      kubeconfig,
+		clientset:       clientset,
+		discoveryClient: clientset.Discovery(),
+		dynamicClient:   dynamicClient,
 	}, nil
+}
+
+// ResolveInstanceIdentity resolves the owning KubeBlocks Cluster UID for a Sealos database instance.
+func (r *resolver) ResolveInstanceIdentity(ctx context.Context, input InstanceIdentityInput) (*ResolvedInstanceIdentity, error) {
+	resourceName := strings.TrimSpace(input.ResourceName)
+	if resourceName == "" {
+		return nil, errors.New("resourceName is required")
+	}
+
+	namespace := strings.TrimSpace(input.Namespace)
+	if namespace == "" {
+		var err error
+		namespace, err = NamespaceFromKubeconfig(r.kubeconfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	gvr, err := discoverKubeBlocksClusterResource(r.discoveryClient)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster, err := r.dynamicClient.Resource(gvr).Namespace(namespace).Get(ctx, resourceName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("read KubeBlocks Cluster: %w", err)
+	}
+
+	uid := strings.TrimSpace(string(cluster.GetUID()))
+	if uid == "" {
+		return nil, errors.New("KubeBlocks Cluster has an empty UID")
+	}
+
+	return &ResolvedInstanceIdentity{
+		UID:          uid,
+		Namespace:    namespace,
+		ResourceName: resourceName,
+	}, nil
+}
+
+func discoverKubeBlocksClusterResource(client discovery.DiscoveryInterface) (schema.GroupVersionResource, error) {
+	groups, err := client.ServerGroups()
+	if err != nil {
+		return schema.GroupVersionResource{}, fmt.Errorf("discover Kubernetes API groups: %w", err)
+	}
+
+	for _, group := range groups.Groups {
+		if group.Name != "apps.kubeblocks.io" {
+			continue
+		}
+
+		versions := group.Versions
+		if group.PreferredVersion.GroupVersion != "" {
+			versions = append([]metav1.GroupVersionForDiscovery{group.PreferredVersion}, versions...)
+		}
+		seen := make(map[string]struct{}, len(versions))
+		for _, version := range versions {
+			if _, ok := seen[version.GroupVersion]; ok {
+				continue
+			}
+			seen[version.GroupVersion] = struct{}{}
+
+			resources, err := client.ServerResourcesForGroupVersion(version.GroupVersion)
+			if err != nil {
+				return schema.GroupVersionResource{}, fmt.Errorf("discover KubeBlocks Cluster resource: %w", err)
+			}
+			for _, resource := range resources.APIResources {
+				if resource.Name != "clusters" {
+					continue
+				}
+				if !resource.Namespaced {
+					return schema.GroupVersionResource{}, errors.New("KubeBlocks Cluster resource is not namespaced")
+				}
+				groupVersion, err := schema.ParseGroupVersion(resources.GroupVersion)
+				if err != nil {
+					return schema.GroupVersionResource{}, fmt.Errorf("parse KubeBlocks Cluster group version: %w", err)
+				}
+				return groupVersion.WithResource(resource.Name), nil
+			}
+		}
+	}
+
+	return schema.GroupVersionResource{}, errors.New("KubeBlocks Cluster resource was not discovered")
 }
 
 // ResolveBootstrap resolves bootstrap metadata into database credentials.

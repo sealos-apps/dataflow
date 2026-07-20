@@ -2,12 +2,15 @@ import { create } from 'zustand'
 import {
   BootstrapSealosSessionDocument,
   CreateStandaloneSessionDocument,
+  ResolveSealosInstanceIdentityDocument,
   SettingsConfigDocument,
   type BootstrapSealosSessionMutation,
   type BootstrapSealosSessionMutationVariables,
   type CreateStandaloneSessionMutation,
   type CreateStandaloneSessionMutationVariables,
   type LoginCredentials,
+  type ResolveSealosInstanceIdentityQuery,
+  type ResolveSealosInstanceIdentityQueryVariables,
   type SettingsConfigQuery,
   type SettingsConfigQueryVariables,
 } from '@graphql'
@@ -27,6 +30,7 @@ import {
   isSealosContext,
 } from '@/config/sealos'
 import { replaceBootstrapUrl } from '@/i18n/url-params'
+import type { MessageKey } from '@/i18n/messages'
 import { useSealosStore } from '@/stores/useSealosStore'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error'
@@ -36,7 +40,7 @@ interface AuthState {
   session: AuthSessionSummary | null
   bootstrapDescriptor: BootstrapDescriptor | null
   standaloneLoginDisabled: boolean
-  error: string | null
+  error: MessageKey | null
   initialize: () => Promise<void>
   createStandaloneSession: (credentials: LoginCredentials) => Promise<AuthSessionSummary>
   rebootstrap: () => Promise<boolean>
@@ -69,12 +73,13 @@ async function bootstrapSealosSession(
   })
 
   const payload = result.data?.BootstrapSealosSession
-  if (!payload) {
+  if (!payload?.instanceUid) {
     throw new Error('Missing bootstrap payload')
   }
 
   return {
     sessionToken: payload.sessionToken,
+    instanceUid: payload.instanceUid,
     type: payload.type,
     hostname: payload.hostname,
     port: payload.port,
@@ -82,6 +87,35 @@ async function bootstrapSealosSession(
     displayName: payload.displayName,
     expiresAt: payload.expiresAt,
   }
+}
+
+async function resolveSealosInstanceUID(
+  descriptor: BootstrapDescriptor,
+  kubeconfig: string,
+): Promise<string> {
+  const result = await graphqlClient.query<
+    ResolveSealosInstanceIdentityQuery,
+    ResolveSealosInstanceIdentityQueryVariables
+  >({
+    query: ResolveSealosInstanceIdentityDocument,
+    variables: {
+      input: {
+        kubeconfig,
+        resourceName: descriptor.resourceName,
+        namespace: descriptor.namespace,
+      },
+    },
+  })
+
+  const identity = result.data?.ResolveSealosInstanceIdentity
+  if (!identity) {
+    throw new Error('Missing Sealos instance identity')
+  }
+  return identity.uid
+}
+
+function summarizeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 async function getStandaloneLoginDisabled(): Promise<boolean> {
@@ -113,6 +147,7 @@ async function createStandaloneAuthSession(credentials: LoginCredentials): Promi
 
   return {
     sessionToken: payload.sessionToken,
+    instanceUid: null,
     type: payload.type,
     hostname: payload.hostname,
     port: payload.port,
@@ -135,6 +170,7 @@ function buildBootstrapDescriptor(params: URLSearchParams): BootstrapDescriptor 
     host ?? '',
     port ?? '',
     databaseName,
+    namespace ?? '',
   ].join(':')
 
   return {
@@ -162,12 +198,45 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       await useSealosStore.getState().initialize()
       const descriptor = buildBootstrapDescriptor(params)
       const restored = restoreFromStorage()
+      clearAuth()
+      const kubeconfig = useSealosStore.getState().session?.kubeconfig ?? ''
+      if (!kubeconfig) {
+        set({
+          session: null,
+          bootstrapDescriptor: descriptor,
+          standaloneLoginDisabled: false,
+          status: 'error',
+          error: 'common.auth.missingKubeconfig',
+        })
+        return
+      }
 
-      if (restored?.session && restored.bootstrap?.fingerprint === descriptor.fingerprint) {
+      let currentInstanceUID: string
+      try {
+        currentInstanceUID = await resolveSealosInstanceUID(descriptor, kubeconfig)
+      } catch (error) {
+        console.error(`[SealosAuth] instance identity resolution failed: ${summarizeError(error)}`)
+        set({
+          session: null,
+          bootstrapDescriptor: descriptor,
+          standaloneLoginDisabled: false,
+          status: 'error',
+          error: 'common.auth.instanceIdentityFailed',
+        })
+        return
+      }
+
+      if (
+        restored?.session &&
+        restored.bootstrap?.fingerprint === descriptor.fingerprint &&
+        restored.session.instanceUid === currentInstanceUID &&
+        Date.parse(restored.session.expiresAt) > Date.now()
+      ) {
+        setPersistedAuthState({ session: restored.session, bootstrap: descriptor })
         replaceBootstrapUrl(window.location.search)
         set({
           session: restored.session,
-          bootstrapDescriptor: restored.bootstrap,
+          bootstrapDescriptor: descriptor,
           standaloneLoginDisabled: false,
           status: 'authenticated',
           error: null,
@@ -238,7 +307,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     if (!kubeconfig) {
       set({
         status: 'error',
-        error: 'Missing Sealos kubeconfig',
+        error: 'common.auth.missingKubeconfig',
       })
       return false
     }
@@ -255,13 +324,14 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       })
       return true
     } catch (error) {
+      console.error(`[SealosAuth] session bootstrap failed: ${summarizeError(error)}`)
       clearAuth()
       set({
         session: null,
         bootstrapDescriptor: descriptor,
         standaloneLoginDisabled: false,
         status: 'error',
-        error: error instanceof Error ? error.message : String(error),
+        error: 'common.auth.sessionBootstrapFailed',
       })
       return false
     }

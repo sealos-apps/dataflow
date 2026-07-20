@@ -11,6 +11,7 @@ type AuthSession struct {
 	K8sUsername           string     `gorm:"column:k8s_username"`
 	Namespace             string     `gorm:"column:namespace;not null"`
 	ResourceName          string     `gorm:"column:resource_name"`
+	InstanceUID           string     `gorm:"column:instance_uid"`
 	DBType                string     `gorm:"column:db_type;not null"`
 	Host                  string     `gorm:"column:host;not null"`
 	Port                  string     `gorm:"column:port;not null"`

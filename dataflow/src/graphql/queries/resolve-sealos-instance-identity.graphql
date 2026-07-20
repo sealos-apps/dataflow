@@ -1,0 +1,7 @@
+query ResolveSealosInstanceIdentity($input: SealosInstanceIdentityInput!) {
+  ResolveSealosInstanceIdentity(input: $input) {
+    uid
+    namespace
+    resourceName
+  }
+}

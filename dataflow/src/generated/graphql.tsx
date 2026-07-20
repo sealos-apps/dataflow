@@ -80,6 +80,7 @@ export type AuthSessionPayload = {
   displayName: Scalars['String']['output'];
   expiresAt: Scalars['String']['output'];
   hostname: Scalars['String']['output'];
+  instanceUid?: Maybe<Scalars['String']['output']>;
   port: Scalars['String']['output'];
   sessionToken: Scalars['String']['output'];
   type: Scalars['String']['output'];
@@ -795,6 +796,7 @@ export type Query = {
   Profiles: Array<LoginProfile>;
   ProviderConnections: Array<DiscoveredConnection>;
   RawExecute: RowsResult;
+  ResolveSealosInstanceIdentity: SealosInstanceIdentity;
   Row: RowsResult;
   SSLStatus?: Maybe<SslStatus>;
   Schema: Array<Scalars['String']['output']>;
@@ -871,6 +873,11 @@ export type QueryRawExecuteArgs = {
 };
 
 
+export type QueryResolveSealosInstanceIdentityArgs = {
+  input: SealosInstanceIdentityInput;
+};
+
+
 export type QueryRowArgs = {
   pageOffset: Scalars['Int']['input'];
   pageSize: Scalars['Int']['input'];
@@ -932,6 +939,19 @@ export type SealosBootstrapInput = {
   kubeconfig: Scalars['String']['input'];
   namespace?: InputMaybe<Scalars['String']['input']>;
   port?: InputMaybe<Scalars['String']['input']>;
+  resourceName: Scalars['String']['input'];
+};
+
+export type SealosInstanceIdentity = {
+  __typename?: 'SealosInstanceIdentity';
+  namespace: Scalars['String']['output'];
+  resourceName: Scalars['String']['output'];
+  uid: Scalars['String']['output'];
+};
+
+export type SealosInstanceIdentityInput = {
+  kubeconfig: Scalars['String']['input'];
+  namespace?: InputMaybe<Scalars['String']['input']>;
   resourceName: Scalars['String']['input'];
 };
 
@@ -1078,7 +1098,7 @@ export type BootstrapSealosSessionMutationVariables = Exact<{
 }>;
 
 
-export type BootstrapSealosSessionMutation = { __typename?: 'Mutation', BootstrapSealosSession: { __typename?: 'AuthSessionPayload', sessionToken: string, expiresAt: string, type: string, hostname: string, port: string, database: string, displayName: string } };
+export type BootstrapSealosSessionMutation = { __typename?: 'Mutation', BootstrapSealosSession: { __typename?: 'AuthSessionPayload', sessionToken: string, expiresAt: string, type: string, hostname: string, port: string, database: string, displayName: string, instanceUid?: string | null } };
 
 export type CreateDashboardMutationVariables = Exact<{
   name: Scalars['String']['input'];
@@ -1269,6 +1289,13 @@ export type RawExecuteQueryVariables = Exact<{
 
 export type RawExecuteQuery = { __typename?: 'Query', RawExecute: { __typename?: 'RowsResult', Rows: Array<Array<string>>, TotalCount: number, Columns: Array<{ __typename?: 'Column', Type: string, Name: string }> } };
 
+export type ResolveSealosInstanceIdentityQueryVariables = Exact<{
+  input: SealosInstanceIdentityInput;
+}>;
+
+
+export type ResolveSealosInstanceIdentityQuery = { __typename?: 'Query', ResolveSealosInstanceIdentity: { __typename?: 'SealosInstanceIdentity', uid: string, namespace: string, resourceName: string } };
+
 export type GetStorageUnitRowsQueryVariables = Exact<{
   schema: Scalars['String']['input'];
   storageUnit: Scalars['String']['input'];
@@ -1422,6 +1449,7 @@ export const BootstrapSealosSessionDocument = gql`
     port
     database
     displayName
+    instanceUid
   }
 }
     `;
@@ -2523,6 +2551,48 @@ export type RawExecuteQueryHookResult = ReturnType<typeof useRawExecuteQuery>;
 export type RawExecuteLazyQueryHookResult = ReturnType<typeof useRawExecuteLazyQuery>;
 export type RawExecuteSuspenseQueryHookResult = ReturnType<typeof useRawExecuteSuspenseQuery>;
 export type RawExecuteQueryResult = Apollo.QueryResult<RawExecuteQuery, RawExecuteQueryVariables>;
+export const ResolveSealosInstanceIdentityDocument = gql`
+    query ResolveSealosInstanceIdentity($input: SealosInstanceIdentityInput!) {
+  ResolveSealosInstanceIdentity(input: $input) {
+    uid
+    namespace
+    resourceName
+  }
+}
+    `;
+
+/**
+ * __useResolveSealosInstanceIdentityQuery__
+ *
+ * To run a query within a React component, call `useResolveSealosInstanceIdentityQuery` and pass it any options that fit your needs.
+ * When your component renders, `useResolveSealosInstanceIdentityQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useResolveSealosInstanceIdentityQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useResolveSealosInstanceIdentityQuery(baseOptions: Apollo.QueryHookOptions<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables> & ({ variables: ResolveSealosInstanceIdentityQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables>(ResolveSealosInstanceIdentityDocument, options);
+      }
+export function useResolveSealosInstanceIdentityLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables>(ResolveSealosInstanceIdentityDocument, options);
+        }
+export function useResolveSealosInstanceIdentitySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables>(ResolveSealosInstanceIdentityDocument, options);
+        }
+export type ResolveSealosInstanceIdentityQueryHookResult = ReturnType<typeof useResolveSealosInstanceIdentityQuery>;
+export type ResolveSealosInstanceIdentityLazyQueryHookResult = ReturnType<typeof useResolveSealosInstanceIdentityLazyQuery>;
+export type ResolveSealosInstanceIdentitySuspenseQueryHookResult = ReturnType<typeof useResolveSealosInstanceIdentitySuspenseQuery>;
+export type ResolveSealosInstanceIdentityQueryResult = Apollo.QueryResult<ResolveSealosInstanceIdentityQuery, ResolveSealosInstanceIdentityQueryVariables>;
 export const GetStorageUnitRowsDocument = gql`
     query GetStorageUnitRows($schema: String!, $storageUnit: String!, $where: WhereCondition, $sort: [SortCondition!], $pageSize: Int!, $pageOffset: Int!) {
   Row(

@@ -2,11 +2,20 @@ package sealos
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	discoveryfake "k8s.io/client-go/discovery/fake"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestNormalizeNamespaceMatchesDbproviderFallback(t *testing.T) {
@@ -46,6 +55,103 @@ func TestNormalizeSecretHostMatchesDbprovider(t *testing.T) {
 func TestSecretNameMatchesDbproviderConvention(t *testing.T) {
 	if got := SecretName("my-db"); got != "my-db-conn-credential" {
 		t.Fatalf("expected dbprovider secret naming, got %q", got)
+	}
+}
+
+func TestResolveInstanceIdentityReturnsOwningClusterUID(t *testing.T) {
+	resolver := newIdentityTestResolver(t, "instance-uid-1")
+
+	identity, err := resolver.ResolveInstanceIdentity(context.Background(), InstanceIdentityInput{
+		ResourceName: "my-db",
+	})
+	if err != nil {
+		t.Fatalf("resolve instance identity: %v", err)
+	}
+	if identity.UID != "instance-uid-1" || identity.Namespace != "ns-admin" || identity.ResourceName != "my-db" {
+		t.Fatalf("expected authoritative cluster identity, got %#v", identity)
+	}
+}
+
+func TestResolveInstanceIdentityFailsClosed(t *testing.T) {
+	t.Run("missing cluster", func(t *testing.T) {
+		resolver := newIdentityTestResolver(t, "")
+		resolver.dynamicClient = dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+
+		_, err := resolver.ResolveInstanceIdentity(context.Background(), InstanceIdentityInput{ResourceName: "my-db"})
+		if !apierrors.IsNotFound(err) {
+			t.Fatalf("expected not found error, got %v", err)
+		}
+	})
+
+	t.Run("forbidden cluster", func(t *testing.T) {
+		resolver := newIdentityTestResolver(t, "instance-uid-1")
+		resolver.dynamicClient.(*dynamicfake.FakeDynamicClient).PrependReactor("get", "clusters", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apierrors.NewForbidden(schema.GroupResource{Group: "apps.kubeblocks.io", Resource: "clusters"}, "my-db", errors.New("denied"))
+		})
+
+		_, err := resolver.ResolveInstanceIdentity(context.Background(), InstanceIdentityInput{ResourceName: "my-db"})
+		if !apierrors.IsForbidden(err) {
+			t.Fatalf("expected forbidden error, got %v", err)
+		}
+	})
+
+	t.Run("empty uid", func(t *testing.T) {
+		resolver := newIdentityTestResolver(t, "")
+
+		_, err := resolver.ResolveInstanceIdentity(context.Background(), InstanceIdentityInput{ResourceName: "my-db"})
+		if err == nil {
+			t.Fatal("expected empty UID to be rejected")
+		}
+	})
+
+	t.Run("discovery failure", func(t *testing.T) {
+		resolver := newIdentityTestResolver(t, "instance-uid-1")
+		discoveryErr := errors.New("discovery unavailable")
+		resolver.discoveryClient.(*discoveryfake.FakeDiscovery).PrependReactor("get", "group", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, discoveryErr
+		})
+
+		_, err := resolver.ResolveInstanceIdentity(context.Background(), InstanceIdentityInput{ResourceName: "my-db"})
+		if !errors.Is(err, discoveryErr) {
+			t.Fatalf("expected discovery error, got %v", err)
+		}
+	})
+
+	t.Run("transport failure", func(t *testing.T) {
+		resolver := newIdentityTestResolver(t, "instance-uid-1")
+		transportErr := errors.New("transport unavailable")
+		resolver.dynamicClient.(*dynamicfake.FakeDynamicClient).PrependReactor("get", "clusters", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, transportErr
+		})
+
+		_, err := resolver.ResolveInstanceIdentity(context.Background(), InstanceIdentityInput{ResourceName: "my-db"})
+		if !errors.Is(err, transportErr) {
+			t.Fatalf("expected transport error, got %v", err)
+		}
+	})
+}
+
+func newIdentityTestResolver(t *testing.T, uid string) *resolver {
+	t.Helper()
+
+	discoveryClient := &discoveryfake.FakeDiscovery{Fake: &k8stesting.Fake{}}
+	discoveryClient.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "apps.kubeblocks.io/v1alpha1",
+			APIResources: []metav1.APIResource{{Name: "clusters", Kind: "Cluster", Namespaced: true}},
+		},
+	}
+
+	cluster := &unstructured.Unstructured{}
+	cluster.SetGroupVersionKind(schema.GroupVersionKind{Group: "apps.kubeblocks.io", Version: "v1alpha1", Kind: "Cluster"})
+	cluster.SetNamespace("ns-admin")
+	cluster.SetName("my-db")
+	cluster.SetUID(types.UID(uid))
+
+	return &resolver{
+		kubeconfig:      testKubeconfig("ns-admin"),
+		discoveryClient: discoveryClient,
+		dynamicClient:   dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), cluster),
 	}
 }
 

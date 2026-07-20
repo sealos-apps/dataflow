@@ -49,7 +49,7 @@ function AppBootstrap() {
         data-qa-state="error"
         data-qa-error-code="bootstrap_failed"
       >
-        {t('common.auth.bootstrapFailed', { message: error ?? t('common.unknownError') })}
+        {t('common.auth.bootstrapFailed', { message: error ? t(error) : t('common.unknownError') })}
       </div>
     );
   }

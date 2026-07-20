@@ -86,13 +86,14 @@ type AtomicWhereCondition struct {
 }
 
 type AuthSessionPayload struct {
-	SessionToken string `json:"sessionToken"`
-	ExpiresAt    string `json:"expiresAt"`
-	Type         string `json:"type"`
-	Hostname     string `json:"hostname"`
-	Port         string `json:"port"`
-	Database     string `json:"database"`
-	DisplayName  string `json:"displayName"`
+	SessionToken string  `json:"sessionToken"`
+	ExpiresAt    string  `json:"expiresAt"`
+	Type         string  `json:"type"`
+	Hostname     string  `json:"hostname"`
+	Port         string  `json:"port"`
+	Database     string  `json:"database"`
+	DisplayName  string  `json:"displayName"`
+	InstanceUID  *string `json:"instanceUid,omitempty"`
 }
 
 type Capabilities struct {
@@ -493,6 +494,18 @@ type SealosBootstrapInput struct {
 	DatabaseName *string `json:"databaseName,omitempty"`
 	Host         *string `json:"host,omitempty"`
 	Port         *string `json:"port,omitempty"`
+	Namespace    *string `json:"namespace,omitempty"`
+}
+
+type SealosInstanceIdentity struct {
+	UID          string `json:"uid"`
+	Namespace    string `json:"namespace"`
+	ResourceName string `json:"resourceName"`
+}
+
+type SealosInstanceIdentityInput struct {
+	Kubeconfig   string  `json:"kubeconfig"`
+	ResourceName string  `json:"resourceName"`
 	Namespace    *string `json:"namespace,omitempty"`
 }
 

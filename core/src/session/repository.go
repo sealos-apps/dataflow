@@ -51,6 +51,18 @@ func (r *Repository) RevokeByID(ctx context.Context, id string) error {
 		Update("revoked_at", &now).Error
 }
 
+// RevokeStaleSealosSessions revokes unverified or replaced Sealos Database Sessions for one Database Instance.
+func (r *Repository) RevokeStaleSealosSessions(ctx context.Context, namespace, resourceName, currentUID string) error {
+	now := time.Now().UTC()
+	return r.db.WithContext(ctx).Model(&AuthSession{}).
+		Where("source = ?", "sealos").
+		Where("namespace = ?", namespace).
+		Where("resource_name = ?", resourceName).
+		Where("revoked_at IS NULL").
+		Where("instance_uid IS NULL OR instance_uid = ? OR instance_uid <> ?", "", currentUID).
+		Update("revoked_at", &now).Error
+}
+
 // TouchLastSeen updates the last-seen timestamp for an auth session.
 func (r *Repository) TouchLastSeen(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Model(&AuthSession{}).

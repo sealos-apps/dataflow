@@ -285,6 +285,18 @@ input SealosBootstrapInput {
   namespace: String
 }
 
+input SealosInstanceIdentityInput {
+  kubeconfig: String!
+  resourceName: String!
+  namespace: String
+}
+
+type SealosInstanceIdentity {
+  uid: String!
+  namespace: String!
+  resourceName: String!
+}
+
 type AuthSessionPayload {
   sessionToken: String!
   expiresAt: String!
@@ -293,6 +305,7 @@ type AuthSessionPayload {
   port: String!
   database: String!
   displayName: String!
+  instanceUid: String
 }
 
 type SettingsConfig {
@@ -659,6 +672,7 @@ type HealthStatus {
 }
 
 type Query {
+  ResolveSealosInstanceIdentity(input: SealosInstanceIdentityInput!): SealosInstanceIdentity!
   Version: String!
   UpdateInfo: UpdateInfo!
   Health: HealthStatus!

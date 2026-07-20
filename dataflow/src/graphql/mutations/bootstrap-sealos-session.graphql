@@ -7,5 +7,6 @@ mutation BootstrapSealosSession($input: SealosBootstrapInput!) {
     port
     database
     displayName
+    instanceUid
   }
 }

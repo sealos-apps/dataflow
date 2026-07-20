@@ -1,4 +1,4 @@
-const BOOTSTRAP_KEYS = ['dbType', 'resourceName', 'host', 'port', 'dbName', 'databaseName'] as const
+const BOOTSTRAP_KEYS = ['dbType', 'resourceName', 'host', 'port', 'dbName', 'databaseName', 'namespace'] as const
 
 export function removeBootstrapParams(search: string): string {
   const params = new URLSearchParams(search)

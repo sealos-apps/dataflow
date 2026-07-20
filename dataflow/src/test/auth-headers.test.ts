@@ -18,6 +18,7 @@ describe('auth headers', () => {
   it('builds bearer session tokens from the opaque auth session', () => {
     setAuthSession({
       sessionToken: 'opaque-token',
+      instanceUid: null,
       type: 'Postgres',
       hostname: 'db.ns.svc',
       port: '5432',
@@ -32,6 +33,7 @@ describe('auth headers', () => {
   it('sends database overrides as a separate header', () => {
     setAuthSession({
       sessionToken: 'opaque-token',
+      instanceUid: null,
       type: 'Postgres',
       hostname: 'db.ns.svc',
       port: '5432',

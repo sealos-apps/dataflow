@@ -47,14 +47,30 @@ func (r *mutationResolver) BootstrapSealosSession(ctx context.Context, input mod
 		return nil, err
 	}
 
+	identity, err := resolver.ResolveInstanceIdentity(ctx, sealos.InstanceIdentityInput{
+		ResourceName: input.ResourceName,
+		Namespace:    valueOrEmpty(input.Namespace),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	svc, err := session.GetDefaultService()
+	if err != nil {
+		return nil, err
+	}
+	if err := svc.RevokeStaleSealosSessions(ctx, identity.Namespace, identity.ResourceName, identity.UID); err != nil {
+		return nil, err
+	}
+
 	resolved, err := resolver.ResolveBootstrap(ctx, sealos.BootstrapInput{
 		Kubeconfig:   input.Kubeconfig,
 		DBType:       input.DbType,
-		ResourceName: input.ResourceName,
+		ResourceName: identity.ResourceName,
 		DatabaseName: valueOrEmpty(input.DatabaseName),
 		Host:         valueOrEmpty(input.Host),
 		Port:         valueOrEmpty(input.Port),
-		Namespace:    valueOrEmpty(input.Namespace),
+		Namespace:    identity.Namespace,
 	})
 	if err != nil {
 		return nil, err
@@ -65,16 +81,12 @@ func (r *mutationResolver) BootstrapSealosSession(ctx context.Context, input mod
 		return nil, errors.New("unauthorized")
 	}
 
-	svc, err := session.GetDefaultService()
-	if err != nil {
-		return nil, err
-	}
-
 	record, token, err := svc.Create(ctx, session.CreateParams{
 		Source:       "sealos",
 		K8sUsername:  resolved.K8sUsername,
 		Namespace:    resolved.Namespace,
 		ResourceName: resolved.ResourceName,
+		InstanceUID:  identity.UID,
 		DBType:       resolved.DBType,
 		Host:         resolved.Host,
 		Port:         resolved.Port,
@@ -98,6 +110,7 @@ func (r *mutationResolver) BootstrapSealosSession(ctx context.Context, input mod
 		Port:         resolved.Port,
 		Database:     resolved.DatabaseName,
 		DisplayName:  displayName,
+		InstanceUID:  &identity.UID,
 	}, nil
 }
 
@@ -1287,6 +1300,32 @@ func (r *mutationResolver) GenerateRDSAuthToken(ctx context.Context, providerID 
 	}
 	log.Infof("GenerateRDSAuthToken: token generated successfully (length=%d)", len(token))
 	return token, nil
+}
+
+// ResolveSealosInstanceIdentity is the resolver for the ResolveSealosInstanceIdentity field.
+func (r *queryResolver) ResolveSealosInstanceIdentity(ctx context.Context, input model.SealosInstanceIdentityInput) (*model.SealosInstanceIdentity, error) {
+	if !env.GetSealosBootstrapEnabled() {
+		return nil, errors.New("sealos bootstrap is disabled")
+	}
+
+	resolver, err := sealos.DefaultBootstrapResolverFactory(input.Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	identity, err := resolver.ResolveInstanceIdentity(ctx, sealos.InstanceIdentityInput{
+		ResourceName: input.ResourceName,
+		Namespace:    valueOrEmpty(input.Namespace),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.SealosInstanceIdentity{
+		UID:          identity.UID,
+		Namespace:    identity.Namespace,
+		ResourceName: identity.ResourceName,
+	}, nil
 }
 
 // Version is the resolver for the Version field.

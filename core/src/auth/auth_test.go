@@ -266,10 +266,55 @@ func TestIsAllowedPermitsWhitelistedOperations(t *testing.T) {
 		t.Fatalf("expected BootstrapSealosSession to be allowed without auth")
 	}
 
+	identity := `{"operationName":"ResolveSealosInstanceIdentity","variables":{}}`
+	req = httptest.NewRequest(http.MethodPost, "/api/query", strings.NewReader(identity))
+	if !isAllowed(req, []byte(identity)) {
+		t.Fatalf("expected ResolveSealosInstanceIdentity to be allowed without auth")
+	}
+
 	standalone := `{"operationName":"CreateStandaloneSession","variables":{}}`
 	req = httptest.NewRequest(http.MethodPost, "/api/query", strings.NewReader(standalone))
 	if !isAllowed(req, []byte(standalone)) {
 		t.Fatalf("expected CreateStandaloneSession to be allowed without auth")
+	}
+}
+
+func TestAuthMiddlewareRejectsSessionRevokedForReplacedInstance(t *testing.T) {
+	service := newAuthSessionServiceForTest(t)
+	_, token, err := service.Create(context.Background(), session.CreateParams{
+		Source:       "sealos",
+		Namespace:    "ns-demo",
+		ResourceName: "my-db",
+		InstanceUID:  "old-uid",
+		DBType:       "Postgres",
+		Host:         "db.ns.svc",
+		Port:         "5432",
+		DatabaseName: "postgres",
+		Credentials: &engine.Credentials{
+			Type: "Postgres", Hostname: "db.ns.svc", Username: "alice", Password: "pw", Database: "postgres",
+		},
+	})
+	if err != nil {
+		t.Fatalf("create old instance session: %v", err)
+	}
+	if err := service.RevokeStaleSealosSessions(context.Background(), "ns-demo", "my-db", "current-uid"); err != nil {
+		t.Fatalf("revoke replaced instance session: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/query", strings.NewReader(`{"operationName":"Other"}`))
+	req.Header.Set("Authorization", "Bearer session:"+token)
+	rr := httptest.NewRecorder()
+	handlerCalled := false
+
+	AuthMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		handlerCalled = true
+	})).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected revoked replacement token to return 401, got %d", rr.Code)
+	}
+	if handlerCalled {
+		t.Fatal("expected revoked replacement token not to reach the GraphQL handler")
 	}
 }
 

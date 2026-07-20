@@ -144,6 +144,7 @@ func (s *Service) Create(ctx context.Context, params CreateParams) (*AuthSession
 		K8sUsername:           params.K8sUsername,
 		Namespace:             params.Namespace,
 		ResourceName:          params.ResourceName,
+		InstanceUID:           params.InstanceUID,
 		DBType:                params.DBType,
 		Host:                  params.Host,
 		Port:                  params.Port,
@@ -197,6 +198,11 @@ func (s *Service) ResolveToken(ctx context.Context, token string) (*engine.Crede
 // Revoke marks a session row as revoked.
 func (s *Service) Revoke(ctx context.Context, id string) error {
 	return s.repo.RevokeByID(ctx, id)
+}
+
+// RevokeStaleSealosSessions revokes unverified or replaced Sealos Database Sessions for one Database Instance.
+func (s *Service) RevokeStaleSealosSessions(ctx context.Context, namespace, resourceName, currentUID string) error {
+	return s.repo.RevokeStaleSealosSessions(ctx, namespace, resourceName, currentUID)
 }
 
 func uuidString() string {

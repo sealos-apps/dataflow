@@ -14,6 +14,7 @@ const STORAGE_KEY = 'dataflow_auth';
 
 export interface AuthSessionSummary {
   sessionToken: string;
+  instanceUid: string | null;
   type: string;
   hostname: string;
   port: string;

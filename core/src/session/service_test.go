@@ -26,6 +26,7 @@ func TestServiceCreateAndResolveToken(t *testing.T) {
 		Source:       "sealos",
 		Namespace:    "ns-demo",
 		ResourceName: "my-db",
+		InstanceUID:  "instance-uid-1",
 		DBType:       "Postgres",
 		Host:         "db.ns.svc",
 		Port:         "5432",
@@ -46,11 +47,80 @@ func TestServiceCreateAndResolveToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve token: %v", err)
 	}
-	if loaded == nil || loaded.ResourceName != "my-db" {
+	if loaded == nil || loaded.ResourceName != "my-db" || loaded.InstanceUID != "instance-uid-1" {
 		t.Fatalf("expected session metadata to roundtrip, got %#v", loaded)
 	}
 	if resolved == nil || resolved.Username != "postgres" || resolved.Password != "secret" {
 		t.Fatalf("expected credentials to decrypt, got %#v", resolved)
+	}
+}
+
+func TestServiceRevokesStaleSealosSessionsForTarget(t *testing.T) {
+	service := newSessionServiceForTest(t, "12345678901234567890123456789012", time.Hour)
+	ctx := context.Background()
+
+	type sessionFixture struct {
+		name         string
+		source       string
+		namespace    string
+		resourceName string
+		instanceUID  string
+		wantRevoked  bool
+	}
+
+	fixtures := []sessionFixture{
+		{name: "replaced instance", source: "sealos", namespace: "ns-demo", resourceName: "my-db", instanceUID: "old-uid", wantRevoked: true},
+		{name: "legacy instance", source: "sealos", namespace: "ns-demo", resourceName: "my-db", instanceUID: "", wantRevoked: true},
+		{name: "current instance", source: "sealos", namespace: "ns-demo", resourceName: "my-db", instanceUID: "current-uid"},
+		{name: "other namespace", source: "sealos", namespace: "ns-other", resourceName: "my-db", instanceUID: "old-uid"},
+		{name: "other resource", source: "sealos", namespace: "ns-demo", resourceName: "other-db", instanceUID: "old-uid"},
+		{name: "standalone session", source: "standalone", namespace: "ns-demo", resourceName: "my-db", instanceUID: "old-uid"},
+	}
+
+	tokens := make(map[string]string, len(fixtures))
+	for _, fixture := range fixtures {
+		record, token, err := service.Create(ctx, CreateParams{
+			Source:       fixture.source,
+			Namespace:    fixture.namespace,
+			ResourceName: fixture.resourceName,
+			InstanceUID:  fixture.instanceUID,
+			DBType:       "Postgres",
+			Host:         "db.ns.svc",
+			Port:         "5432",
+			DatabaseName: "postgres",
+			Credentials: &engine.Credentials{
+				Type:     "Postgres",
+				Hostname: "db.ns.svc",
+				Username: "postgres",
+				Password: "secret",
+				Database: "postgres",
+			},
+		})
+		if err != nil {
+			t.Fatalf("create %s: %v", fixture.name, err)
+		}
+		if fixture.name == "legacy instance" {
+			if err := service.repo.db.WithContext(ctx).Model(&AuthSession{}).
+				Where("id = ?", record.ID).
+				Update("instance_uid", nil).Error; err != nil {
+				t.Fatalf("mark legacy session UID null: %v", err)
+			}
+		}
+		tokens[fixture.name] = token
+	}
+
+	if err := service.RevokeStaleSealosSessions(ctx, "ns-demo", "my-db", "current-uid"); err != nil {
+		t.Fatalf("revoke stale target sessions: %v", err)
+	}
+
+	for _, fixture := range fixtures {
+		_, _, err := service.ResolveToken(ctx, tokens[fixture.name])
+		if fixture.wantRevoked && err != ErrSessionRevoked {
+			t.Errorf("%s: expected ErrSessionRevoked, got %v", fixture.name, err)
+		}
+		if !fixture.wantRevoked && err != nil {
+			t.Errorf("%s: expected session to remain valid, got %v", fixture.name, err)
+		}
 	}
 }
 

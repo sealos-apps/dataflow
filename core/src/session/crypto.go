@@ -22,6 +22,7 @@ type CreateParams struct {
 	K8sUsername  string
 	Namespace    string
 	ResourceName string
+	InstanceUID  string
 	DBType       string
 	Host         string
 	Port         string
