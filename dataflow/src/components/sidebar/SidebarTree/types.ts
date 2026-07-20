@@ -18,7 +18,7 @@ export interface TreeNodeData {
   type: NodeType;
   parentId?: string;
   connectionId: string;
-  /** Storage unit provisioned by the engine, an extension, or platform tooling — rendered muted. */
+  /** Not user-authored: a classified System Object, or any node under a system schema or database — rendered muted. */
   system?: boolean;
   metadata: {
     database?: string;
