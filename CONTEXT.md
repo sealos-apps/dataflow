@@ -16,6 +16,18 @@ _Avoid_: analysis tab, chart page
 A configured access path to one database engine or database service.
 _Avoid_: account, cluster, datasource
 
+**Database Instance**:
+A platform-managed deployment of one database engine whose lifecycle is independent from the logical databases and schemas hosted inside it.
+_Avoid_: database, logical database, Database Connection
+
+**Database Instance Identity**:
+The lifecycle-bound identity of a **Database Instance**. Deleting an instance ends that identity; recreating an instance creates a new identity even when the same name is reused.
+_Avoid_: resource name, display name, Database Connection name
+
+**Sealos Database Session**:
+A time-bounded DataFlow authorization created when Sealos opens a **Database Instance**. It is bound to exactly one **Database Instance Identity**.
+_Avoid_: Sealos Desktop session, browser session, Database Connection
+
 **Database Resource**:
 A user-visible database object that can be located and acted on from the workspace.
 _Avoid_: storage unit, file, asset
@@ -104,6 +116,9 @@ _Avoid_: widget when the data visualization is meant
 
 - The **Database Workspace** and **Dashboard Workspace** are separate workspace areas.
 - A **Database Workspace** uses one or more **Database Connections**.
+- A **Database Instance** has one **Database Instance Identity** for each lifecycle.
+- Reusing an instance name does not reuse its **Database Instance Identity**.
+- A **Sealos Database Session** authorizes one **Database Instance Identity** and cannot migrate to another identity.
 - A **Database Connection** exposes zero or more **Database Resources**.
 - A **Workspace Tab** belongs to the **Database Workspace**.
 - A **Workspace Tab** can be tied to one **Database Resource**.
