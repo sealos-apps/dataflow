@@ -80,6 +80,9 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
           type: "database" as const,
           parentId: node.id,
           connectionId: node.connectionId,
+          // For engines where systemSchemas are database names, the whole
+          // revealed system database renders muted
+          system: conn?.type !== "POSTGRES" && systemSchemas.includes(db),
           metadata: { database: db },
         }));
       }
@@ -98,6 +101,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
             type: "schema" as const,
             parentId: node.id,
             connectionId: node.connectionId,
+            system: systemSchemas.includes(schema),
             metadata: { database: node.name, schema },
           }));
         }
@@ -117,6 +121,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
 
         // MySQL / MongoDB / ClickHouse — fetch tables directly
         const tables = await fetchTables(node.connectionId, node.name);
+        const inSystemDatabase = systemSchemas.includes(node.name);
         return tables.map((t) => ({
           id: `${node.id}-${t.name}`,
           name: t.name,
@@ -125,6 +130,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
             : t.type.toLowerCase().includes("view") ? "view" : "table") as NodeType,
           parentId: node.id,
           connectionId: node.connectionId,
+          system: inSystemDatabase || t.system,
           metadata: { database: node.name, table: t.name },
         }));
       }
@@ -142,6 +148,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
       }
 
       if (node.type === "schema") {
+        const inSystemSchema = systemSchemas.includes(node.name);
         return [
           {
             id: `${node.id}-tables`,
@@ -149,6 +156,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
             type: "table_folder" as const,
             parentId: node.id,
             connectionId: node.connectionId,
+            system: inSystemSchema,
             metadata: { database: node.metadata.database, schema: node.name },
           },
           {
@@ -157,6 +165,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
             type: "view_folder" as const,
             parentId: node.id,
             connectionId: node.connectionId,
+            system: inSystemSchema,
             metadata: { database: node.metadata.database, schema: node.name },
           },
         ];
@@ -172,6 +181,8 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
         // System objects follow the database node's "Show system objects" toggle
         const databaseNodeId = `${node.connectionId}-${node.metadata.database}`;
         const showSystem = showSystemObjectsFor.has(databaseNodeId);
+        // Everything under a system schema is system, not just classified units
+        const inSystemSchema = systemSchemas.includes(node.metadata.schema!);
         return tables
           .filter((t) => showSystem || !t.system)
           .filter((t) =>
@@ -185,7 +196,7 @@ export function SidebarTreeProvider({ children }: { children: React.ReactNode })
             type: (isViewFolder ? "view" : "table") as NodeType,
             parentId: node.id,
             connectionId: node.connectionId,
-            system: t.system,
+            system: inSystemSchema || t.system,
             metadata: {
               database: node.metadata.database,
               schema: node.metadata.schema,
