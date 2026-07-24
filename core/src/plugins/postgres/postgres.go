@@ -94,8 +94,9 @@ func (p *PostgresPlugin) GetTableInfoQuery() string {
 	// AND t.table_type = 'BASE TABLE' this removes the view tables
 }
 
+// GetStorageUnitExistsQuery returns a query that quotes raw schema and relation names before resolving them.
 func (p *PostgresPlugin) GetStorageUnitExistsQuery() string {
-	return `SELECT to_regclass($1 || '.' || $2) IS NOT NULL`
+	return `SELECT to_regclass(quote_ident($1) || '.' || quote_ident($2)) IS NOT NULL`
 }
 
 func (p *PostgresPlugin) GetPlaceholder(index int) string {
