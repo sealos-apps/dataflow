@@ -1,5 +1,24 @@
 {{- if .Values.ingress.enabled -}}
 {{- $host := include "dataflow.ingressHost" . -}}
+{{- $dataflowConfig := default (dict) .Values.dataflowConfig -}}
+{{- $embeddedAllowedOrigins := default (list) $dataflowConfig.embeddedAllowedOrigins -}}
+{{- range $index, $origin := $embeddedAllowedOrigins -}}
+{{- if not (regexMatch `^https?://(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:.]+\])(?::[0-9]+)?$` $origin) -}}
+{{- fail (printf "dataflowConfig.embeddedAllowedOrigins[%d] must be an exact http(s) origin without wildcards or paths: %s" $index $origin) -}}
+{{- end -}}
+{{- end -}}
+{{- $embeddedOrigins := join " " $embeddedAllowedOrigins -}}
+{{- $frameAncestors := printf "frame-ancestors 'self' https://%s https://*.%s" .Values.cloudDomain .Values.cloudDomain -}}
+{{- if $embeddedOrigins -}}
+{{- $frameAncestors = printf "%s %s" $frameAncestors $embeddedOrigins -}}
+{{- end -}}
+{{- $ingressAnnotations := default (dict) .Values.ingress.annotations -}}
+{{- $securityAnnotations := dict
+  "nginx.ingress.kubernetes.io/configuration-snippet" (printf "more_clear_headers \"X-Frame-Options:\";\nmore_set_headers \"Content-Security-Policy: %s\";" $frameAncestors)
+  "higress.io/response-header-control-remove" "X-Frame-Options"
+  "higress.io/response-header-control-update" (printf "Content-Security-Policy \"%s\"" $frameAncestors)
+-}}
+{{- $annotations := mergeOverwrite (deepCopy $ingressAnnotations) $securityAnnotations -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,10 +26,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "dataflow.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- toYaml $annotations | nindent 4 }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   tls:

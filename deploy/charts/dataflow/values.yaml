@@ -20,6 +20,9 @@ fullnameOverride: ''
 
 cloudDomain: '127.0.0.1.nip.io'
 
+dataflowConfig:
+  embeddedAllowedOrigins: []
+
 session:
   encryptionKey: 'replace-with-32-byte-secret-key!'
   ttl: 24h
