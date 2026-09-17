@@ -3,15 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const getSessionMock = vi.fn()
 const getLanguageMock = vi.fn()
 const addAppEventListenMock = vi.fn()
+const createSealosAppMock = vi.fn(() => undefined)
 
-vi.mock('sealos-desktop-sdk', () => ({
+vi.mock('@labring/sealos-desktop-sdk', () => ({
   EVENT_NAME: {
     CHANGE_I18N: 'change-i18n',
   },
 }))
 
-vi.mock('sealos-desktop-sdk/app', () => ({
-  createSealosApp: vi.fn(() => undefined),
+vi.mock('@labring/sealos-desktop-sdk/app', () => ({
+  createSealosApp: createSealosAppMock,
   sealosApp: {
     getSession: getSessionMock,
     getLanguage: getLanguageMock,
@@ -22,28 +23,18 @@ vi.mock('sealos-desktop-sdk/app', () => ({
 describe('useSealosStore', () => {
   beforeEach(() => {
     vi.resetModules()
-    const storage = new Map<string, string>()
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => storage.get(key) ?? null),
-      setItem: vi.fn((key: string, value: string) => {
-        storage.set(key, value)
-      }),
-      removeItem: vi.fn((key: string) => {
-        storage.delete(key)
-      }),
-      clear: vi.fn(() => {
-        storage.clear()
-      }),
-    })
     getSessionMock.mockReset()
     getLanguageMock.mockReset()
     addAppEventListenMock.mockReset()
+    createSealosAppMock.mockReset()
+    createSealosAppMock.mockReturnValue(undefined)
     getLanguageMock.mockResolvedValue({ lng: 'en' })
     addAppEventListenMock.mockReturnValue(undefined)
   })
 
   it('prefers the Sealos SDK session when it includes kubeconfig', async () => {
     getSessionMock.mockResolvedValue({
+      token: 'sdk-token',
       user: {
         id: 'u-1',
         name: 'Ada',
@@ -51,59 +42,16 @@ describe('useSealosStore', () => {
       },
       kubeconfig: 'sdk-kubeconfig',
     })
-    localStorage.setItem(
-      'session',
-      JSON.stringify({
-        user: {
-          id: 'u-2',
-          name: 'Grace',
-          avatar: '',
-        },
-        kubeconfig: 'local-storage-kubeconfig',
-      }),
-    )
-
     const { useSealosStore } = await import('@/stores/useSealosStore')
 
     await useSealosStore.getState().initialize()
 
     expect(useSealosStore.getState().session?.kubeconfig).toBe('sdk-kubeconfig')
+    expect(createSealosAppMock).toHaveBeenCalledOnce()
   })
 
-  it('loads the Sealos session from dbprovider 5.1 localStorage when SDK session is unavailable', async () => {
+  it('treats an unavailable SDK session as outside Sealos Desktop', async () => {
     getSessionMock.mockRejectedValue(new Error('not in desktop bridge'))
-    localStorage.setItem(
-      'session',
-      JSON.stringify({
-        user: {
-          id: 'u-1',
-          name: 'Ada',
-          avatar: '',
-        },
-        kubeconfig: 'apiVersion: v1\ncurrent-context: ns-admin\n',
-      }),
-    )
-
-    const { useSealosStore } = await import('@/stores/useSealosStore')
-
-    await useSealosStore.getState().initialize()
-
-    expect(useSealosStore.getState().session?.kubeconfig).toBe('apiVersion: v1\ncurrent-context: ns-admin\n')
-    expect(useSealosStore.getState().isInSealosDesktop).toBe(true)
-  })
-
-  it('ignores malformed dbprovider 5.1 localStorage sessions without kubeconfig', async () => {
-    getSessionMock.mockResolvedValue(null)
-    localStorage.setItem(
-      'session',
-      JSON.stringify({
-        user: {
-          id: 'u-1',
-          name: 'Ada',
-          avatar: '',
-        },
-      }),
-    )
 
     const { useSealosStore } = await import('@/stores/useSealosStore')
 
@@ -111,5 +59,32 @@ describe('useSealosStore', () => {
 
     expect(useSealosStore.getState().session).toBeNull()
     expect(useSealosStore.getState().isInSealosDesktop).toBe(false)
+  })
+
+  it('ignores SDK sessions without kubeconfig', async () => {
+    getSessionMock.mockResolvedValue(null)
+
+    const { useSealosStore } = await import('@/stores/useSealosStore')
+
+    await useSealosStore.getState().initialize()
+
+    expect(useSealosStore.getState().session).toBeNull()
+    expect(useSealosStore.getState().isInSealosDesktop).toBe(false)
+  })
+
+  it('updates the language from Desktop events', async () => {
+    let changeI18n: ((data: { currentLanguage?: string }) => void) | undefined
+    getSessionMock.mockResolvedValue(null)
+    addAppEventListenMock.mockImplementation((_, callback) => {
+      changeI18n = callback
+      return undefined
+    })
+
+    const { useSealosStore } = await import('@/stores/useSealosStore')
+
+    await useSealosStore.getState().initialize()
+    changeI18n?.({ currentLanguage: 'zh' })
+
+    expect(useSealosStore.getState().language).toBe('zh')
   })
 })

@@ -37,3 +37,20 @@ During install, `install.sh` ensures the user override file exists at:
 When the file does not exist yet, it is initialized from:
 
 - `deploy/charts/dataflow/dataflow-values.yaml`
+
+## Embedded UI
+
+To allow an external parent page to embed DataFlow, set
+`dataflowConfig.embeddedAllowedOrigins` to exact HTTP(S) origins, including the
+protocol and optional port. For example:
+
+```yaml
+dataflowConfig:
+  embeddedAllowedOrigins:
+    - https://province.example.com
+```
+
+Wildcards, paths, and protocol-less hostnames are rejected during Helm
+rendering. The Ingress removes `X-Frame-Options` and limits CSP
+`frame-ancestors` to Sealos origins plus this list for both NGINX Ingress and
+Higress.

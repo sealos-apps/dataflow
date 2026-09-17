@@ -1,5 +1,8 @@
 replicaCount: 1
 
+dataflowConfig:
+  embeddedAllowedOrigins: []
+
 deploymentStrategy:
   type: RollingUpdate
   rollingUpdate:
