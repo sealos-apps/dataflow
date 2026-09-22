@@ -168,6 +168,7 @@ export const enCommonMessages = {
   'database.import.error.sqlSourceBoth': 'Choose either a SQL file or SQL text, not both.',
   'database.import.error.sqlSourceMissing': 'Provide a SQL file or SQL text.',
   'database.import.error.sqlTooLarge': 'The SQL file exceeds the size limit.',
+  'database.import.error.requestTooLarge': 'The import content is too large. Reduce the SQL file or text size and try again.',
   'database.import.error.sqlFileFailed': 'Failed to read the SQL file.',
   'database.import.error.sqlMultiStatementUnsupported': 'This database does not support multi-statement SQL import.',
   'database.import.error.sqlFailed':
