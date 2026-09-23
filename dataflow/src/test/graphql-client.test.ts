@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getAuthSessionMock = vi.fn()
@@ -100,4 +101,36 @@ describe('graphql client auth fetch', () => {
     })
     expect((form.get('0') as File).name).toBe('seed.sql')
   })
+})
+
+
+describe('SQL import HTTP errors', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    getAuthSessionMock.mockReturnValue(null)
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  const mutation = gql`
+    mutation ImportSQL($input: ImportSQLInput!) {
+      ImportSQL(input: $input) { Status }
+    }
+  `
+
+  for (const kind of ['file', 'text']) {
+    it.each(['Request body too large', '<html>413 Request Entity Too Large</html>', ''])(
+      `${kind} imports preserve status 413 for response body %j`,
+      async (body) => {
+        vi.mocked(fetch).mockResolvedValue(new Response(body, { status: 413 }))
+        const { graphqlClient } = await import('@/config/graphql-client')
+        const input = kind === 'file'
+          ? { File: new File(['SELECT 1;'], 'seed.sql'), Filename: 'seed.sql' }
+          : { Script: 'SELECT 1;' }
+
+        await expect(graphqlClient.mutate({ mutation, variables: { input } }))
+          .rejects.toMatchObject({ networkError: { statusCode: 413 } })
+        expect(fetch).toHaveBeenCalledTimes(1)
+      },
+    )
+  }
 })

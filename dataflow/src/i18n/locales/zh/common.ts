@@ -162,6 +162,7 @@ export const zhCommonMessages = {
   'database.import.error.sqlSourceBoth': '只能选择 SQL 文件或 SQL 文本之一。',
   'database.import.error.sqlSourceMissing': '请提供 SQL 文件或 SQL 文本。',
   'database.import.error.sqlTooLarge': 'SQL 文件超过大小限制。',
+  'database.import.error.requestTooLarge': '导入内容过大，请减小 SQL 文件或文本后重试。',
   'database.import.error.sqlFileFailed': 'SQL 文件读取失败。',
   'database.import.error.sqlMultiStatementUnsupported': '当前数据库不支持多语句 SQL 导入。',
   'database.import.error.sqlFailed': 'SQL 执行失败。请确认脚本语法与当前数据库匹配；例如 MySQL dump 不能直接导入 PostgreSQL。',

@@ -111,23 +111,38 @@ Delete generated binaries after local testing unless they are intentional artifa
 
 ## Build Runtime Image
 
-Build an `amd64` image by default for release-oriented checks:
+Build and publish both `amd64` and `arm64` images by default:
 
 ```bash
 docker buildx build \
   -f core/Dockerfile \
-  --platform linux/amd64 \
+  --platform linux/amd64,linux/arm64 \
   --build-arg VERSION=<version> \
-  --build-arg TARGETARCH=amd64 \
   --build-arg PLATFORM=docker \
-  -t dataflow-local:<version> \
-  .
+  -t <registry>/dataflow:<version> \
+  --push .
 ```
+
+Buildx supplies `TARGETARCH` for each platform; do not pin it to one architecture
+in a multi-platform build. For test deployments, use
+`crpi-7jr40k6elhldekqp.cn-hangzhou.personal.cr.aliyuncs.com/mlhiter` unless another
+registry is explicitly requested.
+
+If the registry rejects the build with `unknown manifest class for
+application/vnd.oci.empty.v1+json`, rebuild with `--provenance=false --sbom=false`
+and verify that the published index contains both target platforms. The existing
+build layers can be reused.
+
+If the Go compiler is killed while compiling Elasticsearch packages on a
+memory-constrained builder, use a temporary Dockerfile with
+`ENV GOGC=20 GOFLAGS=-p=1 GOMAXPROCS=2` immediately before the backend `go build`
+step. This reduces compilation concurrency and memory pressure at the cost of
+build time; keep these settings out of the final runtime stage.
 
 Run locally:
 
 ```bash
-docker run --rm -p 8080:8080 dataflow-local:<version>
+docker run --rm -p 8080:8080 <registry>/dataflow:<version>
 ```
 
 Open `http://localhost:8080`.

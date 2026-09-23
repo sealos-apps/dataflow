@@ -1,5 +1,6 @@
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Database, FileCode, FileSpreadsheet, Loader2, Upload } from 'lucide-react'
+import { isApolloError } from '@apollo/client'
 import { Dialog, DialogClose, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -575,10 +576,12 @@ function DatabaseImportProvider({
         await executeSqlImport()
       }
     } catch (error) {
+      const networkError = error instanceof Error && isApolloError(error) ? error.networkError : null
+      const requestTooLarge = method === 'sql' && networkError && 'statusCode' in networkError && networkError.statusCode === 413
       actions.setAlert({
         type: 'error',
         title: t('database.import.failedTitle'),
-        message: error instanceof Error ? error.message : t(method === 'tableFile'
+        message: requestTooLarge ? t('database.import.error.requestTooLarge') : error instanceof Error ? error.message : t(method === 'tableFile'
           ? 'database.import.table.failedMessage'
           : 'database.import.failedMessage'),
       })

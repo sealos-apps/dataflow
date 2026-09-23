@@ -94,6 +94,10 @@ const uploadLink = new ApolloLink((operation) => new Observable((observer) => {
         body: formData,
         signal: controller.signal,
       });
+      // A rejected upload can return plain text or HTML rather than GraphQL JSON.
+      if (response.status === 413) {
+        throw Object.assign(new Error('GraphQL upload failed (413)'), { statusCode: 413 });
+      }
       const payload = await readGraphQLResponse(response);
 
       if (!response.ok && !payload.errors) {
